@@ -55,7 +55,6 @@ void run_conv_bias_act_with_plan(
         const cudnnHandle_t& handle, const cudnn_frontend::ExecutionPlan& plan,
         const TensorND& x, const TensorND& y, const TensorND& w, const TensorND& b,
         const TensorND& z, const Workspace& workspace);
-
 }  // namespace cuda
 }  // namespace megdnn
 

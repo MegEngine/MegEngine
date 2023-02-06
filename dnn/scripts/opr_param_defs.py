@@ -1330,3 +1330,20 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  add_fields('float32', Doc('p', 'the order of norm'), '2').
  add_fields('int32', Doc('dim', 'which dim the norm performed along'), '-1'),
  )
+
+(pdef('MultiHeadAttn')
+ .add_fields('uint32', Doc('num_heads', 'Number of parallel attention heads.'), '1')
+ .add_fields('float32', Doc('sm_scaler', 'Softmax smoothing (1.0 >= smScaler >= 0.0) or sharpening (smScaler > 1.0) coefficient.'), '1.f')
+ .add_fields('uint32', Doc('input_order', 'The sequence data layout, allows the user to select 3! = 6 different data layouts or permutations of BEAM, BATCH and TIME dimensions.'), '0')
+ .add_fields('bool', Doc('reslink', 'Whether to add input query to final output.'), 'false')
+ .add_fields('bool', Doc('training', 'Whether it is in training mode.'), 'true')
+ .add_fields('bool', Doc('bias', 'Whether to add linear bias.'), 'false')
+ .add_fields('bool', Doc('attn_mask', 'Whether to add attn_mask.'), 'false')
+ .add_fields('bool', Doc('enable_qproj', 'enable query weight projection.'), 'true')
+ .add_fields('bool', Doc('enable_kproj', 'enable key weight projection.'), 'true')
+ .add_fields('bool', Doc('enable_vproj', 'enable value weight projection.'), 'true')
+ .add_fields('bool', Doc('enable_oproj', 'enable output weight projection.'), 'true')
+ .add_fields('uint64', Doc('seed', 'Random number seed for drop'), '0')
+ .add_fields('float32', Doc('attn_prob', 'Dropout probability on attention, is applied directly to the softmax output'), '0.f')
+ .add_fields('float32', Doc('out_prob', 'Dropout probability on output, alters the multi-head attention output'), '0.f')
+ )

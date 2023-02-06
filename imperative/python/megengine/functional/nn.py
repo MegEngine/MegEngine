@@ -35,7 +35,7 @@ from ..core.tensor.utils import (
     subgraph,
     subgraph_fn,
 )
-from ..device import get_default_device
+from ..device import get_cudnn_version, get_default_device, is_cuda_available
 from ..distributed import WORLD, is_distributed
 from ..jit import exclude_from_trace
 from ..logger import get_logger
@@ -104,6 +104,7 @@ __all__ = [
     "warp_perspective",
     "pixel_shuffle",
     "region_restricted_conv",
+    "multi_head_attention",
 ]
 
 
@@ -1053,7 +1054,7 @@ def instance_norm(
     r"""Applies instance normalization to the input.
 
     Refer to :class:`~.InstanceNorm` for more information.
-    
+
     Args:
         inp: input tensor.
         affine: whether to use learnable affine parameters (weight, bias)
@@ -1083,7 +1084,7 @@ def group_norm(
     r"""Applies group normalization to the input.
 
     Refer to :class:`~.GroupNorm` for more information.
-    
+
     Args:
         inp: input tensor.
         num_groups: number of groups to separate the channels into
@@ -2052,7 +2053,82 @@ def region_restricted_conv(
     return output
 
 
-from .quantized import conv_bias_activation  # isort:skip
+def multi_head_attention(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    embed_dim: int,
+    num_heads: int,
+    attn_drop: float,
+    out_drop: float,
+    io_weight_bias: Optional[Tensor],
+    bias: bool = False,
+    reslink: bool = False,
+    training: bool = True,
+    attn_mask: bool = False,
+    enable_qproj: bool = True,
+    enable_kproj: bool = True,
+    enable_vproj: bool = True,
+    enable_oproj: bool = True,
+):
+    r"""Allows the model to jointly attend to information
+    from different representation subspaces.
+    See `Attention Is All You Need <https://arxiv.org/abs/1706.03762>`_.
+
+    .. math::
+        \text{MultiHeadAttn}\big(q,K,V, W_Q, W_V, W_O\big) = \sum^{nHeads-1}_{i=0}W_{O,i}h_i
+
+    where :math:`h_i=W_{V,i}V \text{Softmax}\Big( \text{smScaler} \cdot K^TW^T_{K,i}W_{Q,i}q \Big),\text{for }i\text{ = 0 ... nHeads-1}`.
+
+    See :class:`~.module.MultiHeadAttn` for more details.
+    
+    Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported, and if the cudnn version >=8.6.0, the calculation results are completely correct; If the cudnn version >=8.0.4 but <8.6.0, if there is a bias, only the dbias result calculated from the backward is incorrect. If there is no bias, the forward and backward calculations are correct; If the cudnn version is less than 8.0.4, this operator is not supported.
+    
+    Args:
+        query, key, value: map a query and a set of key-value pairs to an output.
+            See "Attention Is All You Need" for more details.
+        embed_dim: total dimension of the model.
+        num_heads: parallel attention heads.
+        attn_drop: probability of an element to be zeroed, used in attention matrix.
+        out_drop: probability of an element to be zeroed, used in final output.
+        io_weight_bias: input/output projection weight/bias all in one, used for cudnn api.
+        bias: used to indicate a bias in io_weight_bias, used for cudnn api.
+        reslink: add input query to final output.
+        training: will apply dropout if is ``True``.
+        attn_mask: used to indicate whether to add a mask to the attention matrix. 
+            By default, the upper right triangle of the mask is -inf, and the diagonal and lower left triangle are all 0.
+            Default: `True`
+        enable_qproj: enable query weight projection. Default: ``True``.
+        enable_kproj: enable key weight projection. Default: ``True``.
+        enable_vproj: enable value weight projection. Default: ``True``.
+        enable_oproj: enable output weight projection. Default: ``True``.
+    """
+
+    head_dim = embed_dim // num_heads
+    smScaler = head_dim ** -0.5
+
+    op = builtin.MultiHeadAttn(
+        num_heads=num_heads,
+        sm_scaler=smScaler,
+        attn_prob=attn_drop,
+        out_prob=out_drop,
+        reslink=reslink,
+        training=training,
+        input_order=0,
+        seed=_get_global_rng_seed(),
+        bias=bias,
+        attn_mask=attn_mask,
+        enable_qproj=enable_qproj,
+        enable_kproj=enable_kproj,
+        enable_vproj=enable_vproj,
+        enable_oproj=enable_oproj,
+    )
+
+    out, reserveSpace = apply(op, query, key, value, io_weight_bias)
+    return out
+
+
 from .loss import *  # isort:skip
 from .metric import *  # isort:skip
 from .vision import *  # isort:skip
+from .quantized import conv_bias_activation  # isort:skip

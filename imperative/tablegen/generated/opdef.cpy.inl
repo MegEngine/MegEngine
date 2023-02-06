@@ -15043,6 +15043,367 @@ void _init_py_MeshIndexing(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MeshIndexing::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(MultiHeadAttn) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"num_heads", serialization<decltype(opdef.num_heads)>::dump(opdef.num_heads)},
+            {"sm_scaler", serialization<decltype(opdef.sm_scaler)>::dump(opdef.sm_scaler)},
+            {"input_order", serialization<decltype(opdef.input_order)>::dump(opdef.input_order)},
+            {"reslink", serialization<decltype(opdef.reslink)>::dump(opdef.reslink)},
+            {"training", serialization<decltype(opdef.training)>::dump(opdef.training)},
+            {"bias", serialization<decltype(opdef.bias)>::dump(opdef.bias)},
+            {"attn_mask", serialization<decltype(opdef.attn_mask)>::dump(opdef.attn_mask)},
+            {"enable_qproj", serialization<decltype(opdef.enable_qproj)>::dump(opdef.enable_qproj)},
+            {"enable_kproj", serialization<decltype(opdef.enable_kproj)>::dump(opdef.enable_kproj)},
+            {"enable_vproj", serialization<decltype(opdef.enable_vproj)>::dump(opdef.enable_vproj)},
+            {"enable_oproj", serialization<decltype(opdef.enable_oproj)>::dump(opdef.enable_oproj)},
+            {"seed", serialization<decltype(opdef.seed)>::dump(opdef.seed)},
+            {"attn_prob", serialization<decltype(opdef.attn_prob)>::dump(opdef.attn_prob)},
+            {"out_prob", serialization<decltype(opdef.out_prob)>::dump(opdef.out_prob)},
+            {"handle", serialization<decltype(opdef.handle)>::dump(opdef.handle)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("num_heads");
+        if (iter != state.end()) {
+            opdef.num_heads = serialization<decltype(opdef.num_heads)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("sm_scaler");
+        if (iter != state.end()) {
+            opdef.sm_scaler = serialization<decltype(opdef.sm_scaler)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("input_order");
+        if (iter != state.end()) {
+            opdef.input_order = serialization<decltype(opdef.input_order)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("reslink");
+        if (iter != state.end()) {
+            opdef.reslink = serialization<decltype(opdef.reslink)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("training");
+        if (iter != state.end()) {
+            opdef.training = serialization<decltype(opdef.training)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("bias");
+        if (iter != state.end()) {
+            opdef.bias = serialization<decltype(opdef.bias)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("attn_mask");
+        if (iter != state.end()) {
+            opdef.attn_mask = serialization<decltype(opdef.attn_mask)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("enable_qproj");
+        if (iter != state.end()) {
+            opdef.enable_qproj = serialization<decltype(opdef.enable_qproj)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("enable_kproj");
+        if (iter != state.end()) {
+            opdef.enable_kproj = serialization<decltype(opdef.enable_kproj)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("enable_vproj");
+        if (iter != state.end()) {
+            opdef.enable_vproj = serialization<decltype(opdef.enable_vproj)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("enable_oproj");
+        if (iter != state.end()) {
+            opdef.enable_oproj = serialization<decltype(opdef.enable_oproj)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("seed");
+        if (iter != state.end()) {
+            opdef.seed = serialization<decltype(opdef.seed)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("attn_prob");
+        if (iter != state.end()) {
+            opdef.attn_prob = serialization<decltype(opdef.attn_prob)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("out_prob");
+        if (iter != state.end()) {
+            opdef.out_prob = serialization<decltype(opdef.out_prob)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("handle");
+        if (iter != state.end()) {
+            opdef.handle = serialization<decltype(opdef.handle)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(MultiHeadAttn)
+
+int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"num_heads", "sm_scaler", "input_order", "reslink", "training", "bias", "attn_mask", "enable_qproj", "enable_kproj", "enable_vproj", "enable_oproj", "seed", "attn_prob", "out_prob", "handle", "scope", NULL};
+    PyObject *num_heads = NULL, *sm_scaler = NULL, *input_order = NULL, *reslink = NULL, *training = NULL, *bias = NULL, *attn_mask = NULL, *enable_qproj = NULL, *enable_kproj = NULL, *enable_vproj = NULL, *enable_oproj = NULL, *seed = NULL, *attn_prob = NULL, *out_prob = NULL, *handle = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOOOOOOO", const_cast<char**>(kwlist), &num_heads, &sm_scaler, &input_order, &reslink, &training, &bias, &attn_mask, &enable_qproj, &enable_kproj, &enable_vproj, &enable_oproj, &seed, &attn_prob, &out_prob, &handle, &scope))
+    return -1;
+
+    if (num_heads) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().num_heads =
+                    py::cast<decltype(MultiHeadAttn::num_heads)>(py::handle(num_heads));
+        } CATCH_ALL(-1)
+    }
+
+    if (sm_scaler) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().sm_scaler =
+                    py::cast<decltype(MultiHeadAttn::sm_scaler)>(py::handle(sm_scaler));
+        } CATCH_ALL(-1)
+    }
+
+    if (input_order) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().input_order =
+                    py::cast<decltype(MultiHeadAttn::input_order)>(py::handle(input_order));
+        } CATCH_ALL(-1)
+    }
+
+    if (reslink) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().reslink =
+                    py::cast<decltype(MultiHeadAttn::reslink)>(py::handle(reslink));
+        } CATCH_ALL(-1)
+    }
+
+    if (training) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().training =
+                    py::cast<decltype(MultiHeadAttn::training)>(py::handle(training));
+        } CATCH_ALL(-1)
+    }
+
+    if (bias) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().bias =
+                    py::cast<decltype(MultiHeadAttn::bias)>(py::handle(bias));
+        } CATCH_ALL(-1)
+    }
+
+    if (attn_mask) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().attn_mask =
+                    py::cast<decltype(MultiHeadAttn::attn_mask)>(py::handle(attn_mask));
+        } CATCH_ALL(-1)
+    }
+
+    if (enable_qproj) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_qproj =
+                    py::cast<decltype(MultiHeadAttn::enable_qproj)>(py::handle(enable_qproj));
+        } CATCH_ALL(-1)
+    }
+
+    if (enable_kproj) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_kproj =
+                    py::cast<decltype(MultiHeadAttn::enable_kproj)>(py::handle(enable_kproj));
+        } CATCH_ALL(-1)
+    }
+
+    if (enable_vproj) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_vproj =
+                    py::cast<decltype(MultiHeadAttn::enable_vproj)>(py::handle(enable_vproj));
+        } CATCH_ALL(-1)
+    }
+
+    if (enable_oproj) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_oproj =
+                    py::cast<decltype(MultiHeadAttn::enable_oproj)>(py::handle(enable_oproj));
+        } CATCH_ALL(-1)
+    }
+
+    if (seed) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().seed =
+                    py::cast<decltype(MultiHeadAttn::seed)>(py::handle(seed));
+        } CATCH_ALL(-1)
+    }
+
+    if (attn_prob) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().attn_prob =
+                    py::cast<decltype(MultiHeadAttn::attn_prob)>(py::handle(attn_prob));
+        } CATCH_ALL(-1)
+    }
+
+    if (out_prob) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().out_prob =
+                    py::cast<decltype(MultiHeadAttn::out_prob)>(py::handle(out_prob));
+        } CATCH_ALL(-1)
+    }
+
+    if (handle) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().handle =
+                    py::cast<decltype(MultiHeadAttn::handle)>(py::handle(handle));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(MultiHeadAttn)::py_getsetters[] = {
+    {const_cast<char*>("num_heads"), py_get_generic(MultiHeadAttn, num_heads), py_set_generic(MultiHeadAttn, num_heads), const_cast<char*>("num_heads"), NULL},
+    {const_cast<char*>("sm_scaler"), py_get_generic(MultiHeadAttn, sm_scaler), py_set_generic(MultiHeadAttn, sm_scaler), const_cast<char*>("sm_scaler"), NULL},
+    {const_cast<char*>("input_order"), py_get_generic(MultiHeadAttn, input_order), py_set_generic(MultiHeadAttn, input_order), const_cast<char*>("input_order"), NULL},
+    {const_cast<char*>("reslink"), py_get_generic(MultiHeadAttn, reslink), py_set_generic(MultiHeadAttn, reslink), const_cast<char*>("reslink"), NULL},
+    {const_cast<char*>("training"), py_get_generic(MultiHeadAttn, training), py_set_generic(MultiHeadAttn, training), const_cast<char*>("training"), NULL},
+    {const_cast<char*>("bias"), py_get_generic(MultiHeadAttn, bias), py_set_generic(MultiHeadAttn, bias), const_cast<char*>("bias"), NULL},
+    {const_cast<char*>("attn_mask"), py_get_generic(MultiHeadAttn, attn_mask), py_set_generic(MultiHeadAttn, attn_mask), const_cast<char*>("attn_mask"), NULL},
+    {const_cast<char*>("enable_qproj"), py_get_generic(MultiHeadAttn, enable_qproj), py_set_generic(MultiHeadAttn, enable_qproj), const_cast<char*>("enable_qproj"), NULL},
+    {const_cast<char*>("enable_kproj"), py_get_generic(MultiHeadAttn, enable_kproj), py_set_generic(MultiHeadAttn, enable_kproj), const_cast<char*>("enable_kproj"), NULL},
+    {const_cast<char*>("enable_vproj"), py_get_generic(MultiHeadAttn, enable_vproj), py_set_generic(MultiHeadAttn, enable_vproj), const_cast<char*>("enable_vproj"), NULL},
+    {const_cast<char*>("enable_oproj"), py_get_generic(MultiHeadAttn, enable_oproj), py_set_generic(MultiHeadAttn, enable_oproj), const_cast<char*>("enable_oproj"), NULL},
+    {const_cast<char*>("seed"), py_get_generic(MultiHeadAttn, seed), py_set_generic(MultiHeadAttn, seed), const_cast<char*>("seed"), NULL},
+    {const_cast<char*>("attn_prob"), py_get_generic(MultiHeadAttn, attn_prob), py_set_generic(MultiHeadAttn, attn_prob), const_cast<char*>("attn_prob"), NULL},
+    {const_cast<char*>("out_prob"), py_get_generic(MultiHeadAttn, out_prob), py_set_generic(MultiHeadAttn, out_prob), const_cast<char*>("out_prob"), NULL},
+    {const_cast<char*>("handle"), py_get_generic(MultiHeadAttn, handle), py_set_generic(MultiHeadAttn, handle), const_cast<char*>("handle"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(MultiHeadAttn)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(MultiHeadAttn)::getstate, METH_NOARGS, "MultiHeadAttn getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(MultiHeadAttn)::setstate, METH_VARARGS, "MultiHeadAttn setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(MultiHeadAttn)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MultiHeadAttn)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MultiHeadAttn)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MultiHeadAttn)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, num_heads: int = ..., sm_scaler: float = ..., input_order: int = ..., reslink: bool = ..., training: bool = ..., bias: bool = ..., attn_mask: bool = ..., enable_qproj: bool = ..., enable_kproj: bool = ..., enable_vproj: bool = ..., enable_oproj: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
+};
+
+void _init_py_MultiHeadAttn(py::module m) {
+    using py_op = PyOp(MultiHeadAttn);
+    auto& py_type = PyOpType(MultiHeadAttn);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.MultiHeadAttn";
+    py_type.tp_basicsize = sizeof(PyOp(MultiHeadAttn));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "MultiHeadAttn";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MultiHeadAttn), &PyOp(MultiHeadAttn)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("MultiHeadAttn", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MultiHeadAttn::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(NMSKeep) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -22608,6 +22969,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_MatrixMul(m); \
     _init_py_MeshGrid(m); \
     _init_py_MeshIndexing(m); \
+    _init_py_MultiHeadAttn(m); \
     _init_py_NMSKeep(m); \
     _init_py_NvOf(m); \
     _init_py_Padding(m); \

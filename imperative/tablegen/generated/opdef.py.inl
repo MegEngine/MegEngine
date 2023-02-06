@@ -1477,6 +1477,27 @@ MeshIndexingInst
     .def(py::init<>())
     .def_readwrite("items", &MeshIndexing::items);
 
+py::class_<MultiHeadAttn, std::shared_ptr<MultiHeadAttn>, OpDef> MultiHeadAttnInst(m, "MultiHeadAttn");
+
+MultiHeadAttnInst
+    .def(py::init<uint32_t, float, uint32_t, bool, bool, bool, bool, bool, bool, bool, bool, uint64_t, float, float, size_t, std::string>(), py::arg("num_heads") = 1, py::arg("sm_scaler") = 1.f, py::arg("input_order") = 0, py::arg("reslink") = false, py::arg("training") = true, py::arg("bias") = false, py::arg("attn_mask") = false, py::arg("enable_qproj") = true, py::arg("enable_kproj") = true, py::arg("enable_vproj") = true, py::arg("enable_oproj") = true, py::arg("seed") = 0, py::arg("attn_prob") = 0.f, py::arg("out_prob") = 0.f, py::arg("handle"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("num_heads", &MultiHeadAttn::num_heads)
+    .def_readwrite("sm_scaler", &MultiHeadAttn::sm_scaler)
+    .def_readwrite("input_order", &MultiHeadAttn::input_order)
+    .def_readwrite("reslink", &MultiHeadAttn::reslink)
+    .def_readwrite("training", &MultiHeadAttn::training)
+    .def_readwrite("bias", &MultiHeadAttn::bias)
+    .def_readwrite("attn_mask", &MultiHeadAttn::attn_mask)
+    .def_readwrite("enable_qproj", &MultiHeadAttn::enable_qproj)
+    .def_readwrite("enable_kproj", &MultiHeadAttn::enable_kproj)
+    .def_readwrite("enable_vproj", &MultiHeadAttn::enable_vproj)
+    .def_readwrite("enable_oproj", &MultiHeadAttn::enable_oproj)
+    .def_readwrite("seed", &MultiHeadAttn::seed)
+    .def_readwrite("attn_prob", &MultiHeadAttn::attn_prob)
+    .def_readwrite("out_prob", &MultiHeadAttn::out_prob)
+    .def_readwrite("handle", &MultiHeadAttn::handle);
+
 py::class_<NMSKeep, std::shared_ptr<NMSKeep>, OpDef> NMSKeepInst(m, "NMSKeep");
 
 NMSKeepInst

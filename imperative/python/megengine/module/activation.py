@@ -3,6 +3,7 @@ import numpy as np
 
 from ..functional import gelu, leaky_relu, prelu, relu, sigmoid, silu, softmax
 from ..tensor import Parameter
+from .init import ones_, zeros_
 from .module import Module
 
 

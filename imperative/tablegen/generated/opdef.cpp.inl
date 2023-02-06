@@ -5186,6 +5186,96 @@ OP_TRAIT_REG(MeshIndexing, MeshIndexing)
     .props(MeshIndexing_props_impl)
     .make_name(MeshIndexing_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultiHeadAttn);
+
+namespace {
+size_t MultiHeadAttn_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MultiHeadAttn>();
+    static_cast<void>(op_);
+
+    return mgb::hash_pair_combine(
+      mgb::hash(op_.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash(op_.handle),
+        mgb::hash_pair_combine(
+          mgb::hash(op_.num_heads),
+          mgb::hash_pair_combine(
+            mgb::hash(op_.sm_scaler),
+            mgb::hash_pair_combine(
+              mgb::hash(op_.input_order),
+              mgb::hash_pair_combine(
+                mgb::hash(op_.reslink),
+                mgb::hash_pair_combine(
+                  mgb::hash(op_.training),
+                  mgb::hash_pair_combine(
+                    mgb::hash(op_.bias),
+                    mgb::hash_pair_combine(
+                      mgb::hash(op_.attn_mask),
+                      mgb::hash_pair_combine(
+                        mgb::hash(op_.enable_qproj),
+                        mgb::hash_pair_combine(
+                          mgb::hash(op_.enable_kproj),
+                          mgb::hash_pair_combine(
+                            mgb::hash(op_.enable_vproj),
+                            mgb::hash_pair_combine(
+                              mgb::hash(op_.enable_oproj),
+                              mgb::hash_pair_combine(
+                                mgb::hash(op_.attn_prob),
+                                mgb::hash(op_.out_prob)
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      );
+  }
+bool MultiHeadAttn_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<MultiHeadAttn>(),
+         &&b_ = rhs_.cast_final_safe<MultiHeadAttn>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+return a_.handle == b_.handle && a_.num_heads == b_.num_heads && a_.sm_scaler == b_.sm_scaler && a_.input_order == b_.input_order && a_.reslink == b_.reslink && a_.training == b_.training && a_.bias == b_.bias && a_.attn_mask == b_.attn_mask && a_.enable_qproj == b_.enable_qproj && a_.enable_kproj == b_.enable_kproj && a_.enable_vproj == b_.enable_vproj && a_.enable_oproj == b_.enable_oproj && a_.attn_prob == b_.attn_prob && a_.out_prob == b_.out_prob;}
+std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MultiHeadAttn>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("num_heads", std::to_string(op_.num_heads));
+    props_.emplace_back("sm_scaler", std::to_string(op_.sm_scaler));
+    props_.emplace_back("input_order", std::to_string(op_.input_order));
+    props_.emplace_back("reslink", std::to_string(op_.reslink));
+    props_.emplace_back("training", std::to_string(op_.training));
+    props_.emplace_back("bias", std::to_string(op_.bias));
+    props_.emplace_back("attn_mask", std::to_string(op_.attn_mask));
+    props_.emplace_back("enable_qproj", std::to_string(op_.enable_qproj));
+    props_.emplace_back("enable_kproj", std::to_string(op_.enable_kproj));
+    props_.emplace_back("enable_vproj", std::to_string(op_.enable_vproj));
+    props_.emplace_back("enable_oproj", std::to_string(op_.enable_oproj));
+    props_.emplace_back("seed", std::to_string(op_.seed));
+    props_.emplace_back("attn_prob", std::to_string(op_.attn_prob));
+    props_.emplace_back("out_prob", std::to_string(op_.out_prob));
+    props_.emplace_back("handle", std::to_string(op_.handle));
+    return props_;
+}
+std::string MultiHeadAttn_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MultiHeadAttn>();
+    static_cast<void>(op_);
+    return "MultiHeadAttn";
+}
+} // anonymous namespace
+OP_TRAIT_REG(MultiHeadAttn, MultiHeadAttn)
+    .hash(MultiHeadAttn_hash_impl)
+    .is_same_st(MultiHeadAttn_is_same_st_impl)
+    .props(MultiHeadAttn_props_impl)
+    .make_name(MultiHeadAttn_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(NMSKeep);
 
 namespace {

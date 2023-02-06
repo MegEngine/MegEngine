@@ -285,6 +285,25 @@ struct OpMeth<Dropout> {
     }
 };
 
+template <>
+struct OpMeth<MultiHeadAttn> {
+    using DnnOp = megdnn::MultiHeadAttn;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::MultiHeadAttn;
+    static Param make_param(const MultiHeadAttn& opdef) {
+        auto handle_seed = RNGDnnOpManager::get_seed(opdef.handle);
+        mgb_assert(
+                handle_seed == opdef.seed,
+                "inconsistent multiheadattn seed: dropout op: %lu handle: %lu",
+                handle_seed, opdef.seed);
+        return {opdef.num_heads,    opdef.sm_scaler,    opdef.input_order,
+                opdef.reslink,      opdef.training,     opdef.bias,
+                opdef.attn_mask,    opdef.enable_qproj, opdef.enable_kproj,
+                opdef.enable_vproj, opdef.enable_oproj, handle_seed,
+                opdef.attn_prob,    opdef.out_prob};
+    }
+};
+
 template <bool>
 struct _InferLayout;
 
@@ -401,6 +420,14 @@ _INST_RNG_MAKER(2)
 #undef _FOR_EACH_OUT
 #undef _FOR_EACH_IN
 
+#define _FOR_EACH_IN(subfix) \
+    inputs[0] subfix, inputs[1] subfix, inputs[2] subfix, inputs[3] subfix,
+#define _FOR_EACH_OUT(subfix) outputs[0] subfix, outputs[1] subfix
+_INST_RNG_INVOLKER(4, 2)
+_INST_RNG_MAKER(4)
+#undef _FOR_EACH_OUT
+#undef _FOR_EACH_IN
+
 #undef _INST_RNG_INVOLKER
 #undef _INST_RNG_MAKER
 
@@ -506,6 +533,39 @@ SmallVector<LogicalTensorDesc> infer_output_attrs<Dropout>(
     return dests;
 }
 
+template <>
+SmallVector<LogicalTensorDesc> infer_output_attrs<MultiHeadAttn>(
+        const OpDef& op, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<LogicalTensorDesc> dests(2);
+    auto&& cn = inputs[0]->comp_node();
+
+    dests[0].comp_node = cn;
+    dests[0].layout = TensorLayout(inputs[0]->layout());
+    dests[0].layout.dtype = inputs[0]->layout().dtype;
+
+    auto get_reservespace_in_bytes = [&]() -> size_t {
+        // retrieve dnn_op from glob cache
+        auto&& rng = op.cast_final_safe<MultiHeadAttn>();
+        auto handle = rng.handle;
+        if (!handle) {
+            handle = RNGDnnOpManager::get_default_handle(cn);
+        }
+        auto dnn_op_thread_safe =
+                RNGDnnOpManager::inst().get_dnn_op<megdnn::MultiHeadAttn>(
+                        handle, reinterpret_cast<size_t>(op.dyn_typeinfo()), cn);
+        auto dnn_op = std::get<1>(dnn_op_thread_safe);
+        dnn_op->param() = OpMeth<MultiHeadAttn>::make_param(rng);
+
+        return dnn_op->get_reservespace_in_bytes(
+                inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                inputs[3]->layout(), {}, {});
+    };
+    dests[1].comp_node = cn;
+    dests[1].layout =
+            TensorLayout(TensorShape({get_reservespace_in_bytes()}), dtype::Byte());
+    return dests;
+}
+
 template <typename Op>
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
@@ -600,6 +660,44 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<Dro
     return {dests, success};
 }
 
+template <>
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<
+        MultiHeadAttn>(const OpDef& op, const SmallVector<LogicalTensorDesc>& inputs) {
+    bool success = inputs[0].layout.ndim != 0;
+
+    SmallVector<LogicalTensorDesc> dests(2);
+    auto cn = inputs[0].comp_node;
+    dests[0].comp_node = cn;
+    dests[0].layout = TensorLayout(inputs[0].layout);
+    dests[0].layout.dtype = inputs[0].layout.dtype;
+
+    auto get_reservespace_in_bytes = [&]() -> size_t {
+        auto&& rng = op.cast_final_safe<MultiHeadAttn>();
+        auto handle = rng.handle;
+        if (!handle) {
+            handle = RNGDnnOpManager::get_default_handle(cn);
+        }
+        auto dnn_op_thread_safe =
+                RNGDnnOpManager::inst().get_dnn_op<megdnn::MultiHeadAttn>(
+                        handle, reinterpret_cast<size_t>(op.dyn_typeinfo()), cn);
+        auto dnn_op = std::get<1>(dnn_op_thread_safe);
+        dnn_op->param() = OpMeth<MultiHeadAttn>::make_param(rng);
+
+        return dnn_op->get_reservespace_in_bytes(
+                inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
+                {}, {});
+    };
+    dests[1].comp_node = cn;
+    if (success) {
+        dests[1].layout =
+                TensorLayout(TensorShape({get_reservespace_in_bytes()}), dtype::Byte());
+    } else {
+        dests[1].layout = TensorLayout(dtype::Byte());
+    }
+
+    return {dests, success};
+}
+
 template <typename Op>
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
@@ -647,6 +745,7 @@ REG_RNG_OP(PoissonRNG, SymbolVar)
 REG_RNG_OP(BetaRNG, SymbolVar)
 REG_RNG_OP(ShuffleRNG, SymbolVarArray)
 REG_RNG_OP(Dropout, SymbolVarArray)
+REG_RNG_OP(MultiHeadAttn, SymbolVarArray)
 #undef REG_RNG_OP
 
 }  // namespace mgb::imperative::rng

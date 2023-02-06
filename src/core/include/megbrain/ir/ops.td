@@ -559,4 +559,57 @@ def RegionRestrictedConvolution: MgbHashableOp<"RegionRestrictedConvolution", [C
 def RegionRestrictedConvolutionBackwardData: MgbHashableOp<"RegionRestrictedConvolutionBackwardData", [ConvolutionParam]>;
 def MaskedFill: MgbHashableOp<"MaskedFill", [FillParam]>;
 
+def MultiHeadAttn: MgbHashableOp<"MultiHeadAttn", [MultiHeadAttnParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.handle),
+        mgb::hash_pair_combine(
+          mgb::hash($_self.num_heads),
+          mgb::hash_pair_combine(
+            mgb::hash($_self.sm_scaler),
+            mgb::hash_pair_combine(
+              mgb::hash($_self.input_order),
+              mgb::hash_pair_combine(
+                mgb::hash($_self.reslink),
+                mgb::hash_pair_combine(
+                  mgb::hash($_self.training),
+                  mgb::hash_pair_combine(
+                    mgb::hash($_self.bias),
+                    mgb::hash_pair_combine(
+                      mgb::hash($_self.attn_mask),
+                      mgb::hash_pair_combine(
+                        mgb::hash($_self.enable_qproj),
+                        mgb::hash_pair_combine(
+                          mgb::hash($_self.enable_kproj),
+                          mgb::hash_pair_combine(
+                            mgb::hash($_self.enable_vproj),
+                            mgb::hash_pair_combine(
+                              mgb::hash($_self.enable_oproj),
+                              mgb::hash_pair_combine(
+                                mgb::hash($_self.attn_prob),
+                                mgb::hash($_self.out_prob)
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.num_heads == $1.num_heads && $0.sm_scaler == $1.sm_scaler && $0.input_order == $1.input_order && $0.reslink == $1.reslink && $0.training == $1.training && $0.bias == $1.bias && $0.attn_mask == $1.attn_mask && $0.enable_qproj == $1.enable_qproj && $0.enable_kproj == $1.enable_kproj && $0.enable_vproj == $1.enable_vproj && $0.enable_oproj == $1.enable_oproj && $0.attn_prob == $1.attn_prob && $0.out_prob == $1.out_prob;}];
+
+}
+
 #endif // MGB_OPS

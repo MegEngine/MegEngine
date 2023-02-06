@@ -54,6 +54,7 @@
 #include "src/naive/matrix_mul/opr_impl.h"
 #include "src/naive/max_tensor_diff/opr_impl.h"
 #include "src/naive/mesh_indexing/opr_impl.h"
+#include "src/naive/multi_head_attn/opr_impl.h"
 #include "src/naive/norm/opr_impl.h"
 #include "src/naive/padding/opr_impl.h"
 #include "src/naive/param_pack/opr_impl.h"

@@ -2,11 +2,17 @@
 
 #include <unordered_map>
 #include "megdnn/basic_types.h"
+#include "megdnn/opr_param_defs.h"
 #include "megdnn/oprs/nn.h"
 #include "src/cuda/cudnn_with_check.h"
 
 namespace megdnn {
 namespace cuda {
+
+cudnnDataType_t to_cudnn_dtype(
+        DType type, const param::Convolution::Format format = {});
+
+cudnnTensorFormat_t to_cudnn_format(const param::Convolution::Format format);
 
 /*!
  * \brief get compute_type of convolution operations
@@ -84,6 +90,24 @@ public:
     ~Conv3DDesc();
     cudnnConvolutionDescriptor_t desc;
 };
+
+#if CUDNN_VERSION >= 8004
+class SeqTensorDesc {
+public:
+    int dim[CUDNN_SEQDATA_DIM_COUNT];
+    cudnnSeqDataAxis_t dimAxes[CUDNN_SEQDATA_DIM_COUNT];
+    cudnnSeqDataDescriptor_t desc;
+
+    ~SeqTensorDesc();
+    SeqTensorDesc();
+    SeqTensorDesc(
+            const TensorLayout& layout, const size_t batchSize, const size_t seqLen,
+            const size_t elemSize, const size_t dataLayout, int* seqArray);
+    void set(
+            const TensorLayout& layout, const size_t batchSize, const size_t seqLen,
+            const size_t elemSize, const size_t dataLayout, int* seqArray);
+};
+#endif
 
 class CudnnAlgoPack {
 public:

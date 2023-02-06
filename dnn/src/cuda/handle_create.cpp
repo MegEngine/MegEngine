@@ -50,6 +50,7 @@
 #include "src/cuda/matrix_mul/opr_impl.h"
 #include "src/cuda/max_tensor_diff/opr_impl.h"
 #include "src/cuda/mesh_indexing/opr_impl.h"
+#include "src/cuda/multi_head_attn/opr_impl.h"
 #include "src/cuda/norm/opr_impl.h"
 #include "src/cuda/padding/opr_impl.h"
 #include "src/cuda/param_pack/opr_impl.h"
@@ -230,6 +231,8 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(NormForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(RegionRestrictedConvolutionBackwardFilter);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnBackward);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {
