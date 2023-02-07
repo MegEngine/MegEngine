@@ -16,12 +16,14 @@ ModelType ModelBase::get_model_type(std::string model_path) {
 
     // get model type
     std::string tag(buf);
+    std::string tagv2(&buf[8]);
     ModelType type;
     if (tag.substr(0, 7) == std::string("mgb0001") ||
         tag.substr(0, 8) == std::string("mgb0000a") ||
         tag.substr(0, 4) == std::string("MGBS") ||
         tag.substr(0, 4) == std::string("MGBC") ||
-        tag.substr(0, 8) == std::string("mgbtest0")) {
+        tag.substr(0, 8) == std::string("mgbtest0") ||
+        tagv2.substr(0, 4) == std::string("mgv2")) {
         type = ModelType::MEGDL_MODEL;
 
     } else {
