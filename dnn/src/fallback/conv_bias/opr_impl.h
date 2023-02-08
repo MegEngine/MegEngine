@@ -228,6 +228,7 @@ public:
             GI_COMMON_WINOGRAD_F73_4X4_NCHW44_F32,
             GI_COMMON_WINOGRAD_F23_8X8_NCHW88_F16,
             GI_COMMON_WINOGRAD_F43_8X8_NCHW88_F16,
+            GI_COMMON_WINOGRAD_F63_8X8_NCHW88_F16,
             GI_COMMON_DIRECT_FP32,
             GI_COMMON_DIRECT_STRD1_FP32,
             GI_COMMON_DIRECT_STRD2_FP32,
@@ -397,6 +398,7 @@ private:
 
     class AlgoFP16WinogradF23_8x8_NCHW88;
     class AlgoFP16WinogradF43_8x8_NCHW88;
+    class AlgoFP16WinogradF63_8x8_NCHW88;
 
     class AlgoF32Direct;
     class AlgoF32DirectStride1;

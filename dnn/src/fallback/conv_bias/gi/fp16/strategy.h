@@ -17,6 +17,9 @@ MEGDNN_REG_WINOGRAD_STRATEGY(
 MEGDNN_REG_WINOGRAD_STRATEGY(
         dt_float16, dt_float16, dt_float16, dt_float16, 2, 3, 8, 8,
         winograd_F23_mk8_f16_nchw88)
+MEGDNN_REG_WINOGRAD_STRATEGY(
+        dt_float16, dt_float16, dt_float16, dt_float16, 6, 3, 8, 8,
+        winograd_F63_mk8_f16_nchw88)
 }  // namespace winograd
 }  // namespace fallback
 }  // namespace megdnn

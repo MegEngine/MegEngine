@@ -7,4 +7,5 @@
 #define MULSF16 GiMultiplyScalerFloat16
 
 #endif
+#define CONCAT(a, idx) a##idx
 // vim: syntax=cpp.doxygen
