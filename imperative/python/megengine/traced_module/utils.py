@@ -56,6 +56,9 @@ def _convert_kwargs_to_args(
     argspecs: Union[Callable, FullArgSpec], args, kwargs, is_bounded=False
 ):
     # is_bounded = True when func is a method and provided args don't include 'self'
+    if isinstance(argspecs, Callable) and hasattr(argspecs, "__wrapped__"):
+        argspecs = inspect.unwrap(argspecs)
+
     arg_specs = (
         inspect.getfullargspec(argspecs) if isinstance(argspecs, Callable) else argspecs
     )

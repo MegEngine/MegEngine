@@ -328,6 +328,12 @@ class LeafDef(TreeDef):
         assert isinstance(leaves[0], self.type), self.type
         return leaves[0]
 
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
+        if hasattr(self, "const_val") and isinstance(self.const_val, np.dtype):
+            self.type = _leaf_type(self.const_val)
+
     def __ne__(self, other) -> bool:
         return not self.__eq__(other)
 

@@ -229,7 +229,11 @@ def square_func_loader(expr):
 
 @register_functional_loader(("megengine.functional.math", "topk"))
 def topk_loader(expr):
-    if not hasattr(expr, "version"):  # for mge 1.6
+    import pkg_resources as pkg
+
+    if not hasattr(expr, "version") or pkg.parse_version(
+        expr.version
+    ) <= pkg.parse_version("1.12.0"):
 
         def origin_topk_signature(
             inp, k, descending=False, kth_only=False, no_sort=False
@@ -260,12 +264,30 @@ def arange_func_loader(expr):
     if len(args) == 5:
         device = args[-1]
         dtype = args[-2]
-        args = args[: len(args) - 2]
+        args = args[:-2]
 
         kwargs["dtype"] = dtype
         kwargs["device"] = device
 
     expr.set_args_kwargs(*args, **kwargs)
+
+
+@register_functional_loader(("megengine.functional.tensor", "linspace"))
+def linespace_loader(expr):
+    args, kwargs = expr.args, expr.kwargs
+    if not hasattr(expr, "version"):
+
+        def orig_linspace_signature(start, stop, num, dtype="float32", device=None):
+            pass
+
+        args, kwargs = _convert_kwargs_to_args(
+            orig_linspace_signature, expr.args, expr.kwargs
+        )
+        expr.set_args_kwargs(*args, **kwargs)
+    if len(args) == 5:
+        new_args = args[0:-2]
+        new_kwargs = {"dtype": args[-2], "device": args[-1]}
+        expr.set_args_kwargs(*new_args, **new_kwargs)
 
 
 @register_functional_loader(("megengine.functional.tensor", "full"))
@@ -290,3 +312,80 @@ def full_func_loader(expr):
         kwargs["device"] = device
 
     expr.set_args_kwargs(*args, **kwargs)
+
+
+@register_functional_loader(("megengine.functional.nn", "conv_transpose2d"))
+def deconv_loader(expr):
+    args, kwargs = expr.args, expr.kwargs
+    if not hasattr(expr, "version"):
+
+        def orig_conv_transpose2d_signature(
+            inp,
+            weight,
+            bias=None,
+            stride=1,
+            padding=0,
+            dilation=1,
+            groups=1,
+            conv_mode="cross_correlation",
+            compute_mode="default",
+        ):
+            pass
+
+        args, kwargs = _convert_kwargs_to_args(
+            orig_conv_transpose2d_signature, expr.args, expr.kwargs
+        )
+        expr.set_args_kwargs(*args, **kwargs)
+    if len(args) == 9:
+        args = list(args)
+        args.insert(4, 0)  # output padding = 0
+        expr.set_args_kwargs(*args, **kwargs)
+
+
+@register_functional_loader(("megengine.functional.quantized", "conv_transpose2d"))
+def deconv_loader(expr):
+    args, kwargs = expr.args, expr.kwargs
+    if not hasattr(expr, "version"):
+
+        def orig_conv_transpose2d_signature(
+            inp,
+            weight,
+            bias=None,
+            dtype=None,
+            stride=1,
+            padding=0,
+            dilation=1,
+            groups=1,
+            conv_mode="cross_correlation",
+            compute_mode="default",
+        ):
+            pass
+
+        args, kwargs = _convert_kwargs_to_args(
+            orig_conv_transpose2d_signature, expr.args, expr.kwargs
+        )
+        expr.set_args_kwargs(*args, **kwargs)
+    if len(args) == 10:
+        args = list(args)
+        args.insert(5, 0)  # output padding = 0
+        expr.set_args_kwargs(*args, **kwargs)
+
+
+@register_functional_loader(("megengine.functional.nn", "conv_transpose3d"))
+def deconv3d_loader(expr):
+    args, kwargs = expr.args, expr.kwargs
+    if not hasattr(expr, "version"):
+
+        def origin_conv_transpose3d_signature(
+            inp, weight, bias=None, stride=1, padding=0, dilation=1, groups=1,
+        ):
+            pass
+
+        args, kwargs = _convert_kwargs_to_args(
+            origin_conv_transpose3d_signature, expr.args, expr.kwargs
+        )
+        expr.set_args_kwargs(*args, **kwargs)
+    if len(args) == 7:
+        args = list(args)
+        args.insert(4, 0)
+        expr.set_args_kwargs(*args, **kwargs)
