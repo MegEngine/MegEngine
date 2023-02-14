@@ -559,12 +559,21 @@ MGB_IMPL_OPR_GRAD(Elemwise) {
         }
         case Mode::RELU6:
             RET(EL2(RELU6_GRAD, i0, og));
-        case Mode::SOFTPLUS:
-            RET(EL2(SOFTPLUS_GRAD, i0, og));
+        case Mode::SOFTPLUS: {
+            auto abse = EL1(EXP, EL1(NEGATE, EL1(ABS, i0)));
+            auto logg = og * abse / (1 + abse);
+            auto absg = EL2(ABS_GRAD, i0, EL1(NEGATE, logg));
+            RET(EL2(ADD, absg, EL2(SWITCH_GT0, EL1(RELU, i0), og)));
+        }
         case Mode::HSIGMOID:
             RET(EL2(HSIGMOID_GRAD, i0, og));
-        case Mode::LOGSIGMOID:
-            RET(EL2(SOFTPLUS_GRAD, EL1(NEGATE, i0), og));
+        case Mode::LOGSIGMOID: {
+            og = EL1(NEGATE, og);
+            auto abse = EL1(EXP, EL1(NEGATE, EL1(ABS, i0)));
+            auto logg = og * abse / (1 + abse);
+            auto absg = EL2(ABS_GRAD, i0, EL1(NEGATE, logg));
+            RET(EL2(SUB, absg, EL2(SWITCH_GT0, EL1(RELU, EL1(NEGATE, i0)), og)));
+        }
         case Mode::SQRT:
             RET(og / EL1(SQRT, i0) / 2);
         case Mode::SQUARE:
