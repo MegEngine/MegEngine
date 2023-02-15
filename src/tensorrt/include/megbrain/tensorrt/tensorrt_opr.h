@@ -36,8 +36,9 @@ enum class Empty : int32_t {};
 #define TENSOR_RT_MANAGE_ALL_WORKSPACE 0
 #endif
 
-#if NV_TENSOR_RT_VERSION >= 8000
-#error "if trt8 fix https://github.com/NVIDIA/TensorRT/issues/2290, try TENSOR_RT_MANAGE_ALL_WORKSPACE=0"
+//! issue detail: https://github.com/NVIDIA/TensorRT/issues/2290
+#if NV_TENSOR_RT_VERSION >= 8400
+#define TENSOR_RT_MANAGE_ALL_WORKSPACE 0
 #endif
 
 namespace mgb {

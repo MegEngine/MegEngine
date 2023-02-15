@@ -1,5 +1,5 @@
 #!/bin/bash -e
-set -x
+set -ex
 
 CWD=$(dirname $0)
 BASEDIR=$(readlink -f ${CWD}/../../..)
@@ -12,7 +12,7 @@ CUDA_LIB_DIR="/usr/local/cuda/lib64/"
 TensorRT_LIB_DIR="/opt/tensorrt/lib/"
 
 SDK_NAME="unknown"
-x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114"
+x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118"
 aarch64_support_version="cu102_JetsonNano cu111 cpu"
 if [[ -z ${IN_CI} ]]
 then
@@ -225,6 +225,44 @@ elif [ $SDK_NAME == "cu114" ];then
         -gencode arch=compute_86,code=sm_86 \
         -gencode arch=compute_86,code=compute_86\" "
 
+elif [ $SDK_NAME == "cu118" ];then
+    BUILD_GCC8="ON"
+    REQUIR_CUDA_VERSION="11080"
+    REQUIR_CUDNN_VERSION="8.6.0"
+    REQUIR_TENSORRT_VERSION="8.5.3.1"
+    REQUIR_CUBLAS_VERSION="11.11.3.6"
+
+    # override the default cuda/cudnn/trt lib dir
+    CUDNN_LIB_DIR="/opt/cudnn/lib/"
+    CUDA_LIB_DIR="/usr/local/cuda/targets/x86_64-linux/lib/"
+    TensorRT_LIB_DIR="/opt/tensorrt/lib/"
+
+    CUDA_COPY_LIB_LIST="\
+        ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
+        ${CUDA_LIB_DIR}/libcublasLt.so.11:\
+        ${CUDA_LIB_DIR}/libcublas.so.11:\
+        ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
+        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
+        ${TensorRT_LIB_DIR}/libnvinfer_plugin.so.8:\
+        ${TensorRT_LIB_DIR}/libnvonnxparser.so.8\
+        ${TensorRT_LIB_DIR}/libnvinfer_builder_resource.so.8.5.3:\
+        ${TensorRT_LIB_DIR}/libnvparsers.so.8:\
+        ${TensorRT_LIB_DIR}/libnvinfer.so.8"
+
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
+        -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
+        -gencode arch=compute_70,code=sm_70 \
+        -gencode arch=compute_75,code=sm_75 \
+        -gencode arch=compute_80,code=sm_80 \
+        -gencode arch=compute_86,code=sm_86 \
+        -gencode arch=compute_89,code=sm_89 \
+        -gencode arch=compute_89,code=compute_89\" "
+
 
 elif [ $SDK_NAME == "cpu" ];then
     echo "use $SDK_NAME without cuda support"
@@ -308,7 +346,7 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     CUBLAS_VERSION_CONTEXT=$(head -150 ${CUBLAS_VERSION_PATH})
     CUDA_VERSION_CONTEXT=$(head -300 ${CUDA_VERSION_PATH})
     CUDNN_VERSION_CONTEXT=$(head -62 ${CUDNN_VERSION_PATH})
-    TENSORRT_VERSION_CONTEXT=$(tail -12 ${TENSORRT_VERSION_PATH})
+    TENSORRT_VERSION_CONTEXT=$(tail -20 ${TENSORRT_VERSION_PATH})
 
     if [ "$REQUIR_CUDA_VERSION" -ge "11000" ];then
         CUDA_API_VERSION=$(echo $CUDA_VERSION_CONTEXT | grep -Eo "define CUDA_VERSION * +([0-9]+)")

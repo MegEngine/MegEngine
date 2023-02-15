@@ -3,6 +3,7 @@
 #else
 #define MEGDNN_DIAGNOSTIC_PROLOGUE_INCLUDED
 #endif
+#include <cuda.h>
 
 //! see
 //! https://stackoverflow.com/questions/49836419/how-to-hide-nvccs-function-was-declared-but-never-referenced-warnings

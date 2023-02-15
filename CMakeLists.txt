@@ -767,6 +767,16 @@ if(MGE_WITH_CUDA)
         set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_61,code=sm_61")
         set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_70,code=sm_70")
         set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_75,code=sm_75")
+      elseif(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER "11.8.0"
+             OR ${CMAKE_CUDA_COMPILER_VERSION} VERSION_EQUAL "11.8.0")
+        set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_61,code=sm_61")
+        set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_70,code=sm_70")
+        set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_75,code=sm_75")
+        set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_80,code=sm_80")
+        set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_86,code=sm_86")
+        set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_89,code=sm_89")
+        set(MGE_CUDA_GENCODE
+            "${MGE_CUDA_GENCODE} -gencode arch=compute_89,code=compute_89")
       elseif(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER "11.1.0"
              OR ${CMAKE_CUDA_COMPILER_VERSION} VERSION_EQUAL "11.1.0")
         set(MGE_CUDA_GENCODE "${MGE_CUDA_GENCODE} -gencode arch=compute_61,code=sm_61")
