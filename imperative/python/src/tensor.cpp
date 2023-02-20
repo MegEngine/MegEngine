@@ -101,7 +101,10 @@ PyObject* py_apply(
             HostTensorND ht(target_cn);
             ht = npy::np2tensor(args[i], npy::Meth::copy_into(&ht), target_dtype);
             record_py_backtrace();
-            if (PyArray_Check(args[i]) || PyList_Check(args[i])) {  // non scaler
+            //! operand in elemwise can't be None
+            if (args[i] == Py_None) {
+                throw py::type_error("the operand is None and is not supported.");
+            } else if (PyArray_Check(args[i]) || PyList_Check(args[i])) {  // non scaler
                 // py_tuple is not allowed here because of tracing
                 return imperative::apply(
                         CreateTensor(CreateTensor::Const, target_cn, ht.layout()),

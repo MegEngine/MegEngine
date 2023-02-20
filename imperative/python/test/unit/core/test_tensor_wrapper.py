@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import copy
+import unittest
 
 import numpy as np
 import pytest
@@ -235,3 +236,11 @@ def test_tensor_construct_tensor():
         assert Tensor(x.to("xpu0:2"), device="xpu0:1").device == "xpu0:1"
     assert Tensor(x.to("xpu0:2")).device == x.to("xpu0:2").device
     _full_sync()
+
+
+class TestElemwiseNone(unittest.TestCase):
+    def test_elemementwise_and_with_none(self):
+        with self.assertRaises(TypeError) as context:
+            a = Tensor(1.0)
+            b = a + None
+        assert str(context.exception) == "the operand is None and is not supported."
