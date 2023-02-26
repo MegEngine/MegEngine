@@ -397,7 +397,7 @@ def origin_softplus(inp: mge.tensor) -> mge.tensor:
 def test_subgraph_elemwise_mode():
     def _test_allclose(func, ori_func):
         targets = np.array(2)
-        inp = np.random.randn(2, 256, 10, 16).astype("float32")
+        inp = np.random.uniform(size=(2, 16, 10, 16)).astype(np.float32)
         ori_inp = mge.tensor(inp)
         mge_inp = mge.tensor(inp)
 
