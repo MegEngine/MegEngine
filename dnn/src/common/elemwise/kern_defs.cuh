@@ -85,6 +85,15 @@ __device__ __host__ inline float gelu_grad(float x, float dy) {
     return dy * (normcdf_v + x * phi);
 }
 
+//! grad of softplus
+__device__ __host__ inline float softplus_grad(float x, float dy) {
+    float logg = -dy * expf(-fabs(x)) / (1.f + expf(-fabs(x)));
+    float grad0 = x > 0.f ? logg : -logg;
+    float relux = x < 0.f ? 0.f : x;
+    float grad1 = relux > 0.f ? dy : 0.f;
+    return grad0 + grad1;
+}
+
 __device__ __host__ inline bool feq(float a, float b) {
     return fabsf(a - b) < 1e-6;
 }
@@ -287,7 +296,7 @@ DEF_KERN_FLOAT(GELU_GRAD, gelu_grad(x, y));
 DEF_KERN_FLOAT(ASINH_GRAD, y / sqrt(x * x + 1.f));
 DEF_KERN_FLOAT(ACOSH_GRAD, y / sqrt(x * x - 1.f));
 DEF_KERN_FLOAT(ATANH_GRAD, y / (1.f - x * x));
-DEF_KERN_FLOAT(SOFTPLUS_GRAD, y* expf(x) / (1.f + expf(x)));
+DEF_KERN_FLOAT(SOFTPLUS_GRAD, softplus_grad(x, y));
 DEF_KERN_FLOAT(RELU6_GRAD, x <= ctype(0) ? ctype(0) : (x >= ctype(6) ? ctype(0) : y));
 DEF_KERN_FLOAT(
         HSIGMOID_GRAD,

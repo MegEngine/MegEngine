@@ -77,6 +77,14 @@ float do_fuse_add_h_swish(float x, float y) {
     return z * fmaxf(fminf(z + 3.f, 6.f), 0.f) / 6.f;
 }
 
+float do_softplus_grad(float x, float y) {
+    float logg = -y * expf(-fabs(x)) / (1.f + expf(-fabs(x)));
+    float grad0 = x > 0.f ? logg : -logg;
+    float relux = x < 0.f ? 0.f : x;
+    float grad1 = relux > 0.f ? y : 0.f;
+    return grad0 + grad1;
+}
+
 template <typename T>
 T do_shl(T, T);  // undefined
 template <typename T>

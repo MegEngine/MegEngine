@@ -61,7 +61,7 @@ DEF_TRAIT(GELU_GRAD, do_gelu_grad(x, y))
 DEF_TRAIT(ASINH_GRAD, y / std::sqrt(x * x + 1))
 DEF_TRAIT(ACOSH_GRAD, y / std::sqrt(x * x - 1))
 DEF_TRAIT(ATANH_GRAD, y / (1 - x * x))
-DEF_TRAIT(SOFTPLUS_GRAD, y* std::exp(x) / (1.f + std::exp(x)))
+DEF_TRAIT(SOFTPLUS_GRAD, do_softplus_grad(x, y))
 DEF_TRAIT(RELU6_GRAD, x <= 0.f ? 0.f : (x >= 6.f ? 0.f : y))
 DEF_TRAIT(HSIGMOID_GRAD, x <= -3.f ? 0.f : (x >= 3.f ? 0.f : (y / 6.f)))
 
