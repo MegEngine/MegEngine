@@ -35,8 +35,12 @@ cg::OperatorNodeBase* opr_shallow_copy_jit_executor_opr(
     };
     cg::DepOprIter iter{on_opr};
     for (size_t i = 0; i < inputs.size(); ++i) {
-        var_replace_map[opr.input(i)] = inputs[i];
+        auto input_opr = opr.input(i)->owner_opr();
+        for (size_t j = 0; j < input_opr->output().size(); j++) {
+            var_replace_map[input_opr->output(j)] = input_opr->output(j);
+        }
         iter.set_visited(opr.input(i)->owner_opr());
+        var_replace_map[opr.input(i)] = inputs[i];
     }
     if (shape_infer) {
         iter.add(shape_infer);

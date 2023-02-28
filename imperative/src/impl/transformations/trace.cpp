@@ -479,6 +479,8 @@ void CompiledTransformation::compile() {
         }
     }
     m_executable = m_graph->compile(output_specs);
+    mgb_assert(m_executable != nullptr, "The compiled executable is nullptr.");
+
     m_var_accessors = var_accessors;
     m_output_spec = output_specs;
 }
