@@ -1743,11 +1743,9 @@ std::vector<conv_bias::TestArg> get_nchw88_conv_bias_args(
                                         if (ic % (group * 8) || oc % (group * 8)) {
                                             continue;
                                         }
-                                        if (kernel < h || kernel < w) {
-                                            continue;
-                                        }
-                                        pack(n, oc, ic, h, w, kernel, stride, pad,
-                                             group, nlmode, bias);
+                                        if (kernel < h && kernel < w)
+                                            pack(n, oc, ic, h, w, kernel, stride, pad,
+                                                 group, nlmode, bias);
                                     }
                                 }
     return args;

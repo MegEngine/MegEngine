@@ -439,8 +439,9 @@ struct OutputTransformF43_NCHW88 {
         UNROLL_CALL_NOWRAPPER_D2(5, 6, cb);
 #undef cb
 
-        const gi_float16_t* buf_base =
-                output_transform_buf + ocb * nr_units_in_tile * 4 + unit_idx * 4;
+        const gi_float16_t* buf_base = output_transform_buf +
+                                       ocb * nr_units_in_tile * pack_size +
+                                       unit_idx * pack_size;
         const gi_float16_t* buf_ptr = nullptr;
 
         // load line 1 -> v10 ... v15

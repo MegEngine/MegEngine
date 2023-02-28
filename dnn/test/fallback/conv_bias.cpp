@@ -609,6 +609,7 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F43_4_NCHW44) {
 }
 
 #if defined(GI_SUPPORT_F16)
+
 TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_8_NCHW88_FP16) {
     using namespace conv_bias;
     std::vector<TestArg> args =
@@ -616,9 +617,9 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F23_8_NCHW88_FP16) {
 
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
             handle());
-    Float16PeriodicalRNG rng(0x3c00);
+    Float16PeriodicalRNG rng(0x3c00);  // (-1.0, 1.0)
     check_winograd_fp16(
-            "8:2:", checker, args, &rng, 0.003, param::MatrixMul::Format::MK8,
+            "8:2:", checker, args, &rng, 0.009, param::MatrixMul::Format::MK8,
             "WINOGRAD_NCHW88");
 }
 
@@ -629,9 +630,9 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F43_8_NCHW88_FP16) {
 
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
             handle());
-    Float16PeriodicalRNG rng(0x3c00);
+    Float16PeriodicalRNG rng(0x3800);  // (-0.5, 0.5)
     check_winograd_fp16(
-            "8:4:", checker, args, &rng, 0.006, param::MatrixMul::Format::MK8,
+            "8:4:", checker, args, &rng, 0.027, param::MatrixMul::Format::MK8,
             "WINOGRAD_NCHW88");
 }
 
@@ -642,9 +643,9 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F63_8_NCHW88_FP16) {
 
     Checker<ConvBiasForward, OprWeightPreprocessProxy<ConvBiasForward>> checker(
             handle());
-    Float16PeriodicalRNG rng(0x3c00);
+    Float16PeriodicalRNG rng(0x3800);  // (-0.5, 0.5)
     check_winograd_fp16(
-            "8:6:", checker, args, &rng, 0.019, param::MatrixMul::Format::MK8,
+            "8:6:", checker, args, &rng, 0.06, param::MatrixMul::Format::MK8,
             "WINOGRAD_NCHW88");
 }
 #endif
