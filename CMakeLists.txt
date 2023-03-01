@@ -1089,6 +1089,11 @@ if(MGE_WITH_JIT AND MGE_WITH_HALIDE)
   include(cmake/Halide.cmake)
 endif()
 
+if(MGE_ENABLE_EXCEPTIONS)
+  add_compile_definitions(CPP_REDIS_ENABLE_EXCEPTION=1)
+else()
+  add_compile_definitions(CPP_REDIS_ENABLE_EXCEPTION=0)
+endif()
 include(cmake/cpp_redis.cmake)
 
 # Thread
@@ -1133,6 +1138,7 @@ if(MSVC OR WIN32)
 endif()
 
 if(CMAKE_THREAD_LIBS_INIT
+   OR CMAKE_HAVE_LIBC_PTHREAD
    OR CMAKE_USE_WIN32_THREADS_INIT
    OR ANDROID)
   set(MGB_HAVE_THREAD 1)

@@ -812,7 +812,7 @@ typedef ::testing::Types<
         void  // extra void to consume last comma
         >
         UnaryTraitTypes;
-TYPED_TEST_CASE(TestOprBasicArithUnaryElemwise, UnaryTraitTypes);
+TYPED_TEST_SUITE(TestOprBasicArithUnaryElemwise, UnaryTraitTypes);
 
 typedef ::testing::Types<
 #define DEF_TRAIT(_mode, _expr) _mode,
@@ -821,7 +821,7 @@ typedef ::testing::Types<
         void  // extra void to consume last comma
         >
         BinaryTraitTypes;
-TYPED_TEST_CASE(TestOprBasicArithBinaryElemwise, BinaryTraitTypes);
+TYPED_TEST_SUITE(TestOprBasicArithBinaryElemwise, BinaryTraitTypes);
 
 typedef ::testing::Types<
 #define DEF_TRAIT(_mode, _expr) _mode,
@@ -830,7 +830,7 @@ typedef ::testing::Types<
         void  // extra void to consume last comma
         >
         TernaryTraitTypes;
-TYPED_TEST_CASE(TestOprBasicArithTernaryElemwise, TernaryTraitTypes);
+TYPED_TEST_SUITE(TestOprBasicArithTernaryElemwise, TernaryTraitTypes);
 
 }  // anonymous namespace
 

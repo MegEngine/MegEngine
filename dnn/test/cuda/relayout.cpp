@@ -11,7 +11,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class CUDA_RELAYOUT : public CUDA {};
-TYPED_TEST_CASE(CUDA_RELAYOUT, relayout::test_types);
+TYPED_TEST_SUITE(CUDA_RELAYOUT, relayout::test_types);
 TYPED_TEST(CUDA_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle_cuda());
 }

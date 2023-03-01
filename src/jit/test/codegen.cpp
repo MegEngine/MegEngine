@@ -290,7 +290,7 @@ void run_mlir_mode(CompNode cn) {
 #if MGB_JIT_HALIDE
 template <typename tag>
 class TestJITHalideCodeGenCuda : public ::testing::Test {};
-TYPED_TEST_CASE(TestJITHalideCodeGenCuda, test_types);
+TYPED_TEST_SUITE(TestJITHalideCodeGenCuda, test_types);
 TYPED_TEST(TestJITHalideCodeGenCuda, run) {
     REQUIRE_GPU(1);
     run<TypeParam>(Backend::HALIDE, CompNode::load("gpu0"));
@@ -301,7 +301,7 @@ TYPED_TEST(TestJITHalideCodeGenCuda, run) {
 
 template <typename tag>
 class TestJITNvrtcCodeGen : public ::testing::Test {};
-TYPED_TEST_CASE(TestJITNvrtcCodeGen, test_types);
+TYPED_TEST_SUITE(TestJITNvrtcCodeGen, test_types);
 TYPED_TEST(TestJITNvrtcCodeGen, run) {
     REQUIRE_GPU(1);
     run<TypeParam>(Backend::NVRTC, CompNode::load("gpu0"));
@@ -344,7 +344,7 @@ FOREACH_UNARY_MODE(def_tag)
 #define t(n) n,
 using mlir_elemwise_unary_types = ::testing::Types<FOREACH_UNARY_MODE(t) ABS>;
 #undef t
-TYPED_TEST_CASE(TestJITMlirUnaryElemwise, mlir_elemwise_unary_types);
+TYPED_TEST_SUITE(TestJITMlirUnaryElemwise, mlir_elemwise_unary_types);
 
 #define SKIP_MODE(_mode)                                 \
     if (TypeParam::mode == opr::Elemwise::Mode::_mode) { \
@@ -390,7 +390,7 @@ FOREACH_BINARY_MODE(def_tag)
 #define t(n) n,
 using mlir_elemwise_binary_types = ::testing::Types<FOREACH_BINARY_MODE(t) ADD>;
 #undef t
-TYPED_TEST_CASE(TestJITMlirBinaryElemwise, mlir_elemwise_binary_types);
+TYPED_TEST_SUITE(TestJITMlirBinaryElemwise, mlir_elemwise_binary_types);
 TYPED_TEST(TestJITMlirBinaryElemwise, run) {
     auto cn = CompNode::load("cpu0");
     run_mlir_mode<TypeParam, 2>(cn);
@@ -422,7 +422,7 @@ FOREACH_TERNARY_MODE(def_tag)
 using mlir_elemwise_ternary_types =
         ::testing::Types<FOREACH_TERNARY_MODE(t) COND_LEQ_MOV>;
 #undef t
-TYPED_TEST_CASE(TestJITMlirTernaryElemwise, mlir_elemwise_ternary_types);
+TYPED_TEST_SUITE(TestJITMlirTernaryElemwise, mlir_elemwise_ternary_types);
 TYPED_TEST(TestJITMlirTernaryElemwise, run) {
     auto cn = CompNode::load("cpu0");
     run_mlir_mode<TypeParam, 3>(cn);

@@ -12,14 +12,14 @@ using namespace test;
 
 template <typename tag>
 class ARM_ELEMWISE : public ARM_COMMON {};
-TYPED_TEST_CASE(ARM_ELEMWISE, elemwise::test_types);
+TYPED_TEST_SUITE(ARM_ELEMWISE, elemwise::test_types);
 TYPED_TEST(ARM_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }
 
 template <typename tag>
 class ARM_ELEMWISE_MULTI_THREADS : public ARM_COMMON_MULTI_THREADS {};
-TYPED_TEST_CASE(ARM_ELEMWISE_MULTI_THREADS, elemwise::test_types);
+TYPED_TEST_SUITE(ARM_ELEMWISE_MULTI_THREADS, elemwise::test_types);
 TYPED_TEST(ARM_ELEMWISE_MULTI_THREADS, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }

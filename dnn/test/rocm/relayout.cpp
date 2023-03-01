@@ -13,7 +13,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class ROCM_RELAYOUT : public ROCM {};
-TYPED_TEST_CASE(ROCM_RELAYOUT, relayout::test_types);
+TYPED_TEST_SUITE(ROCM_RELAYOUT, relayout::test_types);
 TYPED_TEST(ROCM_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle_rocm());
 }
