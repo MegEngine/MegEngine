@@ -9,11 +9,7 @@ if(MGE_WITH_NVRTC_STUB)
   list(APPEND STUB_SRC ${NVRTC_STUB})
 endif()
 
-if(MSVC OR WIN32)
-  add_library(cuda-stub STATIC ${STUB_SRC})
-else()
-  add_library(cuda-stub SHARED ${STUB_SRC})
-endif()
+add_library(cuda-stub OBJECT ${STUB_SRC})
 
 set_target_properties(cuda-stub PROPERTIES OUTPUT_NAME cuda_stub)
 target_compile_definitions(cuda-stub PRIVATE __CUDA_API_VERSION_INTERNAL)
@@ -24,4 +20,3 @@ else()
 endif()
 target_include_directories(cuda-stub
                            PRIVATE $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/genfiles>)
-install(TARGETS cuda-stub EXPORT ${MGE_EXPORT_TARGETS})

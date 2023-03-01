@@ -28,8 +28,6 @@ function handle_copy_cuda_libs() {
     TO_DIR=$1
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "handle cuda lib to ${TO_DIR}"
-        cp ${BUILD_DIR}/dnn/cuda-stub/libcuda_stub.so ${TO_DIR}
-        handle_strip ${TO_DIR}/libcuda_stub.so
         cp /usr/local/cuda/lib64/libnvToolsExt.so.1 ${TO_DIR}
         IFS=: read -a lib_name_array <<<"$CUDA_COPY_LIB_LIST"
         append_rpath='$ORIGIN'

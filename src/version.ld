@@ -14,6 +14,7 @@ global:
     };
     megcore*;
     *custom*;
+    cu*;
 
 
 local:
