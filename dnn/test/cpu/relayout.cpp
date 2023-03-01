@@ -12,7 +12,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class CPU_RELAYOUT : public CPU {};
-TYPED_TEST_CASE(CPU_RELAYOUT, relayout::test_types);
+TYPED_TEST_SUITE(CPU_RELAYOUT, relayout::test_types);
 TYPED_TEST(CPU_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle());
 }

@@ -71,7 +71,7 @@ void run_tensor_add(
 
 template <typename tag>
 class CUDA_ELEMWISE : public CUDA {};
-TYPED_TEST_CASE(CUDA_ELEMWISE, elemwise::test_types);
+TYPED_TEST_SUITE(CUDA_ELEMWISE, elemwise::test_types);
 TYPED_TEST(CUDA_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle_cuda());
 }

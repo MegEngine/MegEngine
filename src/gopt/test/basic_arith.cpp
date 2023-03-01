@@ -107,10 +107,12 @@ TEST(TestGoptBasicArithInplace, Absorbing) {
     ASSERT_EQ(y.as_immutable_scalar()->get_cast<float>(), 0.f);
 }
 
+namespace {
 auto gen_postive = [](HostTensorND& dest) {
     HostTensorGenerator<dtype::Float32, RandomDistribution::UNIFORM> mask_generator{
             2.f, 4.f};
     dest = *mask_generator(dest.shape(), dest.comp_node());
+};
 };
 
 TEST(TestGoptBasicArithInplace, LogExpExpand) {
