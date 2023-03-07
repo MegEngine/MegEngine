@@ -99,3 +99,4 @@ If you do not want to create whl file when debug Python3 binding, you can call `
 * cpu only with `RelWithDebInfo` mode: `EXTRA_CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo" scripts/cmake-build/host_build.sh -t`
 
 Start `Python3 ` with env for support `MegEngine` after build: `PYTHONPATH=imperative/python:$PYTHONPATH python3 `
+Start `Python3 ` with env for support `MegEngineLite` after build: `PYTHONPATH=lite/pylite:$PYTHONPATH python3 `

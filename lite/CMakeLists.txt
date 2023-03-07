@@ -71,6 +71,20 @@ include_directories(
 
 # define a shared lib
 add_library(lite_shared SHARED $<TARGET_OBJECTS:lite_static>)
+add_custom_command(
+  TARGET lite_shared
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+          ${CMAKE_CURRENT_SOURCE_DIR}/pylite/megenginelite/libs
+  COMMAND
+    ${CMAKE_COMMAND} -E remove -f
+    ${CMAKE_CURRENT_SOURCE_DIR}/pylite/megenginelite/libs/$<TARGET_FILE_NAME:lite_shared>
+  COMMAND
+    ${CMAKE_COMMAND} -E create_symlink
+    ${CMAKE_CURRENT_BINARY_DIR}/$<TARGET_FILE_NAME:lite_shared>
+    ${CMAKE_CURRENT_SOURCE_DIR}/pylite/megenginelite/libs/$<TARGET_FILE_NAME:lite_shared>
+  VERBATIM)
+
 if(LITE_BUILD_WITH_MGE)
   target_link_libraries(lite_shared PRIVATE megbrain megdnn ${MGE_CUDA_LIBS})
 endif()

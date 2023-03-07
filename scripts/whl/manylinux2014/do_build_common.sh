@@ -148,6 +148,8 @@ do
     # call real build
     echo "host_build.sh HOST_BUILD_ARGS: ${HOST_BUILD_ARGS}"
     ${SRC_DIR}/scripts/cmake-build/host_build.sh ${HOST_BUILD_ARGS}
+    # remove megenginelite py develop soft link create by lite_shared:POST_BUILD @ lite/CMakeLists.txt
+    rm -rf ${SRC_DIR}/lite/pylite/megenginelite/libs
 
     # check python api call setup.py
     cd ${BUILD_DIR}
