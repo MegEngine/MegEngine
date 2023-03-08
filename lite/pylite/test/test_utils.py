@@ -53,6 +53,15 @@ def test_tensor_collect_batch_cpu():
         for j in range(64):
             assert data[i][j // 8][j % 8] == i + 1
 
+    for i in range(4):
+        t = batch_tensor.get_tensor_at(i)
+        data = t.to_numpy()
+        assert data.shape[0] == 1
+        assert data.shape[1] == 8
+        assert data.shape[2] == 8
+        for j in range(64):
+            assert data[0][j // 8][j % 8] == i + 1
+
 
 @require_cuda
 def test_tensor_collect_batch_by_index():

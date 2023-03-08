@@ -203,6 +203,21 @@ class TensorBatchCollector:
                     self._free_list.remove(i)
             self._free_list.extend(indexes)
 
+    def get_tensor_at(self, idx):
+        """
+        get the tensor from the internal big tensor by the idx, make sure the
+        idx is not freed, return the tensor
+
+        Args:
+            idx: the tensor index in the internal big tensor
+        """
+        assert idx < self.shape[0], "the idx specific the tensor is out of range."
+        if idx in self._free_list:
+            warnings.warn(
+                "tensor with batch id {} has not collected before get it.".format(idx)
+            )
+        return self._tensor.slice([idx], [idx + 1])
+
     def get(self):
         """
         After finish collection, get the result tensor
