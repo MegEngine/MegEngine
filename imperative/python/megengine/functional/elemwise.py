@@ -830,7 +830,7 @@ def logaddexp(x: Tensor, y: Tensor) -> Tensor:
 def round(x):
     r"""Element-wise :math:`\operatorname{round}(x)` function.
     
-    Rounds each element :math:`x_i` of the input tebsor :math:`x` to the nearest integer-valued number.
+    Rounds each element :math:`x_i` of the input tensor :math:`x` to the nearest integer-valued number.
     
     Args:
         x: input tensor. Should have a numeric data type.

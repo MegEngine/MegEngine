@@ -918,7 +918,7 @@ def normalize(
     Returns:
         normalized output tensor.
 
-    seealso:: :func:`numpy.linalg.norm` / :func:`~.functional.norm`
+    .. seealso:: :func:`numpy.linalg.norm` / :func:`~.functional.norm`
 
     Examples:
 
