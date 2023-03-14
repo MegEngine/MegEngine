@@ -24,11 +24,7 @@ void GeneralNormBase::deduce_layout_fwd(
         unnormalized_shape[idx] = data.shape[i];
     TensorLayout unnormalized_layout =
             TensorLayout(unnormalized_shape, dtype::Float32());
-    if (idx == 0) {
-        unnormalized_layout.ndim = 1;
-        unnormalized_layout.shape[0] = 1;
-    } else
-        unnormalized_layout.ndim = idx;
+    unnormalized_layout.ndim = idx;
     unnormalized_layout.init_contiguous_stride();
 
     dst = data;

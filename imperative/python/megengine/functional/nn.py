@@ -71,6 +71,7 @@ __all__ = [
     "dropout",
     "embedding",
     "gelu",
+    "general_norm",
     "group_norm",
     "hsigmoid",
     "instance_norm",
@@ -1173,25 +1174,24 @@ def general_norm(
             See :math:`\beta` in :class:`~.GeneralNorm`.
         eps: a value added to the denominator for numerical stability. Default: 1e-5
     """
-    if isinstance(normalized_axis, int):
-        normalized_axis = [
-            normalized_axis,
-        ]
-    elif isinstance(normalized_axis, tuple):
-        normalized_axis = list(normalized_axis)
-    else:
-        assert isinstance(normalized_axis, list), "not support normalized_axis type"
+    if not isinstance(normalized_axis, Sequence):
+        normalized_axis = [normalized_axis]
+    assert isinstance(normalized_axis, (list, tuple))
 
     assert len(normalized_axis) > 0, "normalization axis not specified"
-    normalized_axis.sort()
 
-    if len(normalized_axis) != 1:
-        assert normalized_axis[0] >= 0
-    elif normalized_axis[0] == -1:
-        normalized_axis[0] = inp.shape[inp.ndim - 1]
+    normalized_axis = [num + inp.ndim if num < 0 else num for num in normalized_axis]
+    assert normalized_axis == sorted(
+        normalized_axis
+    ), "The order of normalized_axis is incorrect, should be {}, but got {}. Please specify the values of axis in the correct order in normalized_axis".format(
+        sorted(normalized_axis), normalized_axis
+    )
+    assert (
+        normalized_axis[-1] < inp.ndim,
+    ), "the maximum axis in normalized_axis is greater than inp_shape.ndim"
     assert len(set(normalized_axis)) == len(
         normalized_axis
-    ), "there are duplicate axis in list normalized_axis"
+    ), "there are duplicate axis in normalized_axis"
 
     _reshape = []
     _rereshape = []
@@ -1200,7 +1200,7 @@ def general_norm(
     ) != (len(normalized_axis) - 1)
     if _need_reshape:
         get_logger().warning(
-            "normalized_axis is discontinuous, and performance may be poor."
+            "normalized_axis is discontinuous, and performance may be poor"
         )
         unnormalized_axis = list(set(range(inp.ndim)) - set(normalized_axis))
         unnormalized_axis.sort()
