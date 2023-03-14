@@ -59,12 +59,12 @@ void OpenCLExecutable::execute(JITExecutor* fusion_opr) {
     auto&& kernel = megdnn::opencl::OpenCLKernel(handle);
     auto& args = fusion_opr->args();
 
-    static auto&& prop = megcore::opencl::OpenCLProp(mgr->device());
-    bool is_adreno = prop.is_adreno();
-    bool is_mali = prop.is_mali();
-    auto max_work_group = static_cast<uint32_t>(prop.max_work_group_size());
+    auto prop = megcore::opencl::OpenCLPropCache::instance().get(mgr->device());
+    bool is_adreno = prop->is_adreno();
+    bool is_mali = prop->is_mali();
+    auto max_work_group = static_cast<uint32_t>(prop->max_work_group_size());
     mgb_assert(
-            prop.is_support_image(),
+            prop->is_support_image(),
             "code issue happened, OpenCL jit only support device with support image");
 
     //! for debug
