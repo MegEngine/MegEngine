@@ -1,9 +1,12 @@
+import typing as T
+
 import numpy as np
 
 import megengine as mge
 import megengine.functional as F
 from megengine import Parameter
 
+from ..logger import get_logger
 from .init import ones_, zeros_
 from .module import Module
 
@@ -209,7 +212,8 @@ class GeneralNorm(Module):
     The standard-deviation is calculated via the biased estimator.
     
     Args:
-        normalized_axis(int, list or tuple): the axis of input needs to be normalized. Default: -1
+        normalized_shape(int, list or tuple): the shape of input needs to be normalized, normalized_shape must be specified when affine is true. When affine=true, we will directly use this shape to initialize weight/bias. Please ensure that the order is correct. Default: None
+        normalized_axis(int, list or tuple): the axis of input needs to be normalized, one-to-one correspondence between normalized_axis and normalized_shape. Default: -1
         eps: a value added to the denominator for numerical stability. Default: 1e-5
         affine: this module has learnable affine parameters (weight, bias) when affine is set to be True.
 
@@ -220,45 +224,85 @@ class GeneralNorm(Module):
     Examples:
         >>> import numpy as np
         >>> inp = Tensor(np.arange(2 * 3 * 4 * 4).astype(np.float32).reshape(2, 3, 4, 4))
-        >>> m = M.GeneralNorm((0, 2))
+        >>> m = M.GeneralNorm((2, 4), (0, 2))
         >>> out = m(inp)
         >>> out.numpy().shape
         (2, 3, 4, 4)
+        >>> m = M.GeneralNorm((3, 4), (1, -1)) # Please be careful.
+        >>> out = m(inp)
+        >>> out.numpy().shape
+        (2, 3, 4, 4)
+        >>> m = M.GeneralNorm((2, 4, 3), (0, 2, 1)) # Incorrect initialization, the order of normalized_axis is incorrect, should be adjusted to m = M.GeneralNorm((2, 3, 4), (0, 1, 2)).
+        >>> m = M.GeneralNorm((2, 4, 3), (0, -2, 1)) # Incorrect initialization, the order of normalized_axis is incorrect, should be adjusted to m = M.GeneralNorm((2, 3, 4), (0, 1, -2)).
+        >>> m = M.GeneralNorm((3, 4), (3, -1)) # Incorrect initialization, because axis=-1 and axis=3 are the same axis, namely axis=3.
     """
 
-    def __init__(self, normalized_axis=-1, eps=1e-05, affine=True, **kwargs):
+    def __init__(
+        self, normalized_shape=None, normalized_axis=0, eps=1e-05, affine=True, **kwargs
+    ):
         super().__init__(**kwargs)
-
-        if isinstance(normalized_axis, int):
-            normalized_axis = (normalized_axis,)
-        if isinstance(normalized_axis, list):
-            normalized_axis.sort()
-        if isinstance(normalized_axis, tuple):
-            normalized_axis = sorted(normalized_axis)
-        self.normalized_axis = tuple(normalized_axis)
 
         self.eps = eps
         self.affine = affine
-        self.weight = None
-        self.bias = None
+
+        if self.affine:
+            assert (
+                normalized_shape is not None
+            ), "normalized_shape must be specified when affine is true"
+            assert (
+                normalized_axis is not None
+            ), "normalized_axis must be specified when affine is true"
+            if not isinstance(normalized_axis, T.Sequence):
+                normalized_axis = [normalized_axis]
+            if not isinstance(normalized_shape, T.Sequence):
+                normalized_axis = [normalized_shape]
+            assert isinstance(normalized_axis, (list, tuple))
+            assert isinstance(normalized_shape, (list, tuple))
+
+            assert len(normalized_axis) == len(
+                normalized_shape
+            ), "The size of normalized_axis and normalized_shape are different"
+            assert len(set(normalized_axis)) == len(
+                normalized_axis
+            ), "there are duplicate axis in list normalized_axis"
+
+            self.weight = Parameter(np.ones(normalized_shape, dtype="float32"))
+            self.bias = Parameter(np.zeros(normalized_shape, dtype="float32"))
+        else:
+            self.weight = None
+            self.bias = None
+
+        self.normalized_shape = normalized_shape
+        self.normalized_axis = normalized_axis
         self.reset_parameters()
 
     def reset_parameters(self):
-        if self.affine and self.weight and self.bias:
+        if self.affine:
             ones_(self.weight)
             zeros_(self.bias)
 
     def forward(self, x):
-        if self.affine and not self.weight and not self.bias:
-            shape = []
-            if len(self.normalized_axis) == 1 and self.normalized_axis[0] == -1:
-                shape = x.shape[x.ndim - 1]
-            else:
-                for axis in self.normalized_axis:
-                    shape.append(x.shape[axis])
-
-            self.weight = Parameter(np.ones(shape, dtype="float32"))
-            self.bias = Parameter(np.zeros(shape, dtype="float32"))
+        self.normalized_axis = [
+            num + x.ndim if num < 0 else num for num in self.normalized_axis
+        ]
+        assert self.normalized_axis == sorted(
+            self.normalized_axis
+        ), "The order of normalized_axis is incorrect, should be {}, but got {}. Please specify the values of axis in the correct order in normalized_axis".format(
+            sorted(self.normalized_axis), self.normalized_axis
+        )
+        inp_shape = x.shape
+        for i in range(len(self.normalized_axis)):
+            assert (
+                inp_shape[self.normalized_axis[i]] == self.normalized_shape[i]
+            ), "inp.shape={}, normalized_axis={}, normalized_shape={}, inp.shape[normalized_axis[{}]]({}) != normalized_shape[{}]({})".format(
+                x.shape,
+                self.normalized_axis,
+                self.normalized_shape,
+                i,
+                inp_shape[self.normalized_axis[i]],
+                i,
+                self.normalized_shape[i],
+            )
 
         x = F.nn.general_norm(
             x, self.normalized_axis, self.affine, self.weight, self.bias, self.eps
@@ -266,5 +310,5 @@ class GeneralNorm(Module):
         return x
 
     def _module_info_string(self) -> str:
-        s = "normalized_axis={normalized_axis}, eps={eps}, affine={affine}"
+        s = "normalized_shape={normalized_shape}, normalized_axis={normalized_axis}, eps={eps}, affine={affine}"
         return s.format(**self.__dict__)
