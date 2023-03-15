@@ -98,8 +98,6 @@ VarNodeArray TraceResult::dump(
                         "do model.eval()?");
             }
             output_nodes = OpDef::apply_on_var_node(*op, input_nodes);
-            name2ops[output_nodes[0]->owner_opr()->name()].push_back(
-                    output_nodes[0]->owner_opr());
         } else {
             // no opr, just forward VarNode
             mgb_assert(
@@ -120,6 +118,13 @@ VarNodeArray TraceResult::dump(
                 node->name(var.name);
             }
         }
+    }
+    auto on_opr = [&name2ops](cg::OperatorNodeBase* opr) {
+        name2ops[opr->name()].push_back(opr);
+    };
+    cg::DepOprIter dep_iter(on_opr);
+    for (auto&& [output, name] : outputs) {
+        dep_iter.add(nodes[output]->owner_opr());
     }
     for (auto&& [name, ops] : name2ops) {
         if (ops.size() <= 1) {

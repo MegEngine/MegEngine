@@ -748,3 +748,37 @@ def test_trace_jit_config():
     for fuse_dimshuffle in [None, False, True]:
         for fuse_reduce in [None, False, True]:
             run(fuse_dimshuffle, fuse_reduce)
+
+
+def test_trace_naming():
+    @trace(symbolic=True, capture_as_const=True)
+    def func(x):
+        return F.max(x, axis=2, keepdims=False) + 1
+
+    inp = tensor(np.random.random((1, 3, 3, 3)))
+    func(inp)
+    file = io.BytesIO()
+    func.dump(file, optimize_for_inference=False)
+    file.seek(0)
+    import megengine.utils.network as network
+
+    net = network.Network.load(file)
+    names = set()
+    for var in net.all_vars:
+        assert var.name not in names
+        names.add(var.name)
+
+
+def test_invalid_inp_error():
+    @trace(capture_as_const=True)
+    def func(a):
+        return a * 2
+
+    try:
+        func(1)
+    except Exception as e:
+        assert (
+            str(e) == "Only support tensor type args when capture_as_const is enabled"
+        )
+    else:
+        assert False
