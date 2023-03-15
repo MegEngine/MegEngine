@@ -1,3 +1,4 @@
+#include <thread>
 #include "lite_build_config.h"
 
 #if LITE_BUILD_WITH_MGE
@@ -85,6 +86,68 @@ TEST(TestNetWork, SetDeviceId) {
     network->wait();
     ASSERT_EQ(input_tensor->get_device_id(), 4);
     ASSERT_EQ(output_tensor->get_device_id(), 4);
+}
+
+TEST(TestNetWork, MutliThreadLoad) {
+    Config config;
+    std::string model_path = "./shufflenet.mge";
+    std::shared_ptr<Network> network0 = std::make_shared<Network>(config);
+    std::shared_ptr<Network> network1 = std::make_shared<Network>(config);
+    std::shared_ptr<Network> network2 = std::make_shared<Network>(config);
+    std::shared_ptr<Network> network3 = std::make_shared<Network>(config);
+
+    auto func0 = [&] {
+        network0->set_device_id(0);
+        network0->load_model(model_path);
+        std::shared_ptr<Tensor> input_tensor = network0->get_input_tensor(0);
+        std::shared_ptr<Tensor> output_tensor = network0->get_output_tensor(0);
+        network0->forward();
+        network0->wait();
+        ASSERT_EQ(input_tensor->get_device_id(), 0);
+        ASSERT_EQ(output_tensor->get_device_id(), 0);
+    };
+
+    auto func1 = [&] {
+        network1->set_device_id(0);
+        network1->load_model(model_path);
+        std::shared_ptr<Tensor> input_tensor = network1->get_input_tensor(0);
+        std::shared_ptr<Tensor> output_tensor = network1->get_output_tensor(0);
+        network1->forward();
+        network1->wait();
+        ASSERT_EQ(input_tensor->get_device_id(), 0);
+        ASSERT_EQ(output_tensor->get_device_id(), 0);
+    };
+
+    auto func2 = [&] {
+        network2->set_device_id(1);
+        network2->load_model(model_path);
+        std::shared_ptr<Tensor> input_tensor = network2->get_input_tensor(0);
+        std::shared_ptr<Tensor> output_tensor = network2->get_output_tensor(0);
+        network2->forward();
+        network2->wait();
+        ASSERT_EQ(input_tensor->get_device_id(), 1);
+        ASSERT_EQ(output_tensor->get_device_id(), 1);
+    };
+
+    auto func3 = [&] {
+        network3->set_device_id(1);
+        network3->load_model(model_path);
+        std::shared_ptr<Tensor> input_tensor = network3->get_input_tensor(0);
+        std::shared_ptr<Tensor> output_tensor = network3->get_output_tensor(0);
+        network3->forward();
+        network3->wait();
+        ASSERT_EQ(input_tensor->get_device_id(), 1);
+        ASSERT_EQ(output_tensor->get_device_id(), 1);
+    };
+
+    std::thread t0(func0);
+    std::thread t1(func1);
+    std::thread t2(func2);
+    std::thread t3(func3);
+    t0.join();
+    t1.join();
+    t2.join();
+    t3.join();
 }
 
 TEST(TestNetWork, GetAllName) {

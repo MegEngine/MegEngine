@@ -266,7 +266,7 @@ SubTensorSpec FancyIndexingHelper::fancy_indexing_make_sub_spec(
     static DeviceTensorND fake_val;
     static MGB_MUTEX fake_val_mtx;
 
-    if (mgb_unlikely(fake_val.empty())) {
+    {
         MGB_LOCK_GUARD(fake_val_mtx);
         if (fake_val.empty()) {
             fake_val.comp_node(CompNode::default_cpu())
