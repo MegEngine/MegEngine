@@ -185,7 +185,7 @@ function prepare_env_for_windows_build() {
     export PATH=$VS_PATH/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/:$PATH
     which cmake
     cmake_loc=`which cmake`
-    if [[ $cmake_loc =~ "Visual" ]]; then
+    if [[ $cmake_loc =~ "vs" ]]; then
         echo "cmake valid ..."
     else
         echo "cmake Invalid: ..."
@@ -215,7 +215,7 @@ function prepare_env_for_windows_build() {
     export PATH=$VS_PATH/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/:$PATH
     which Ninja
     ninja_loc=`which Ninja`
-    if [[ $ninja_loc =~ "Visual" ]]; then
+    if [[ $ninja_loc =~ "vs" ]]; then
         echo "Ninja valid ..."
     else
         echo "Ninja Invalid: ..."
@@ -226,18 +226,13 @@ function prepare_env_for_windows_build() {
     export PATH=$VS_PATH/VC/Auxiliary/Build:$PATH
 
     echo "config cuda/cudnn/TensorRT env..."
-    export NIVIDA_INSTALL_PRE=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit
-    export CUDA_V=v10.1
-    export CUDNN_V=cudnn-10.1-windows10-x64-v7.6.5.32
-    export TRT_V=TensorRT-6.0.1.5
-    export CUDA_PATH=$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}
-    export PATH=$PATH:$CUDA_PATH/bin
+    
+    export CUDA_PATH=$CUDA_ROOT_DIR
+    export PATH=:$CUDA_PATH/bin:$PATH
     export CUDA_BIN_PATH=$CUDA_PATH
-    export PC_CUDNN_INCLUDE_DIRS=$NIVIDA_INSTALL_PRE/${CUDNN_V}/cuda/include
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NIVIDA_INSTALL_PRE/${TRT_V}/lib:$NIVIDA_INSTALL_PRE/CUDA/${CUDA_V}/lib/x64:$NIVIDA_INSTALL_PRE/${CUDNN_V}/cuda/lib/x64
+    export PC_CUDNN_INCLUDE_DIRS=$CUDNN_ROOT_DIR/include
+    export LD_LIBRARY_PATH=$TRT_ROOT_DIR/lib:$CUDA_ROOT_DIR/lib/x64:$CUDNN_ROOT_DIR/lib:$CUDNN_ROOT_DIR/lib/x64:$LD_LIBRARY_PATH
     export INCLUDE=$INCLUDE:$CPATH
-    export CUDNN_ROOT_DIR=${NIVIDA_INSTALL_PRE}/${CUDNN_V}/cuda
-    export TRT_ROOT_DIR=${NIVIDA_INSTALL_PRE}/${TRT_V}
 
     # python version will be config by whl build script or ci script, we need
     # a DFT version for build success when we just call host_build.sh
@@ -292,8 +287,8 @@ function cmake_build_windows() {
     echo "now try build windows native with cmake/clang-ci/Ninja/Visual Studio ....."
     export CFLAGS=-$MGE_WINDOWS_BUILD_MARCH
     export CXXFLAGS=-$MGE_WINDOWS_BUILD_MARCH
-    cmd.exe /c " \
-        vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && cmake  -G "Ninja" \
+    cmd.exe /C " \
+        vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH -vcvars_ver=14.26.28801 && cmake  -G "Ninja" \
         -DMGE_ARCH=$MGE_ARCH \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
@@ -305,7 +300,7 @@ function cmake_build_windows() {
         ${EXTRA_CMAKE_ARGS} ../../.. "
 
     config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN} ${NINJA_MAX_JOBS}
-    cmd.exe /c " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH && ${NINJA_CMD} "
+    cmd.exe /C " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH -vcvars_ver=14.26.28801 && ${NINJA_CMD} "
 }
 
 if [[ $OS =~ "NT" ]]; then

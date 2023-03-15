@@ -12,12 +12,16 @@ function err_env() {
     echo "check_env failed: pls refs ${SRC_DIR}/scripts/whl/BUILD_PYTHON_WHL_README.md to init env"
     exit -1
 }
-
+echo $EXTRA_CMAKE_FLAG
 function append_path_env_and_check() {
-    echo  "export vs2019 install path"
-    export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise
-    echo  "export LLVM install path"
-    export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1
+    if [[ -z $VS_PATH ]]; then
+        echo  "export vs2019 install path"
+        export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise
+    fi
+    if [[ -z $LLVM_PATH ]]; then
+        echo  "export LLVM install path"
+        export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1
+    fi
 }
 
 append_path_env_and_check
@@ -38,6 +42,10 @@ PYTHON_DIR=
 PYTHON_LIBRARY=
 PYTHON_INCLUDE_DIR=
 WINDOWS_WHL_HOME=${SRC_DIR}/scripts/whl/windows/windows_whl_home
+if [[ -z $PYTHON_ROOT ]]; then
+    export PYTHON_ROOT="/c/Users/${USER}/mge_whl_python_env"
+fi
+
 if [ -e "${WINDOWS_WHL_HOME}" ]; then
     echo "remove old windows whl file"
     rm -rf ${WINDOWS_WHL_HOME}
@@ -45,7 +53,7 @@ fi
 mkdir -p ${WINDOWS_WHL_HOME}
 
 function config_python_env() {
-    PYTHON_DIR=/c/Users/${USER}/mge_whl_python_env/$1
+    PYTHON_DIR=$PYTHON_ROOT/$1
     PYTHON_BIN=${PYTHON_DIR}
     if [ ! -f "${PYTHON_BIN}/python3.exe" ]; then
         echo "ERR: can not find $PYTHON_BIN , Invalid python package"
@@ -68,15 +76,39 @@ then
     BUILD_WHL_CPU_ONLY="OFF"
 fi
 
+if [[ -z ${CUDA_ROOT_DIR} ]]; then
+    export CUDA_ROOT_DIR="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1"
+fi
+
+if [[ -z ${CUDNN_ROOT_DIR} ]]; then
+    export CUDNN_ROOT_DIR="/c/Program Files/NVIDIA GPU Computing Toolkit/cudnn-10.1-windows10-x64-v7.6.5.32/cuda"
+fi
+
+if [[ -z ${TRT_ROOT_DIR} ]]; then
+    export TRT_ROOT_DIR="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5"
+fi
+
 # config NVIDIA libs
-TRT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5/lib/nvinfer.dll"
-TRT_PLUGIN_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5/lib/nvinfer_plugin.dll"
-CUDNN_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/cudnn-10.1-windows10-x64-v7.6.5.32/cuda/bin/cudnn64_7.dll"
-CUSOLVER_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cusolver64_10.dll"
-CUBLAS_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublas64_10.dll"
-CURAND_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/curand64_10.dll"
-CUBLASLT_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cublasLt64_10.dll"
-CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
+TRT_LIBS=`ls $TRT_ROOT_DIR/lib/nvinfer*.dll`
+if [[ $TRT_VERSION == "7.2.3.4" ]]; then
+    MYELIN_LIB=`ls $TRT_ROOT_DIR/lib/myelin64_*.dll`
+fi
+CUDNN_LIBS=`ls $CUDNN_ROOT_DIR/bin/cudnn*.dll`
+CUSOLVER_LIB=`ls $CUDA_ROOT_DIR/bin/cusolver64_*.dll`
+CUBLAS_LIB=`ls $CUDA_ROOT_DIR/bin/cublas64_*.dll`
+CURAND_LIB=`ls $CUDA_ROOT_DIR/bin/curand64_*.dll`
+CUBLASLT_LIB=`ls $CUDA_ROOT_DIR/bin/cublasLt64_*.dll`
+CUDART_LIB=`ls $CUDA_ROOT_DIR/bin/cudart64_*.dll`
+if [[ $TRT_VERSION == 7.2.3.4 ]]; then
+    NVTRC_LIB=`ls $CUDA_ROOT_DIR/bin/nvrtc64_111_0.dll`
+else
+    NVTRC_LIB=`ls $CUDA_ROOT_DIR/bin/nvrtc64_*.dll`
+fi
+
+if [[ $SDK_NAME == "cu118" ]]; then
+    ZLIBWAPI=`ls $CUDA_ROOT_DIR/bin/zlibwapi.dll`
+fi
+# CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
 MGE_EXPORT_DLL="${SRC_DIR}/build_dir/host/build/src/megengine_shared.dll"
 MGE_EXPORT_LIB="${SRC_DIR}/build_dir/host/build/src/megengine_shared.lib"
 
@@ -88,14 +120,36 @@ function depend_real_copy() {
 
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "copy nvidia lib...."
-        cp "${TRT_LIB}" ${REAL_DST}
-        cp "${TRT_PLUGIN_LIB}" ${REAL_DST}
-        cp "${CUDNN_LIB}" ${REAL_DST}
+        for TRT_LIB in $TRT_LIBS
+        do
+            echo "Copy ${TRT_LIB} to ${REAL_DST}"
+            cp "${TRT_LIB}" ${REAL_DST}
+        done
+        if [[ ! -z $MYELIN_LIB ]]; then
+            cp "$MYELIN_LIB" ${REAL_DST} 
+        fi
+        for CUDNN_LIB in $CUDNN_LIBS
+        do
+            echo "Copy ${CUDNN_LIB} to ${REAL_DST}"
+            cp "${CUDNN_LIB}" ${REAL_DST}
+        done
         cp "${CUSOLVER_LIB}" ${REAL_DST}
         cp "${CUBLAS_LIB}" ${REAL_DST}
         cp "${CURAND_LIB}" ${REAL_DST}
         cp "${CUBLASLT_LIB}" ${REAL_DST}
         cp "${CUDART_LIB}" ${REAL_DST}
+        if [[ ! -z ${NVTRC_LIB} ]]; then
+          for lib in ${NVTRC_LIB} 
+          do
+            echo "Copy ${lib} to ${REAL_DST}"
+            cp "${lib}" ${REAL_DST}
+          done
+        fi
+        
+        if [[ ! -z ${ZLIBWAPI} ]]; then
+            echo "Copy ${ZLIBWAPI} to ${REAL_DST}"
+            cp "${ZLIBWAPI}" ${REAL_DST} 
+        fi
     fi
 }
 
@@ -247,7 +301,9 @@ function third_party_prepare() {
 ######################
 export ALREADY_CONFIG_PYTHON_VER="yes"
 if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
-    export SDK_NAME="cu101"
+    if [[ -z $SDK_NAME ]]; then
+        export SDK_NAME="cu101"
+    fi
 else
     export SDK_NAME="cpu"
 fi
