@@ -1229,6 +1229,7 @@ void init_tensor(py::module m) {
 
     m.def("name_tensor", [](std::string name, py::object tensor) {
         auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        mgb_assert(tw, "Arg_1 shoud be Tensor!");
         auto output = imperative::apply(TraceMarkVar(name), tw->m_tensor->data())[0];
         tw->m_tensor->reset(output);
     });

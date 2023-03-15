@@ -216,6 +216,9 @@ class trace:
 
     def _process_inputs(self, *args, **kwargs):
         for i, arg in enumerate(args):
+            assert isinstance(
+                arg, RawTensor
+            ), "Only support tensor type args when capture_as_const is enabled"
             name_tensor("arg_{}".format(i), arg)
 
         # TODO: mark kwargs in order
