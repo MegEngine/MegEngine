@@ -36,6 +36,8 @@ rm -rf mkl
 if [[ -z ${FTP_URL_PREFIX} ]];then
     DOWNLOAD_FILE='${package}-${MKL_VERSION}-intel_${MKL_PATCH}.tar.bz2'
     URL='https://anaconda.org/intel/${package}/${MKL_VERSION}/download/$FILE_PREFIX-${platform}/'${DOWNLOAD_FILE}
+    #if you can not download the file from anaconda.org, you can uncommit this URL to download it from the mirror supported by the CRA of SUStech
+    #URL='https://mirrors.sustech.edu.cn/anaconda/cloud/intel/$FILE_PREFIX-${platform}/'${DOWNLOAD_FILE} 
 else
     DOWNLOAD_FILE='${package}.tar.bz2'
     URL='$FTP_URL_PREFIX/$FILE_PREFIX-${platform}-'${DOWNLOAD_FILE}
@@ -52,7 +54,11 @@ do
     do
         echo "Installing $(eval echo $DOWNLOAD_FILE) for x86_${platform}..."
         echo "try download mkl package from: $(eval echo $URL)"
-        wget -q --show-progress "$(eval echo $URL)" -O mkl/x86_${platform}/"$(eval echo $DOWNLOAD_FILE)"
+        if [ ${FILE_PREFIX} == "win" ]; then
+            curl -SL "$(eval echo $URL)" --output mkl/x86_${platform}/"$(eval echo $DOWNLOAD_FILE)"
+        else
+            wget -q --show-progress "$(eval echo $URL)" -O mkl/x86_${platform}/"$(eval echo $DOWNLOAD_FILE)"
+        fi
         $TAR xvj -C mkl/x86_${platform} -f mkl/x86_${platform}/"$(eval echo $DOWNLOAD_FILE)"
     done
 done
