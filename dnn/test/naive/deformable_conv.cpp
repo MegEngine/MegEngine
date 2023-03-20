@@ -1,3 +1,4 @@
+#include "megdnn/dtype.h"
 #include "test/naive/fixture.h"
 
 #include "megdnn/oprs/nn.h"
@@ -52,6 +53,15 @@ TEST_F(NAIVE, DEFORMABLE_CONV_FWD) {
              {1, 2 * 2 * 3 * 3, 5, 5},
              {1, 2 * 3 * 3, 5, 5},
              {}});
+    //! check algo interface
+    auto opr = handle()->create_operator<DeformableConv>();
+    auto i0 = megdnn::TensorLayout({1, 2, 5, 5}, megdnn::dtype::Float32());
+    auto i1 = megdnn::TensorLayout({2, 1, 1, 3, 3}, megdnn::dtype::Float32());
+    auto i2 = megdnn::TensorLayout({1, 2 * 2 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto i3 = megdnn::TensorLayout({1, 2 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto o = opr->get_algorithm_info_heuristic(i0, i1, i2, i3, {});
+    auto kk = o.desc.name;
+    printf("%s\n", kk.c_str());
 }
 
 TEST_F(NAIVE, DEFORMABLE_CONV_BWD_FILTER) {
@@ -82,6 +92,18 @@ TEST_F(NAIVE, DEFORMABLE_CONV_BWD_FILTER) {
              {1, 2 * 3 * 3, 5, 5},
              {1, 2, 5, 5},
              {2, 1, 1, 3, 3}});
+
+    //! check algo interface
+    auto opr = handle()->create_operator<DeformableConvBackwardFilter>();
+    auto i0 = megdnn::TensorLayout({1, 2, 5, 5}, megdnn::dtype::Float32());
+    auto i1 = megdnn::TensorLayout({1, 2 * 2 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto i2 = megdnn::TensorLayout({1, 2 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto i3 = megdnn::TensorLayout({1, 2, 5, 5}, megdnn::dtype::Float32());
+    auto i4 = megdnn::TensorLayout({2, 1, 1, 3, 3}, megdnn::dtype::Float32());
+
+    auto o = opr->get_algorithm_info_heuristic(i0, i1, i2, i3, i4);
+    auto kk = o.desc.name;
+    printf("%s\n", kk.c_str());
 }
 
 TEST_F(NAIVE, DEFORMABLE_CONV_BWD_DATA) {
@@ -118,5 +140,18 @@ TEST_F(NAIVE, DEFORMABLE_CONV_BWD_DATA) {
              {1, 2, 5, 5},
              {1, 1 * 2 * 3 * 3, 5, 5},
              {1, 1 * 3 * 3, 5, 5}});
+    //! check algo interface
+    auto opr = handle()->create_operator<DeformableConvBackwardData>();
+    auto i0 = megdnn::TensorLayout({1, 2, 5, 5}, megdnn::dtype::Float32());
+    auto i1 = megdnn::TensorLayout({2, 1, 1, 3, 3}, megdnn::dtype::Float32());
+    auto i2 = megdnn::TensorLayout({1, 1 * 2 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto i3 = megdnn::TensorLayout({1, 1 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto i4 = megdnn::TensorLayout({1, 2, 5, 5}, megdnn::dtype::Float32());
+    auto i5 = megdnn::TensorLayout({1, 2, 5, 5}, megdnn::dtype::Float32());
+    auto i6 = megdnn::TensorLayout({1, 1 * 2 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto i7 = megdnn::TensorLayout({1, 1 * 3 * 3, 5, 5}, megdnn::dtype::Float32());
+    auto o = opr->get_algorithm_info_heuristic(i0, i1, i2, i3, i4, i5, i6, i7);
+    auto kk = o.desc.name;
+    printf("%s\n", kk.c_str());
 }
 // vim: syntax=cpp.doxygen

@@ -1,4 +1,5 @@
 #include "src/naive/deformable_conv/opr_impl.h"
+#include <vector>
 #include "src/common/utils.h"
 #include "src/naive/convolution/helper.h"
 #include "src/naive/handle.h"
@@ -121,6 +122,38 @@ void Fwd::exec(
             mask.ptr<float>(), dst.ptr<float>(), OC, IC, N, FH, FW, IH, IW, PH, PW, DH,
             DW, SH, SW, OH, OW, group, deformable_group));
     return;
+}
+
+std::vector<DeformableConvForward::Algorithm*> Fwd::get_all_algorithms(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* dst */) {
+    return {static_cast<HandleImpl*>(handle())->default_deformable_conv_fwd_algo()};
+}
+
+std::vector<DeformableConvForward::Algorithm*> Fwd::get_all_algorithms_safe(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* dst */) {
+    return {static_cast<HandleImpl*>(handle())->default_deformable_conv_fwd_algo()};
+}
+
+DeformableConvForward::Algorithm* Fwd::get_algorithm_heuristic(
+        const TensorLayout& /* src */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
+        const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr) {
+    auto algo = static_cast<HandleImpl*>(handle())->default_deformable_conv_fwd_algo();
+    algo->check_attribute(positive_attr, negative_attr);
+    return algo;
+}
+
+DeformableConvForward::Algorithm* Fwd::get_algorithm_from_desc(
+        const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_deformable_conv_fwd_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
 }
 
 /* ============== Bwd Implementation ============== */
@@ -388,6 +421,41 @@ void BwdFlt::exec(
             out_grad.ptr<float>(), filter_grad.ptr<float>(), OC, IC, N, FH, FW, IH, IW,
             PH, PW, DH, DW, SH, SW, OH, OW, group, deformable_group));
 }
+
+std::vector<BwdFlt::Algorithm*> BwdFlt::get_all_algorithms(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* dst */) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_deformable_conv_bwd_filter_algo()};
+}
+
+std::vector<BwdFlt::Algorithm*> BwdFlt::get_all_algorithms_safe(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* dst */) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_deformable_conv_bwd_filter_algo()};
+}
+
+BwdFlt::Algorithm* BwdFlt::get_algorithm_heuristic(
+        const TensorLayout& /* src */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
+        const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr) {
+    auto algo = static_cast<HandleImpl*>(handle())
+                        ->default_deformable_conv_bwd_filter_algo();
+    algo->check_attribute(positive_attr, negative_attr);
+    return algo;
+}
+
+BwdFlt::Algorithm* BwdFlt::get_algorithm_from_desc(const AlgorithmDesc& desc) {
+    Algorithm* ret = static_cast<HandleImpl*>(handle())
+                             ->default_deformable_conv_bwd_filter_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
+}
+
 size_t BwdData::get_workspace_in_bytes(
         const TensorLayout& /* im */, const TensorLayout& /* filter */,
         const TensorLayout& /* offset */, const TensorLayout& /* mask */,
@@ -415,6 +483,44 @@ void BwdData::exec(
             mask.ptr<float>(), out_grad.ptr<float>(), im_grad.ptr<float>(),
             offset_grad.ptr<float>(), mask_grad.ptr<float>(), OC, IC, N, FH, FW, IH, IW,
             PH, PW, SH, SW, DH, DW, OH, OW, group, deformable_group));
+}
+
+std::vector<BwdData::Algorithm*> BwdData::get_all_algorithms(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* out_grad */, const TensorLayout& /* im_grad */,
+        const TensorLayout& /* offset_grad */, const TensorLayout& /* mask_grad */) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_deformable_conv_bwd_data_algo()};
+}
+
+std::vector<BwdData::Algorithm*> BwdData::get_all_algorithms_safe(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* out_grad */, const TensorLayout& /* im_grad */,
+        const TensorLayout& /* offset_grad */, const TensorLayout& /* mask_grad */) {
+    return {static_cast<HandleImpl*>(handle())
+                    ->default_deformable_conv_bwd_data_algo()};
+}
+
+BwdData::Algorithm* BwdData::get_algorithm_heuristic(
+        const TensorLayout& /* im */, const TensorLayout& /* filter */,
+        const TensorLayout& /* offset */, const TensorLayout& /* mask */,
+        const TensorLayout& /* out_grad */, const TensorLayout& /* im_grad */,
+        const TensorLayout& /* offset_grad */, const TensorLayout& /* mask_grad */,
+        size_t /* workspace_limit_in_bytes */, const AlgoAttribute& positive_attr,
+        const AlgoAttribute& negative_attr) {
+    auto algo =
+            static_cast<HandleImpl*>(handle())->default_deformable_conv_bwd_data_algo();
+    algo->check_attribute(positive_attr, negative_attr);
+    return algo;
+}
+
+BwdData::Algorithm* BwdData::get_algorithm_from_desc(const AlgorithmDesc& desc) {
+    Algorithm* ret =
+            static_cast<HandleImpl*>(handle())->default_deformable_conv_bwd_data_algo();
+    megdnn_assert(desc == ret->info().desc);
+    return ret;
 }
 
 // vim: syntax=cpp.doxygen

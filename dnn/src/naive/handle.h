@@ -38,6 +38,10 @@ class HandleImpl : public HandleImplHelper {
 
     static DefaultPoolingForwardAlgorithm m_default_pooling_fwd_algo;
     static DefaultPoolingBackwardAlgorithm m_default_pooling_bwd_algo;
+    static DeformableConvForwardAlgorithm m_default_deformable_conv_fwd_algo;
+    static DeformableConvBackwardDataAlgorithm m_default_deformable_conv_bwd_data_algo;
+    static DeformableConvBackwardFilterAlgorithm
+            m_default_deformable_conv_bwd_filter_algo;
 
     //! move KernFunc to alloc_kern()->func, destruct func, and call dispatch
     template <typename T>
@@ -117,6 +121,18 @@ public:
 
     PoolingBackward::Algorithm* default_pooling_bwd_algo() {
         return &m_default_pooling_bwd_algo;
+    }
+
+    DeformableConvForward::Algorithm* default_deformable_conv_fwd_algo() {
+        return &m_default_deformable_conv_fwd_algo;
+    }
+
+    DeformableConvBackwardData::Algorithm* default_deformable_conv_bwd_data_algo() {
+        return &m_default_deformable_conv_bwd_data_algo;
+    }
+
+    DeformableConvBackwardFilter::Algorithm* default_deformable_conv_bwd_filter_algo() {
+        return &m_default_deformable_conv_bwd_filter_algo;
     }
 
     Relayout* relayout_opr() override { return get_helper_opr<Relayout, 2>(this); }

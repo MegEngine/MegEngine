@@ -12,24 +12,18 @@ public:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& /* im */, const TensorLayout& /* filter */,
             const TensorLayout& /* offset */, const TensorLayout& /* mask */,
-            const TensorLayout& /* dst */) override {
-        return std::vector<Algorithm*>();
-    };
+            const TensorLayout& /* dst */) override;
     std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /* im */, const TensorLayout& /* filter */,
             const TensorLayout& /* offset */, const TensorLayout& /* mask */,
-            const TensorLayout& /* dst */) override {
-        return std::vector<Algorithm*>();
-    };
+            const TensorLayout& /* dst */) override;
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& /* src */, const TensorLayout& /* filter */,
             const TensorLayout& /* offset */, const TensorLayout& /* mask */,
             const TensorLayout& /* dst */, size_t /* workspace_limit_in_bytes */,
             const AlgoAttribute& /*positive_attr*/,
-            const AlgoAttribute& /*negative_attr*/) override {
-        return nullptr;
-    };
+            const AlgoAttribute& /*negative_attr*/) override;
 
     size_t get_workspace_in_bytes(
             const TensorLayout& /* src */, const TensorLayout& /* filter */,
@@ -42,7 +36,7 @@ public:
         return "DEFORMABLE_CONV2_NAIVE";
     };
 
-    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override { return {}; }
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
     void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in offset,
@@ -57,16 +51,12 @@ public:
     std::vector<Algorithm*> get_all_algorithms(
             const TensorLayout& /* im */, const TensorLayout& /* offset */,
             const TensorLayout& /* mask */, const TensorLayout& /* out_grad */,
-            const TensorLayout& /* filter_grad */) override {
-        return std::vector<Algorithm*>();
-    };
+            const TensorLayout& /* filter_grad */) override;
 
     std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /* im */, const TensorLayout& /* offset */,
             const TensorLayout& /* mask */, const TensorLayout& /* out_grad */,
-            const TensorLayout& /* filter_grad */) override {
-        return std::vector<Algorithm*>();
-    };
+            const TensorLayout& /* filter_grad */) override;
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& /* im */, const TensorLayout& /* offset */,
@@ -74,9 +64,7 @@ public:
             const TensorLayout& /* filter_grad */,
             size_t /* workspace_limit_in_bytes */,
             const AlgoAttribute& /*positive_attr*/,
-            const AlgoAttribute& /*negative_attr*/) override {
-        return nullptr;
-    };
+            const AlgoAttribute& /*negative_attr*/) override;
 
     size_t get_workspace_in_bytes(
             const TensorLayout& im, const TensorLayout& offset,
@@ -87,7 +75,7 @@ public:
         return "DEFORMABLE_CONV2_BWD_FILTER_NAIVE";
     };
 
-    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override { return {}; }
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
     void exec(
             _megdnn_tensor_in im, _megdnn_tensor_in offset, _megdnn_tensor_in mask,
@@ -104,18 +92,14 @@ public:
             const TensorLayout& /* offset */, const TensorLayout& /* mask */,
             const TensorLayout& /* out_grad */, const TensorLayout& /* im_grad */,
             const TensorLayout& /* offset_grad */,
-            const TensorLayout& /* mask_grad */) override {
-        return std::vector<Algorithm*>();
-    };
+            const TensorLayout& /* mask_grad */) override;
 
     std::vector<Algorithm*> get_all_algorithms_safe(
             const TensorLayout& /* im */, const TensorLayout& /* filter */,
             const TensorLayout& /* offset */, const TensorLayout& /* mask */,
             const TensorLayout& /* out_grad */, const TensorLayout& /* im_grad */,
             const TensorLayout& /* offset_grad */,
-            const TensorLayout& /* mask_grad */) override {
-        return std::vector<Algorithm*>();
-    };
+            const TensorLayout& /* mask_grad */) override;
 
     Algorithm* get_algorithm_heuristic(
             const TensorLayout& /* im */, const TensorLayout& /* filter */,
@@ -124,9 +108,7 @@ public:
             const TensorLayout& /* offset_grad */, const TensorLayout& /* mask_grad */,
             size_t /* workspace_limit_in_bytes */,
             const AlgoAttribute& /*positive_attr*/,
-            const AlgoAttribute& /*negative_attr*/) override {
-        return nullptr;
-    };
+            const AlgoAttribute& /*negative_attr*/) override;
 
     size_t get_workspace_in_bytes(
             const TensorLayout& im, const TensorLayout& filter,
@@ -138,7 +120,7 @@ public:
         return "DEFORMABLE_CONV2_BWD_DATA_NAIVE";
     };
 
-    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override { return {}; }
+    Algorithm* get_algorithm_from_desc(const AlgorithmDesc&) override;
 
     void exec(
             _megdnn_tensor_in im, _megdnn_tensor_in filter, _megdnn_tensor_in offset,

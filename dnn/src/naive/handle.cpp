@@ -115,6 +115,10 @@ DefaultBatchedMatrixMulAlgorithm HandleImpl::m_default_batched_matmul_fwd_algo;
 
 DefaultPoolingForwardAlgorithm HandleImpl::m_default_pooling_fwd_algo;
 DefaultPoolingBackwardAlgorithm HandleImpl::m_default_pooling_bwd_algo;
+DeformableConvForwardAlgorithm HandleImpl::m_default_deformable_conv_fwd_algo;
+DeformableConvBackwardDataAlgorithm HandleImpl::m_default_deformable_conv_bwd_data_algo;
+DeformableConvBackwardFilterAlgorithm
+        HandleImpl::m_default_deformable_conv_bwd_filter_algo;
 
 HandleImpl::HandleImpl(megcoreComputingHandle_t computing_handle, HandleType type)
         : HandleImplHelper(computing_handle, type),

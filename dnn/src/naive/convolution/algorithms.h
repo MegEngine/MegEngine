@@ -63,6 +63,32 @@ class DefaultPoolingBackwardAlgorithm final
     const char* name() const override { return "DEFAULT"; }
 };
 
+class DeformableConvForwardAlgorithm final
+        : public megdnn::DeformableConvForward::Algorithm {
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
+    uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
+};
+
+class DeformableConvBackwardFilterAlgorithm final
+        : public megdnn::DeformableConvBackwardFilter::Algorithm {
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
+    uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
+};
+class DeformableConvBackwardDataAlgorithm final
+        : public megdnn::DeformableConvBackwardData::Algorithm {
+    AlgoAttribute attribute() const override {
+        return AlgoAttribute::REPRODUCIBLE | AlgoAttribute::NAIVE;
+    }
+    uint32_t type() const override { return 0; }
+    const char* name() const override { return "DEFAULT"; }
+};
+
 }  // namespace naive
 }  // namespace megdnn
 
