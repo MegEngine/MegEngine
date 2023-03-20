@@ -11,7 +11,7 @@ using namespace test;
 
 template <typename tag>
 class FALLBACK_ELEMWISE : public FALLBACK {};
-TYPED_TEST_CASE(FALLBACK_ELEMWISE, elemwise::test_types);
+TYPED_TEST_SUITE(FALLBACK_ELEMWISE, elemwise::test_types);
 TYPED_TEST(FALLBACK_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }

@@ -12,7 +12,7 @@ namespace test {
 namespace {
 template <typename tag>
 class AARCH64_RELAYOUT : public AARCH64 {};
-TYPED_TEST_CASE(AARCH64_RELAYOUT, relayout::test_types);
+TYPED_TEST_SUITE(AARCH64_RELAYOUT, relayout::test_types);
 TYPED_TEST(AARCH64_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle());
 }

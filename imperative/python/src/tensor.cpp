@@ -994,6 +994,15 @@ void init_tensor(py::module m) {
         sync_py_task_q();
     });
     m.def("close", [channel]() {
+        // sync channel and compnode before close to ensure all tasks have been completed
+        if (channel->check_available()) {
+            channel->sync();
+        }
+        CompNode::sync_all();
+        CompNode::foreach ([](CompNode cn) {
+            auto err = cn.check_async_error();
+            mgb_assert(!err, "%s", err->what());
+        });
         channel->close();
         sync_py_task_q();
     });

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-
+#include <typeinfo>
 namespace mgb::imperative {
 
 std::string demangle(std::string mangled);

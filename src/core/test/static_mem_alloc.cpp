@@ -124,7 +124,7 @@ TEST_P(BasicCorrectness, OverwriteSameEnd) {
     ASSERT_EQ(align(1 + padding()), allocator->tot_alloc_lower_bound());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
         TestStaticMemAllocAlgo, BasicCorrectness,
         TestParam::make_values({1, 2}, {1, 2}, {1}));
 
@@ -207,7 +207,7 @@ TEST_P(RandomOpr, Main) {
             timer.get_secs(), sz_tot, sz_lower, double(sz_tot) / sz_lower - 1);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
         TestStaticMemAllocAlgo, RandomOpr,
         TestParam::make_values(
                 {1, 256}, {1, 32}, {10, INTERVAL_MOVE_MAX_SIZE, 1000, 10000}));

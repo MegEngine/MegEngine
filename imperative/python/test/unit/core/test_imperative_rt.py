@@ -71,3 +71,30 @@ def test_opdef_path():
     assert Mode.__module__ == "megengine.core._imperative_rt.ops"
     assert Mode.__name__ == "Mode"
     assert Mode.__qualname__ == "Elemwise.Mode"
+
+
+def _exit_impl():
+    import numpy as np
+    import megengine
+    from megengine import functional as F
+
+    megengine.set_default_device("cpu0")
+    in_channel = 32
+    out_channel = 32
+    x = megengine.tensor(np.random.randn(32, in_channel, 224, 224).astype(np.float32))
+    w = megengine.tensor(
+        np.random.randn(out_channel, in_channel, 3, 3).astype(np.float32)
+    )
+    y = F.conv2d(x, w)
+
+
+def test_imperative_exit():
+    import multiprocessing as mp
+
+    recover = mp.get_start_method()
+    mp.set_start_method("spawn", force=True)
+    pro = mp.Process(target=_exit_impl)
+    pro.start()
+    pro.join()
+    assert pro.exitcode == 0, f"{pro.exitcode}"
+    mp.set_start_method(recover, force=True)

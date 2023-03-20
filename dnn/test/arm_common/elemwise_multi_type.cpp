@@ -14,7 +14,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class ARM_COMMON_ELEMWISE_MULTI_TYPE : public ARM_COMMON {};
-TYPED_TEST_CASE(ARM_COMMON_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
+TYPED_TEST_SUITE(ARM_COMMON_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
 }  // anonymous namespace
 
 TYPED_TEST(ARM_COMMON_ELEMWISE_MULTI_TYPE, run) {

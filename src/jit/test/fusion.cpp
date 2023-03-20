@@ -1147,7 +1147,7 @@ TEST(TestJITFusionHalide, SameGradOpr) {
 
 template <typename tag>
 class TestJITHalideFusionCuda : public ::testing::Test {};
-TYPED_TEST_CASE(TestJITHalideFusionCuda, test_types);
+TYPED_TEST_SUITE(TestJITHalideFusionCuda, test_types);
 TYPED_TEST(TestJITHalideFusionCuda, run) {
     set_backend(Backend::NONE);
 
@@ -1160,7 +1160,7 @@ TYPED_TEST(TestJITHalideFusionCuda, run) {
 
 template <typename tag>
 class TestJITNvrtcFusion : public ::testing::Test {};
-TYPED_TEST_CASE(TestJITNvrtcFusion, test_types);
+TYPED_TEST_SUITE(TestJITNvrtcFusion, test_types);
 TYPED_TEST(TestJITNvrtcFusion, run) {
     set_backend(Backend::NONE);
 
