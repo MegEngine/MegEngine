@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <functional>
+#include <mutex>
 #include <unordered_map>
 
 using namespace megdnn;
@@ -64,6 +65,8 @@ typename ParameterizedDType<type_enum>::Trait* ParameterizedDType<
             DTypeParam<SelfType>, std::unique_ptr<SelfType::Trait>, Hasher>
             entries;
 
+    static DNN_MUTEX mtx;
+    MEGDNN_LOCK_GUARD(mtx);
     auto it = entries.find(param);
     if (it != entries.end()) {
         return it->second.get();
