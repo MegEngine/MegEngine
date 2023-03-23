@@ -52,7 +52,7 @@ void run_elemwise_benchmark(
 
 template <typename tag>
 class ROCM_ELEMWISE : public ROCM {};
-TYPED_TEST_SUITE(ROCM_ELEMWISE, elemwise::test_types);
+TYPED_TEST_CASE(ROCM_ELEMWISE, elemwise::test_types);
 TYPED_TEST(ROCM_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle_rocm());
 }

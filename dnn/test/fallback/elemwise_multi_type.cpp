@@ -8,7 +8,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class FALLBACK_ELEMWISE_MULTI_TYPE : public FALLBACK {};
-TYPED_TEST_SUITE(FALLBACK_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
+TYPED_TEST_CASE(FALLBACK_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
 }  // anonymous namespace
 
 TYPED_TEST(FALLBACK_ELEMWISE_MULTI_TYPE, run) {

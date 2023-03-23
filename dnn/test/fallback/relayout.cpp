@@ -14,7 +14,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class FALLBACK_RELAYOUT : public FALLBACK {};
-TYPED_TEST_SUITE(FALLBACK_RELAYOUT, relayout::test_types);
+TYPED_TEST_CASE(FALLBACK_RELAYOUT, relayout::test_types);
 TYPED_TEST(FALLBACK_RELAYOUT, run) {
     relayout::run_test<TypeParam>(this->handle());
 }

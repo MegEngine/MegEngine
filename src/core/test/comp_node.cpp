@@ -789,7 +789,7 @@ TEST(TestCompNode, DepedentObjectList) {
 namespace {
 template <typename tag>
 class TestCPUCompSeqRec : public ::testing::Test {};
-TYPED_TEST_SUITE(TestCPUCompSeqRec, comp_node_test::seq_rec::test_types);
+TYPED_TEST_CASE(TestCPUCompSeqRec, comp_node_test::seq_rec::test_types);
 TYPED_TEST(TestCPUCompSeqRec, run) {
     comp_node_test::seq_rec::run<TypeParam>(CompNode::load("cpux"));
 }

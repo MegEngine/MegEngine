@@ -13,7 +13,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class CUDA_ELEMWISE_MULTI_TYPE : public CUDA {};
-TYPED_TEST_SUITE(CUDA_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
+TYPED_TEST_CASE(CUDA_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
 }  // anonymous namespace
 
 TYPED_TEST(CUDA_ELEMWISE_MULTI_TYPE, run) {

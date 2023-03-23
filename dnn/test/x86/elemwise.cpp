@@ -212,7 +212,7 @@ TEST_F(X86, ELEMWISE_FORWARD_TERNARY) {
 
 template <typename tag>
 class X86_ELEMWISE : public X86 {};
-TYPED_TEST_SUITE(X86_ELEMWISE, elemwise::test_types);
+TYPED_TEST_CASE(X86_ELEMWISE, elemwise::test_types);
 TYPED_TEST(X86_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle());
 }

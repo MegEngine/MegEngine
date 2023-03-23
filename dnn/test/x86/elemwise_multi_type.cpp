@@ -11,7 +11,7 @@ using namespace test;
 namespace {
 template <typename tag>
 class X86_ELEMWISE_MULTI_TYPE : public X86 {};
-TYPED_TEST_SUITE(X86_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
+TYPED_TEST_CASE(X86_ELEMWISE_MULTI_TYPE, elemwise_multi_type::test_types);
 }  // anonymous namespace
 
 TYPED_TEST(X86_ELEMWISE_MULTI_TYPE, run) {
