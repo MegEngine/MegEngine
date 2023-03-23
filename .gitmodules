@@ -51,7 +51,7 @@
 	url = https://github.com/MegEngine/gflags.git
 [submodule "third_party/cpp_redis"]
 	path = third_party/cpp_redis
-	url = https://github.com/cpp-redis/cpp_redis
+	url = https://github.com/MegEngine/cpp_redis
 [submodule "third_party/tacopie"]
 	path = third_party/tacopie
 	url = https://github.com/cpp-redis/tacopie
