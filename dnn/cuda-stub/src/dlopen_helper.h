@@ -105,13 +105,21 @@ static void log_failed_load(int func_idx) {
 }
 
 static void* resolve_library_func(void* handle, const char* func) {
+    static size_t cnt = 0;
     if (!handle) {
         LOGD("%s handle should not be nullptr!", g_default_api_name);
         return nullptr;
     }
     auto ret = dlsym(handle, func);
     if (!ret) {
-        LOGD("failed to load %s func: %s.(It seems that the currently used version of the library containing the function is too old.)", g_default_api_name, func);
+	    cnt++;
+	    //! do not print all annoying msg at broken driver env, for example empty libcuda.so or libcuda.dll
+	    if (cnt < 3) {
+            LOGD("failed to load %s func: %s.(May caused by currently driver is too old, \
+                if you find cuda is not available(by import megengine as mge; mge.get_device_count(\"gpu\") \
+                    or find some inexplicable crash of the program, try upgrade driver from \
+                    https://developer.nvidia.com/cuda-downloads)", g_default_api_name, func);
+	    }
     }
     return ret;
 }
