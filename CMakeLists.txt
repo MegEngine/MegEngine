@@ -1274,15 +1274,29 @@ if(MGE_ARCH STREQUAL "aarch64")
     set(MARCH "-march=armv8.2-a+fp16")
   endif()
 
-  if(MGE_WITH_CUDA)
+  if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     message(
       WARNING
-        "aarch64 ld will add -mfix-cortex-a53-843419 and -mfix-cortex-a53-835769,\
-        when cuda enable and CMAKE with DEBUG build type,ld will take about 14min+,\
-        for save link time(14min->1min), you may open below flags if not deploy on\
-        arm a53 platform, or just build release type!")
+        "aarch64 ld will add -mfix-cortex-a53-843419 and -mfix-cortex-a53-835769 by default.\
+    when build with DEBUG build type,ld will take about 14min+, for save link time(14min->1min), \
+    you may open below flags if not deploy on arm a53 platform, or just build release type!"
+    )
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-fix-cortex-a53-843419
     # -mno-fix-cortex-a53-835769")
+  endif()
+
+  if(MGE_WITH_CUDA)
+    message(STATUS "check compiler version...")
+    if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.5)
+      message(FATAL_ERROR "gcc version must >= 7.5 when build with cuda")
+    endif()
+    # cuda libs build with -mno-fix-cortex-a53-843419 -mno-fix-cortex-a53-835769, if you are not deploy on arm a53 platform and want to save link time, you may open below flags even
+    message(
+      WARNING
+        "cuda libs build with -mno-fix-cortex-a53-843419 -mno-fix-cortex-a53-835769, so force disable it to avoid link error"
+    )
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} -mno-fix-cortex-a53-843419 -mno-fix-cortex-a53-835769")
   endif()
 endif()
 

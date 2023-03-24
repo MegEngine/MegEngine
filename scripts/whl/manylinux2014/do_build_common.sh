@@ -1,5 +1,13 @@
 #!/bin/bash -e
 
+IN_UBUNTU_DOCKER_ENV="OFF"
+if which lsb_release && lsb_release -a | grep "Ubuntu"; then
+    IN_UBUNTU_DOCKER_ENV="ON"
+    # some code will take about 1h to run as on aarch64-ubuntu
+    export CC=gcc-8
+    export CXX=g++-8
+fi
+
 function handle_strip() {
     echo "now handle strip $1"
     objcopy --only-keep-debug $1 $1.dbg
@@ -42,7 +50,9 @@ function patch_elf_depend_lib_mgb_mge() {
     echo "handle common depend lib for mgb or mge"
     LIBS_DIR=${BUILD_DIR}/staging/megengine/core/lib
     mkdir -p ${LIBS_DIR}
-    cp /usr/lib64/libatomic.so.1 ${LIBS_DIR}
+    if [ ${IN_UBUNTU_DOCKER_ENV} = "OFF" ]; then
+        cp /usr/lib64/libatomic.so.1 ${LIBS_DIR}
+    fi
 
     patchelf --remove-rpath ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
     patchelf --force-rpath --set-rpath '$ORIGIN/lib' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
@@ -73,6 +83,10 @@ SRC_DIR=$(readlink -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
 
 SUPPORT_ALL_VERSION="36m 37m 38 39 310"
+if [ ${IN_UBUNTU_DOCKER_ENV} = "ON" ]; then
+    SUPPORT_ALL_VERSION="3.6.10 3.7.7 3.8.3 3.9.4 3.10.1"
+    echo "in ubuntu docker env, override support all python version: ${SUPPORT_ALL_VERSION}"
+fi
 ALL_PYTHON=${ALL_PYTHON}
 if [[ -z ${ALL_PYTHON} ]]
 then
@@ -92,6 +106,42 @@ if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
     BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_ON/MGE_INFERENCE_ONLY_OFF/Release/build/
 fi
 
+function config_ubuntu_python_env() {
+    PYTHON_DIR=~/.pyenv/versions/$1/
+    PYTHON_BIN=~/.pyenv/versions/$1/bin
+    if [ ! -f "$PYTHON_BIN/python3" ]; then
+        echo "ERR: can not find $PYTHON_BIN , Invalid python package"
+        echo "now support list: ${FULL_PYTHON_VER}"
+        err_env
+    else
+        echo "put python3 to env..."
+        export PATH=${PYTHON_BIN}:$PATH
+        which python3
+    fi
+    echo ${ver}
+
+    if [ "$1" = "3.6.10" ]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.6m
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.6m.so
+    elif [ "$1" = "3.7.7" ]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.7m
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.7m.so
+    elif [[ "$1" = "3.8.3" || "$1" = "3.8.10" ]]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.8
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.8.so
+    elif [ "$1" = "3.9.4" ]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.9
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.9.so
+    elif [ "$1" = "3.10.1" ]; then
+        PYTHON_INCLUDE_DIR=${PYTHON_DIR}include/python3.10
+        PYTHON_LIBRARY=${PYTHON_DIR}/lib/libpython3.10.so
+    else
+        echo "ERR: DO NOT SUPPORT PYTHON VERSION"
+        echo "now support list: ${FULL_PYTHON_VER}"
+        exit -1
+    fi
+}
+
 # here we just treat cu file should not in the increment build file list
 INCREMENT_KEY_WORDS=".cu.o is dirty"
 IS_IN_FIRST_LOOP=TRUE
@@ -107,22 +157,42 @@ do
         rm -rf ${BUILD_DIR}
     fi
 
-    python_ver=`echo $ver | tr -d m`
-    MAJOR=${python_ver:0:1}
-    MINOR=${python_ver:1}
-    PYTHON_DIR=/opt/python/cp${python_ver}-cp${ver}
-
-    SUFFIX=
-    if [[ $MINOR -lt 8 ]];then
-        SUFFIX="m"
-    fi
-
+    # export common args
     export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_CUSTOM_OP=ON"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_EXECUTABLE=${PYTHON_DIR}/bin/python3"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_LIBRARY=${PYTHON_DIR}/lib/"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_INCLUDE_DIR=${PYTHON_DIR}/include/python${MAJOR}.${MINOR}${SUFFIX}"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_ATLAS=ON"
+
+    if [ ${IN_UBUNTU_DOCKER_ENV} = "ON" ]; then
+        echo "into Ubuntu env"
+        # config env
+        config_ubuntu_python_env ${ver}
+        #check env
+        if [ ! -f "$PYTHON_LIBRARY" ]; then
+            echo "ERR: can not find $PYTHON_LIBRARY , Invalid python package"
+            err_env
+        fi
+        if [ ! -d "$PYTHON_INCLUDE_DIR" ]; then
+            echo "ERR: can not find $PYTHON_INCLUDE_DIR , Invalid python package"
+            err_env
+        fi
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR}"
+    else
+        echo "into manylinux env"
+        python_ver=`echo $ver | tr -d m`
+        MAJOR=${python_ver:0:1}
+        MINOR=${python_ver:1}
+        PYTHON_DIR=/opt/python/cp${python_ver}-cp${ver}
+
+        SUFFIX=
+        if [[ $MINOR -lt 8 ]];then
+            SUFFIX="m"
+        fi
+        export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_INCLUDE_DIR=${PYTHON_DIR}/include/python${MAJOR}.${MINOR}${SUFFIX}"
+    fi
+    #append cmake args for config python
+    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_EXECUTABLE=${PYTHON_DIR}/bin/python3"
+    # please do not config to real python path, it will cause import failed if user python3 do not have libpython3.xx.so[dynamic lib]
+    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DPYTHON_LIBRARY=${PYTHON_DIR}/lib/"
 
     if [ -d "${BUILD_DIR}" ]; then
         # insure rm have args
@@ -174,8 +244,15 @@ do
     cd /home/output
     mkdir -p ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}
     cd ${BUILD_DIR}/staging/dist/
-    org_whl_name=`ls Meg*${ver}*.whl`
-    compat_whl_name=`echo ${org_whl_name} | sed 's/linux/manylinux2014/'`
+    org_whl_name="null"
+    if [ ${IN_UBUNTU_DOCKER_ENV} = "ON" ]; then
+        # ubuntu glibc higher than manylinux2014, so keep org name
+        org_whl_name=`ls Meg*.whl`
+        compat_whl_name=${org_whl_name}
+    else
+        org_whl_name=`ls Meg*${ver}*.whl`
+        compat_whl_name=`echo ${org_whl_name} | sed 's/linux/manylinux2014/'`
+    fi
     echo "org whl name: ${org_whl_name}"
     echo "comapt whl name: ${compat_whl_name}"
     mv ${org_whl_name} ${SRC_DIR}/scripts/whl/manylinux2014/output/wheelhouse/${SDK_NAME}/${compat_whl_name}

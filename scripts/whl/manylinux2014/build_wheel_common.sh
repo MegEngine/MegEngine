@@ -13,7 +13,9 @@ TensorRT_LIB_DIR="/opt/tensorrt/lib/"
 
 SDK_NAME="unknown"
 x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118"
-aarch64_support_version="cu102_JetsonNano cu111 cpu"
+aarch64_support_version="cu102_JetsonNano cu111 cpu cu118"
+docker_tag="env_manylinux2014:latest"
+
 if [[ -z ${IN_CI} ]]
 then
     IN_CI="false"
@@ -236,6 +238,12 @@ elif [ $SDK_NAME == "cu118" ];then
     CUDNN_LIB_DIR="/opt/cudnn/lib/"
     CUDA_LIB_DIR="/usr/local/cuda/targets/x86_64-linux/lib/"
     TensorRT_LIB_DIR="/opt/tensorrt/lib/"
+    if [ ${machine} == "aarch64" ];then
+        CUDA_LIB_DIR="/usr/local/cuda/targets/sbsa-linux/lib/"
+        # aarch64-trt8 libs build from ubuntu2004, which depends on new glibc and libc++
+        # manylinux2014 do satify the glibc/libc++ requirement, so we need to use ubuntu2004 as base image
+        docker_tag="ubuntu2004:latest"
+    fi
 
     CUDA_COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
@@ -262,6 +270,23 @@ elif [ $SDK_NAME == "cu118" ];then
         -gencode arch=compute_86,code=sm_86 \
         -gencode arch=compute_89,code=sm_89 \
         -gencode arch=compute_89,code=compute_89\" "
+    if [ ${machine} == "aarch64" ];then
+        if [ ${IN_CI} = "true" ]; then
+            # ci taishan is use SM_75 card
+            EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
+        else
+            # support orin and remove 1080Ti
+            EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
+                -DMGE_CUDA_GENCODE=\" \
+                -gencode arch=compute_70,code=sm_70 \
+                -gencode arch=compute_75,code=sm_75 \
+                -gencode arch=compute_80,code=sm_80 \
+                -gencode arch=compute_86,code=sm_86 \
+                -gencode arch=compute_87,code=sm_87 \
+                -gencode arch=compute_89,code=sm_89 \
+                -gencode arch=compute_89,code=compute_89\" "
+        fi
+    fi
 
 
 elif [ $SDK_NAME == "cpu" ];then
@@ -407,6 +432,10 @@ if [ ${machine} == "aarch64" ];then
     # infact ubuntu gcc version: gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0 is OK
     echo "force use gcc8 on aarch64 linux"
     BUILD_GCC8="ON"
+    if [ $SDK_NAME == "cu118" ];then
+        echo "cu118 with aarch64 will build at ubuntu2004 docker env, so do not use gcc8"
+        BUILD_GCC8="OFF"
+    fi
 fi
 
 if [ "$BUILD_GCC8" == "ON" ];then
@@ -443,4 +472,4 @@ docker run --rm ${docker_args} $TMPFS_ARGS \
     -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt \
     -v ${BASEDIR}:/home/code \
     -v ${OUTPUTDIR}:/home/output:rw \
-    env_manylinux2014:latest /bin/bash -c "$run_cmd"
+    ${docker_tag} /bin/bash -c "$run_cmd"
