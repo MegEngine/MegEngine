@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import io
+import os
 from ctypes import *
 
-import numpy as np
+import megfile
 
 from .base import _Cnetwork, _Ctensor, _lib, _LiteCObjBase
 from .struct import *
@@ -594,6 +596,7 @@ class LiteNetwork(object):
 
         c_network_io = self.network_io._create_network_io()
         self._api.LITE_make_network(byref(self._network), self.config, c_network_io)
+        self.model_bytes = None
 
     def __repr__(self):
         data = {"config": self.config, "IOs": self.network_io}
@@ -602,12 +605,25 @@ class LiteNetwork(object):
     def __del__(self):
         self._api.LITE_destroy_network(self._network)
 
-    def load(self, path):
+    def load(self, file):
         """
-        load network from given path
+        load network from given file or file object
         """
-        c_path = c_char_p(path.encode("utf-8"))
-        self._api.LITE_load_model_from_path(self._network, c_path)
+        if isinstance(file, (str, os.PathLike)):
+            with megfile.smart_open(file, "rb") as f:
+                self.model_bytes = f.read()
+        else:
+            assert isinstance(
+                file, io.BufferedReader
+            ), "file must be BufferedReader when open!!"
+            self.model_bytes = file.read()
+
+        self.model_bytes = io.BytesIO(self.model_bytes)
+        length = self.model_bytes.getbuffer().nbytes
+        self.model_bytes = c_buffer(self.model_bytes.getvalue())
+
+        cdata = cast(self.model_bytes, POINTER(c_void_p))
+        self._api.LITE_load_model_from_mem(self._network, cdata, length)
 
     def forward(self):
         """

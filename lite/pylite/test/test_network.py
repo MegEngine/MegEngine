@@ -501,6 +501,25 @@ class TestNetwork(TestShuffleNet):
         os.remove(fast_run_cache)
         os.remove(global_layout_transform_model)
 
+    def test_network_basic_mem(self):
+        network = LiteNetwork()
+        with open(self.model_path, "rb") as file:
+            network.load(file)
+
+            input_name = network.get_input_name(0)
+            input_tensor = network.get_io_tensor(input_name)
+            output_name = network.get_output_name(0)
+            output_tensor = network.get_io_tensor(output_name)
+
+            assert input_tensor.layout.shapes[0] == 1
+            assert input_tensor.layout.shapes[1] == 3
+            assert input_tensor.layout.shapes[2] == 224
+            assert input_tensor.layout.shapes[3] == 224
+            assert input_tensor.layout.data_type == LiteDataType.LITE_FLOAT
+            assert input_tensor.layout.ndim == 4
+
+            self.do_forward(network)
+
 
 class TestDiscreteInputNet(unittest.TestCase):
     source_dir = os.getenv("LITE_TEST_RESOURCE")
