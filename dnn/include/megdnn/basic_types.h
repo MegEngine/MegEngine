@@ -95,6 +95,7 @@ struct TensorShape {
 #if MEGDNN_CC_HOST
     TensorShape() = default;
     TensorShape(const TensorShape& rhs) = default;
+    MGE_WIN_DECLSPEC_FUC TensorShape& operator=(const TensorShape& rhs) = default;
     MGE_WIN_DECLSPEC_FUC TensorShape(const SmallVector<size_t>& init_shape);
     MGE_WIN_DECLSPEC_FUC TensorShape(std::initializer_list<size_t> init_shape);
     MGE_WIN_DECLSPEC_FUC std::string to_string() const;
@@ -224,6 +225,7 @@ struct TensorLayout : public TensorShape {
 
 #if MEGDNN_CC_HOST
     TensorLayout(const TensorLayout& layout) = default;
+    TensorLayout& operator=(const TensorLayout& layout) = default;
 
     //! create empty layout with given dtype
     MGE_WIN_DECLSPEC_FUC explicit TensorLayout(DType dtype_);
