@@ -70,7 +70,7 @@ enum class OptLayoutType {
 /*!
  * \brief: dtype type for running model optimization
  */
-enum class OptDTypeType { IOC16 = 1 << 0 };
+enum class OptDTypeType { DEFAULT = 0, IOC16 = 1 << 0 };
 /**
  *  base class to story option value
  */
