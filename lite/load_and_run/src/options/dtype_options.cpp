@@ -16,6 +16,8 @@ void DTypeOption::config_model_internel<ModelLite>(
     break;
 
         switch (m_option_flag) {
+            case OptDTypeType::DEFAULT:
+                break;
             case OptDTypeType::IOC16:
                 ENABLE_DTYPE(f16_io_comp)
             default:
@@ -38,6 +40,8 @@ void DTypeOption::config_model_internel<ModelMdl>(
     break;
 
         switch (m_option_flag) {
+            case OptDTypeType::DEFAULT:
+                break;
             case OptDTypeType::IOC16:
                 ENABLE_DTYPE(f16_io_comp)
             default:
