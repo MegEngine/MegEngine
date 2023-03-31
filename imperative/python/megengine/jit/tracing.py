@@ -9,7 +9,7 @@ import pickle
 import re
 import struct
 import sys
-from typing import Any
+from typing import Any, Sequence
 
 import cv2
 import numpy as np
@@ -241,6 +241,8 @@ class trace:
     def _process_outputs(self, outputs):
         if isinstance(outputs, RawTensor):
             outputs = [outputs]
+        if not isinstance(outputs, Sequence):
+            outputs = [outputs]
         if isinstance(outputs, collections.abc.Mapping):
             output_names, outputs = zip(*sorted(outputs.items()))
         else:
@@ -248,6 +250,9 @@ class trace:
             output_names = None
         self._output_names = output_names
         for i, output in enumerate(outputs):
+            assert isinstance(
+                output, RawTensor
+            ), "Only support return tensors when capture_as_const is enabled"
             name_tensor("output_{}".format(i), output)
         if self._output_bindings is None:
             self._output_bindings = ["output_{}".format(i) for i in range(len(outputs))]
@@ -678,6 +683,10 @@ class trace:
         if not self._capture_as_const:
             raise ValueError(
                 "you must specify capture_as_const=True at __init__ to use dump"
+            )
+        if not hasattr(self, "_output_names"):
+            raise ValueError(
+                "the traced function without return values cannot be dumped, the traced function should return List[Tensor] or Dict[str, Tensor]"
             )
         if self._output_names and output_names:
             raise TypeError(

@@ -782,3 +782,24 @@ def test_invalid_inp_error():
         )
     else:
         assert False
+
+
+def test_dump_without_output_error():
+    def forward(x):
+        return x * x
+
+    @trace(symbolic=True, capture_as_const=True)
+    def f(x):
+        y = forward(x)
+
+    data = tensor([1.0, 2.0, 3.0])
+
+    f(data)
+    try:
+        file = io.BytesIO()
+        f.dump(file, arg_names=["x"])
+    except Exception as e:
+        assert (
+            str(e)
+            == "the traced function without return values cannot be dumped, the traced function should return List[Tensor] or Dict[str, Tensor]"
+        )
