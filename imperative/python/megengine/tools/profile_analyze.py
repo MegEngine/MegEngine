@@ -50,6 +50,7 @@ def _tabulate_confluence(tab, **kwargs):
 
 
 def main(passed_args=None):  # pylint: disable=too-many-statements
+    is_profile_from_ocl = False
     r"""Analyses profile info from :mod:`~.utils.profile_analyzer` .
     Run this file with ``--help`` to get more usage.
     """
@@ -164,6 +165,8 @@ def main(passed_args=None):  # pylint: disable=too-many-statements
 
     with open(args.dump) as fin:
         dump = json.load(fin)
+        if str(dump).find("opencl") != -1:
+            is_profile_from_ocl = True
 
     analyzer = ProfileAnalyzer(dump, opr_filter)
     analyzer_tot = ProfileAnalyzer(dump, lambda _, __, ___: True)
@@ -184,6 +187,16 @@ def main(passed_args=None):  # pylint: disable=too-many-statements
         tot_dev_time = get_tot_time(device_end_func)
         tot_host_time = get_tot_time(host_end_func)
         tab.append(("total device time", tot_dev_time))
+        # check device time
+        if 0 == tot_dev_time:
+            msg = (
+                "please call mgb::CompNode::enable_opencl_profile(true) before profile at c/c++ code"
+                if is_profile_from_ocl
+                else "please raise a issue for Engine"
+            )
+            assert 0 != tot_dev_time, "total device time should not be 0, {}".format(
+                msg
+            )
         tab.append(("total host time", tot_host_time))
         if args.copy_time:
 
