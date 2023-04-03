@@ -139,22 +139,22 @@ class LSQ(_FakeQuantize, QParamsModuleMixin):
         self.zero_point = Tensor(0.0, dtype="float32")
         self.grad_scale = Tensor(1.0, dtype="float32")
 
-    def set_qparams(self, qparams: LSQParams):
+    def set_qparams(self, qparams: QParams):
         self.mode = qparams.mode
         if qparams.mode == QuantMode.ASYMMERTIC:
             self.zero_point = qparams.zero_point
         else:
-            self.zero_point = Tensor([0.0], dtype="float32")
+            self.zero_point = Tensor(0.0, dtype="float32")
         if qparams.scale is None:
             raise AssertionError("Can not get an initialized scale")
         init_step_size = qparams.scale
         if init_step_size < self.eps:
-            init_step_size = 0
+            init_step_size = Tensor(0.0, dtype="float32")
         else:
-            init_step_size = init_step_size - self.eps
-        self.step_size = Parameter(init_step_size, dtype="float32")
-
-        self.grad_scale = qparams.grad_scale
+            init_step_size = Tensor(init_step_size - self.eps)
+        self.step_size = Parameter(init_step_size.item(), dtype="float32")
+        if isinstance(qparams, LSQParams):
+            self.grad_scale = qparams.grad_scale
 
     def fake_quant_forward(self, inp, qparams: LSQParams = None):
         step_size = F.abs(self.step_size) + self.eps
