@@ -1188,7 +1188,7 @@ def general_norm(
         sorted(normalized_axis), normalized_axis
     )
     assert (
-        normalized_axis[-1] < inp.ndim,
+        normalized_axis[-1] < inp.ndim
     ), "the maximum axis in normalized_axis is greater than inp_shape.ndim"
     assert len(set(normalized_axis)) == len(
         normalized_axis
