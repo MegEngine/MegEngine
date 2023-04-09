@@ -1465,34 +1465,35 @@ void aarch64_hgemm_assembly_kernel_4x8(
     __fp16* outptr6 = outptr5 + ldout;
     __fp16* outptr7 = outptr6 + ldout;
 
-#define LOAD_LINE(reg_index, n)            \
-    "mov x0, %[outptr" n                   \
-    "]\n"                                  \
-    "cmp %w[x_remain], #4\n"               \
-    "b.lt REMAIN_LOAD_LINE_LESS_THAN_4_" n \
-    "\n"                                   \
-    "ldr d" reg_index                      \
-    ", [x0]\n"                             \
-    "b LOAD_LINE_END_" n                   \
-    "\n"                                   \
-                                           \
-    "REMAIN_LOAD_LINE_LESS_THAN_4_" n      \
-    ":\n"                                  \
-    "cmp %w[x_remain], #0\n"               \
-    "beq LOAD_LINE_END_" n                 \
-    "\n"                                   \
-    "ld1 {v" reg_index                     \
-    ".h}[0], [x0], #2\n"                   \
-    "cmp %w[x_remain], #1\n"               \
-    "beq LOAD_LINE_END_" n                 \
-    "\n"                                   \
-    "ld1 {v" reg_index                     \
-    ".h}[1], [x0], #2\n"                   \
-    "cmp %w[x_remain], #2\n"               \
-    "beq LOAD_LINE_END_" n                 \
-    "\n"                                   \
-    "ld1 {v" reg_index                     \
-    ".h}[2], [x0], #2\n"                   \
+#define LOAD_LINE(reg_index, n) \
+    "mov x0, %[outptr" n        \
+    "]\n"                       \
+    "cmp %w[x_remain], #4\n"    \
+    "b.lt 9999" n               \
+    "f"                         \
+    "\n"                        \
+    "ldr d" reg_index           \
+    ", [x0]\n"                  \
+    "b LOAD_LINE_END_" n        \
+    "\n"                        \
+                                \
+    "9999" n                    \
+    ":\n"                       \
+    "cmp %w[x_remain], #0\n"    \
+    "beq LOAD_LINE_END_" n      \
+    "\n"                        \
+    "ld1 {v" reg_index          \
+    ".h}[0], [x0], #2\n"        \
+    "cmp %w[x_remain], #1\n"    \
+    "beq LOAD_LINE_END_" n      \
+    "\n"                        \
+    "ld1 {v" reg_index          \
+    ".h}[1], [x0], #2\n"        \
+    "cmp %w[x_remain], #2\n"    \
+    "beq LOAD_LINE_END_" n      \
+    "\n"                        \
+    "ld1 {v" reg_index          \
+    ".h}[2], [x0], #2\n"        \
     "LOAD_LINE_END_" n ":\n"
 
 #define LOAD_C           \
@@ -1505,35 +1506,40 @@ void aarch64_hgemm_assembly_kernel_4x8(
     LOAD_LINE("14", "6") \
     LOAD_LINE("15", "7")
 
-#define STORE_LINE(reg_index, n)            \
-    "mov x0, %[outptr" n                    \
-    "]\n"                                   \
-    "cmp %w[x_remain], #4\n"                \
-    "b.lt REMAIN_STORE_LINE_LESS_THAN_4_" n \
-    "\n"                                    \
-    "str d" reg_index                       \
-    ", [x0]\n"                              \
-    "b STORE_LINE_END_" n                   \
-    "\n"                                    \
-                                            \
-    "REMAIN_STORE_LINE_LESS_THAN_4_" n      \
-    ":\n"                                   \
-    "cmp %w[x_remain], #0\n"                \
-    "beq STORE_LINE_END_" n                 \
-    "\n"                                    \
-    "st1 {v" reg_index                      \
-    ".h}[0], [x0], #2\n"                    \
-    "cmp %w[x_remain], #1\n"                \
-    "beq STORE_LINE_END_" n                 \
-    "\n"                                    \
-    "st1 {v" reg_index                      \
-    ".h}[1], [x0], #2\n"                    \
-    "cmp %w[x_remain], #2\n"                \
-    "beq STORE_LINE_END_" n                 \
-    "\n"                                    \
-    "st1 {v" reg_index                      \
-    ".h}[2], [x0], #2\n"                    \
-    "STORE_LINE_END_" n ":\n"
+#define STORE_LINE(reg_index, n) \
+    "mov x0, %[outptr" n         \
+    "]\n"                        \
+    "cmp %w[x_remain], #4\n"     \
+    "b.lt 7777" n                \
+    "f"                          \
+    "\n"                         \
+    "str d" reg_index            \
+    ", [x0]\n"                   \
+    "b 8888" n                   \
+    "f"                          \
+    "\n"                         \
+                                 \
+    "7777" n                     \
+    ":\n"                        \
+    "cmp %w[x_remain], #0\n"     \
+    "beq 8888" n                 \
+    "f"                          \
+    "\n"                         \
+    "st1 {v" reg_index           \
+    ".h}[0], [x0], #2\n"         \
+    "cmp %w[x_remain], #1\n"     \
+    "beq 8888" n                 \
+    "f"                          \
+    "\n"                         \
+    "st1 {v" reg_index           \
+    ".h}[1], [x0], #2\n"         \
+    "cmp %w[x_remain], #2\n"     \
+    "beq 8888" n                 \
+    "f"                          \
+    "\n"                         \
+    "st1 {v" reg_index           \
+    ".h}[2], [x0], #2\n"         \
+    "8888" n ":\n"
 
 #define STORE_C           \
     STORE_LINE("8", "0")  \
@@ -1716,7 +1722,7 @@ void aarch64_hgemm_assembly_kernel_24x4(
     "LOAD_24x4_C_END:\n"
 
 #define STORE_LINE(v1, v2, v3, n)       \
-    "cbz w0, STORE_24x4_C_END\n"        \
+    "cbz w0, 4444f\n"        \
     "stp q" v1 ", q" v2 ", [%[outptr" n \
     "]]\n"                              \
     "str q" v3 ", [%[outptr" n          \
@@ -1728,7 +1734,7 @@ void aarch64_hgemm_assembly_kernel_24x4(
             STORE_LINE("9", "17", "25", "1")  \
             STORE_LINE("10", "18", "26", "2") \
             STORE_LINE("11", "19", "27", "3") \
-            "STORE_24x4_C_END:\n"
+            "4444:\n"
     // clang-format on
 
     asm volatile(
@@ -1940,7 +1946,7 @@ void aarch64_hgemm_assembly_kernel_16x4(
     "LOAD_16x4_C_END:\n"
 
 #define STORE_LINE(v1, v2, n)           \
-    "cbz w0, STORE_16x4_C_END\n"        \
+    "cbz w0, 3333f\n"        \
     "stp q" v1 ", q" v2 ", [%[outptr" n \
     "]]\n"                              \
     "subs w0, w0, #1\n"
@@ -1950,7 +1956,7 @@ void aarch64_hgemm_assembly_kernel_16x4(
             STORE_LINE("9", "17", "1")   \
             STORE_LINE("10", "18", "2")  \
             STORE_LINE("11", "19", "3")  \
-            "STORE_16x4_C_END:\n"
+            "3333:\n"
 
     // clang-format on
 
@@ -2128,7 +2134,7 @@ void aarch64_hgemm_assembly_kernel_8x4(
     "LOAD_8x4_C_END:\n"
 
 #define STORE_LINE(v1, n)       \
-    "cbz w0, STORE_8x4_C_END\n" \
+    "cbz w0, 2222f\n" \
     "str q" v1 ", [%[outptr" n  \
     "]]\n"                      \
     "subs w0, w0, #1\n"
@@ -2139,7 +2145,7 @@ void aarch64_hgemm_assembly_kernel_8x4(
     STORE_LINE("9", "1")     \
     STORE_LINE("10", "2")    \
     STORE_LINE("11", "3")    \
-    "STORE_8x4_C_END:\n"
+    "2222:\n"
     // clang-format on
 
     asm volatile(
@@ -2266,79 +2272,85 @@ void aarch64_hgemm_assembly_kernel_4x4(
     __fp16* outptr2 = outptr1 + ldout;
     __fp16* outptr3 = outptr2 + ldout;
 
-#define LOAD_LINE(reg_index, n)                \
-    "cbz w1, LOAD_4x4_C_END\n"                 \
-    "mov x0, %[outptr" n                       \
-    "]\n"                                      \
-    "cmp %w[x_remain], #4\n"                   \
-    "b.lt REMAIN_LOAD_4x4_LINE_LESS_THAN_4_" n \
-    "\n"                                       \
-    "ldr d" reg_index                          \
-    ", [x0]\n"                                 \
-    "b LOAD_4x4_LINE_END_" n                   \
-    "\n"                                       \
-                                               \
-    "REMAIN_LOAD_4x4_LINE_LESS_THAN_4_" n      \
-    ":\n"                                      \
-    "cmp %w[x_remain], #0\n"                   \
-    "beq LOAD_4x4_LINE_END_" n                 \
-    "\n"                                       \
-    "ld1 {v" reg_index                         \
-    ".h}[0], [x0], #2\n"                       \
-    "cmp %w[x_remain], #1\n"                   \
-    "beq LOAD_4x4_LINE_END_" n                 \
-    "\n"                                       \
-    "ld1 {v" reg_index                         \
-    ".h}[1], [x0], #2\n"                       \
-    "cmp %w[x_remain], #2\n"                   \
-    "beq LOAD_4x4_LINE_END_" n                 \
-    "\n"                                       \
-    "ld1 {v" reg_index                         \
-    ".h}[2], [x0], #2\n"                       \
-    "LOAD_4x4_LINE_END_" n                     \
-    ":\n"                                      \
+#define LOAD_LINE(reg_index, n) \
+    "cbz w1, LOAD_4x4_C_END\n"  \
+    "mov x0, %[outptr" n        \
+    "]\n"                       \
+    "cmp %w[x_remain], #4\n"    \
+    "b.lt 55555" n              \
+    "f"                         \
+    "\n"                        \
+    "ldr d" reg_index           \
+    ", [x0]\n"                  \
+    "b LOAD_4x4_LINE_END_" n    \
+    "\n"                        \
+                                \
+    "55555" n                   \
+    ":\n"                       \
+    "cmp %w[x_remain], #0\n"    \
+    "beq LOAD_4x4_LINE_END_" n  \
+    "\n"                        \
+    "ld1 {v" reg_index          \
+    ".h}[0], [x0], #2\n"        \
+    "cmp %w[x_remain], #1\n"    \
+    "beq LOAD_4x4_LINE_END_" n  \
+    "\n"                        \
+    "ld1 {v" reg_index          \
+    ".h}[1], [x0], #2\n"        \
+    "cmp %w[x_remain], #2\n"    \
+    "beq LOAD_4x4_LINE_END_" n  \
+    "\n"                        \
+    "ld1 {v" reg_index          \
+    ".h}[2], [x0], #2\n"        \
+    "LOAD_4x4_LINE_END_" n      \
+    ":\n"                       \
     "subs w1, w1, #1\n"
 
 #define LOAD_C                                                       \
     "mov w1, %w[y_remain]\n" LOAD_LINE("8", "0") LOAD_LINE("9", "1") \
             LOAD_LINE("10", "2") LOAD_LINE("11", "3") "LOAD_4x4_C_END:\n"
 
-#define STORE_LINE(reg_index, n)                \
-    "cbz w1, STORE_4x4_C_END\n"                 \
-    "mov x0, %[outptr" n                        \
-    "]\n"                                       \
-    "cmp %w[x_remain], #4\n"                    \
-    "b.lt REMAIN_STORE_4x4_LINE_LESS_THAN_4_" n \
-    "\n"                                        \
-    "str d" reg_index                           \
-    ", [x0]\n"                                  \
-    "b STORE_4x4_LINE_END_" n                   \
-    "\n"                                        \
-                                                \
-    "REMAIN_STORE_4x4_LINE_LESS_THAN_4_" n      \
-    ":\n"                                       \
-    "cmp %w[x_remain], #0\n"                    \
-    "beq STORE_4x4_LINE_END_" n                 \
-    "\n"                                        \
-    "st1 {v" reg_index                          \
-    ".h}[0], [x0], #2\n"                        \
-    "cmp %w[x_remain], #1\n"                    \
-    "beq STORE_4x4_LINE_END_" n                 \
-    "\n"                                        \
-    "st1 {v" reg_index                          \
-    ".h}[1], [x0], #2\n"                        \
-    "cmp %w[x_remain], #2\n"                    \
-    "beq STORE_4x4_LINE_END_" n                 \
-    "\n"                                        \
-    "st1 {v" reg_index                          \
-    ".h}[2], [x0], #2\n"                        \
-    "STORE_4x4_LINE_END_" n                     \
-    ":\n"                                       \
+#define STORE_LINE(reg_index, n) \
+    "cbz w1, 1111f\n"            \
+    "mov x0, %[outptr" n         \
+    "]\n"                        \
+    "cmp %w[x_remain], #4\n"     \
+    "b.lt 44444" n               \
+    "f"                          \
+    "\n"                         \
+    "str d" reg_index            \
+    ", [x0]\n"                   \
+    "b 6666" n                   \
+    "f"                          \
+    "\n"                         \
+                                 \
+    "44444" n                    \
+    ":\n"                        \
+    "cmp %w[x_remain], #0\n"     \
+    "beq 6666" n                 \
+    "f"                          \
+    "\n"                         \
+    "st1 {v" reg_index           \
+    ".h}[0], [x0], #2\n"         \
+    "cmp %w[x_remain], #1\n"     \
+    "beq 6666" n                 \
+    "f"                          \
+    "\n"                         \
+    "st1 {v" reg_index           \
+    ".h}[1], [x0], #2\n"         \
+    "cmp %w[x_remain], #2\n"     \
+    "beq 6666" n                 \
+    "f"                          \
+    "\n"                         \
+    "st1 {v" reg_index           \
+    ".h}[2], [x0], #2\n"         \
+    "6666" n                     \
+    ":\n"                        \
     "subs w1, w1, #1\n"
 
 #define STORE_C                                                        \
     "mov w1, %w[y_remain]\n" STORE_LINE("8", "0") STORE_LINE("9", "1") \
-            STORE_LINE("10", "2") STORE_LINE("11", "3") "STORE_4x4_C_END:\n"
+            STORE_LINE("10", "2") STORE_LINE("11", "3") "1111:\n"
 
     asm volatile(
             ".arch armv8.2-a+fp16\n"
