@@ -405,9 +405,15 @@ class ArrayMethodMixin(abc.ABC):
         r"""See :func:`~.transpose`."""
         return transpose_cpp(self, args)
 
-    def flatten(self):
+    def flatten(self, start_axis: int = 0, end_axis: int = -1):
         r"""See :func:`~.flatten`."""
-        return reshape_cpp(self, (-1,))
+        inp_shape = self.shape
+        if start_axis < 0:
+            start_axis += len(inp_shape)
+        target_shape = tuple(inp_shape[i] for i in range(start_axis)) + (-1,)
+        if end_axis != -1:
+            target_shape += (*inp_shape[end_axis + 1 :],)
+        return reshape_cpp(self, target_shape)
 
     def sum(self, axis=None, keepdims: bool = False):
         r"""See :func:`~.sum`."""

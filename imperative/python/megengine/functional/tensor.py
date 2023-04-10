@@ -941,12 +941,7 @@ def flatten(inp: Tensor, start_axis: int = 0, end_axis: int = -1) -> Tensor:
         >>> out.numpy().shape
         (2, 2, 9)
     """
-    if start_axis < 0:
-        start_axis += len(inp.shape)
-    target_shape = tuple(inp.shape[i] for i in range(start_axis)) + (-1,)
-    if end_axis != -1:
-        target_shape += (*inp.shape[end_axis + 1 :],)
-    return inp.reshape(*target_shape)
+    return inp.flatten(start_axis, end_axis)
 
 
 def expand_dims(inp: Tensor, axis: Union[int, Sequence[int]]) -> Tensor:
