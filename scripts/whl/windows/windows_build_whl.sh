@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 NT=$(echo `uname` | grep "NT")
 echo $NT
@@ -8,44 +9,170 @@ if [ -z "$NT" ];then
     exit -1
 fi
 
-function err_env() {
-    echo "check_env failed: pls refs ${SRC_DIR}/scripts/whl/BUILD_PYTHON_WHL_README.md to init env"
-    exit -1
-}
-echo $EXTRA_CMAKE_FLAG
-function append_path_env_and_check() {
-    if [[ -z $VS_PATH ]]; then
-        echo  "export vs2019 install path"
-        export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise
-    fi
-    if [[ -z $LLVM_PATH ]]; then
-        echo  "export LLVM install path"
-        export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1
-    fi
-}
-
-append_path_env_and_check
-
 SRC_DIR=$(READLINK -f "`dirname $0`/../../../")
 source ${SRC_DIR}/scripts/whl/utils/utils.sh
+source ${SRC_DIR}/scripts/whl/windows/config.sh
 
-ALL_PYTHON=${ALL_PYTHON}
-FULL_PYTHON_VER="3.6.8 3.7.7 3.8.3 3.9.4 3.10.1"
-if [[ -z ${ALL_PYTHON} ]]
+function err_env() {
+    echo "check_env failed: pls call ${SRC_DIR}/scripts/whl/windows/env_prepare.sh to init env"
+    exit -1
+}
+
+SDK_NAME="unknown"
+x86_64_support_version="cpu cu101 cu118"
+
+if [[ -z ${IN_CI} ]]
 then
-    ALL_PYTHON=${FULL_PYTHON_VER}
-else
-    check_python_version_is_valid "${ALL_PYTHON}" "${FULL_PYTHON_VER}"
+    IN_CI="false"
 fi
+
+function usage() {
+    echo "use -sdk sdk_version to specify sdk toolkit config!"
+    echo "now x86_64 sdk_version support ${x86_64_support_version}"
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -sdk)
+            shift
+            SDK_NAME=$1
+            shift
+            ;;
+        *)
+            usage
+            exit -1
+    esac
+done
+
+is_valid_sdk="false"
+all_sdk=""
+machine=$(uname -m)
+case ${machine} in
+    x86_64) all_sdk=${x86_64_support_version} ;;
+    *) echo "nonsupport env!!!";exit -1 ;;
+esac
+
+for i_sdk in ${all_sdk}
+do
+    if [ ${i_sdk} == ${SDK_NAME} ];then
+        is_valid_sdk="true"
+    fi
+done
+if [ ${is_valid_sdk} == "false" ];then
+    echo "invalid sdk: ${SDK_NAME}"
+    usage
+    exit -1
+fi
+
+echo "Build with ${SDK_NAME}"
+
+# export setup.py local version
+export SDK_NAME=${SDK_NAME}
+
+# TODO: Windows CI take a long time, we have no enough resource to test
+# so only build one sm to speed build. after have enough resource, remove this
+# now we test at 1080TI remote env, so config sm to 61
+if [ ${IN_CI} = "true" ] ; then
+    EXTRA_CMAKE_FLAG=" -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61\" "
+fi
+
+CUDA_LIBS="not_find"
+CUDNN_LIBS="not_find"
+TRT_LIBS="not_find"
+MGE_EXPORT_DLL="${SRC_DIR}/build_dir/host/build/src/megengine_shared.dll"
+MGE_EXPORT_LIB="${SRC_DIR}/build_dir/host/build/src/megengine_shared.lib"
+
+if [ $SDK_NAME == "cu101" ];then
+    REQUIR_CUDA_VERSION="10010"
+    REQUIR_CUDNN_VERSION="7.6.5"
+    REQUIR_TENSORRT_VERSION="6.0.1.5"
+    REQUIR_CUBLAS_VERSION="10.1.0"
+    CUDA_ROOT_DIR=${CUDA_ROOT_DIR_101}
+    CUDNN_ROOT_DIR=${CUDNN_ROOT_DIR_101}
+    TRT_ROOT_DIR=${TRT_ROOT_DIR_101}
+    TENSORRT_ROOT_DIR=${TRT_ROOT_DIR}
+
+    CUDA_LIBS="${CUDA_ROOT_DIR}/bin/cusolver64_10.dll:${CUDA_ROOT_DIR}/bin/cublas64_10.dll\
+        :${CUDA_ROOT_DIR}/bin/curand64_10.dll:${CUDA_ROOT_DIR}/bin/cublasLt64_10.dll\
+        :${CUDA_ROOT_DIR}/bin/cudart64_101.dll"
+
+    CUDNN_LIBS="${CUDNN_ROOT_DIR}/bin/cudnn64_7.dll"
+
+    TRT_LIBS="${TRT_ROOT_DIR}/lib/nvinfer.dll:${TRT_ROOT_DIR}/lib/nvinfer_plugin.dll"
+
+
+elif [ $SDK_NAME == "cu118" ];then
+    REQUIR_CUDA_VERSION="11080"
+    REQUIR_CUDNN_VERSION="8.6.0"
+    REQUIR_TENSORRT_VERSION="8.5.3.1"
+    REQUIR_CUBLAS_VERSION="11.11.3.6"
+    CUDA_ROOT_DIR=${CUDA_ROOT_DIR_118}
+    CUDNN_ROOT_DIR=${CUDNN_ROOT_DIR_118}
+    TRT_ROOT_DIR=${TRT_ROOT_DIR_118}
+    TENSORRT_ROOT_DIR=${TRT_ROOT_DIR}
+
+    CUDA_LIBS="${CUDA_ROOT_DIR}/bin/cusolver64_11.dll:${CUDA_ROOT_DIR}/bin/cublas64_11.dll\
+        :${CUDA_ROOT_DIR}/bin/curand64_10.dll:${CUDA_ROOT_DIR}/bin/cublasLt64_11.dll\
+        :${CUDA_ROOT_DIR}/bin/cudart64_110.dll:${CUDA_ROOT_DIR}/bin/nvrtc64_112_0.dll"
+
+    CUDNN_LIBS="${CUDNN_ROOT_DIR}/bin/cudnn64_8.dll:${CUDNN_ROOT_DIR}/bin/cudnn_cnn_infer64_8.dll\
+        :${CUDNN_ROOT_DIR}/bin/cudnn_ops_train64_8.dll:${CUDNN_ROOT_DIR}/bin/cudnn_adv_infer64_8.dll\
+        :${CUDNN_ROOT_DIR}/bin/cudnn_cnn_train64_8.dll:${CUDNN_ROOT_DIR}/bin/cudnn_adv_train64_8.dll\
+        :${CUDNN_ROOT_DIR}/bin/cudnn_ops_infer64_8.dll:${CUDNN_ROOT_DIR}/bin/zlibwapi.dll"
+
+    # workround for CU118 depends on zlibwapi.dll
+    if [[ ! -f ${CUDNN_ROOT_DIR}/bin/zlibwapi.dll ]]; then
+        echo "can not find zlibwapi.dll, download from ${ZLIBWAPI_URL}"
+        rm -rf tttttmp_1988
+        mkdir -p tttttmp_1988
+        cd tttttmp_1988
+        curl -SL ${ZLIBWAPI_URL} --output zlib123dllx64.zip
+        unzip -X zlib123dllx64.zip
+        cp dll_x64/zlibwapi.dll ${CUDNN_ROOT_DIR}/bin/
+        cd ..
+        rm -rf tttttmp_1988
+        # double check
+        if [[ ! -f ${CUDNN_ROOT_DIR}/bin/zlibwapi.dll ]]; then
+            echo "some issue happened when prepare zlibwapi.dll, please fix me!!!!"
+            exit -1
+        fi
+    fi
+
+    TRT_LIBS="${TRT_ROOT_DIR}/lib/nvinfer.dll:${TRT_ROOT_DIR}/lib/nvinfer_builder_resource.dll:\
+        ${TRT_ROOT_DIR}/lib/nvinfer_plugin.dll"
+
+elif [ $SDK_NAME == "cpu" ];then
+    BUILD_WHL_CPU_ONLY="ON"
+else
+    echo "no support sdk ${SDK_NAME}"
+    usage
+    exit -1
+fi
+
+if [[ -z ${BUILD_WHL_CPU_ONLY} ]]
+then
+    BUILD_WHL_CPU_ONLY="OFF"
+fi
+
+if [ $SDK_NAME == "cpu" ];then
+    echo "use $SDK_NAME without cuda support"
+else
+    echo "CUDA_LIBS: $CUDA_LIBS"
+    echo "CUDNN_LIBS: $CUDNN_LIBS"
+    echo "TRT_LIBS: $TRT_LIBS"
+    # for utils.sh sub bash script, eg host_build.sh
+    export CUDA_ROOT_DIR=${CUDA_ROOT_DIR}
+    export CUDNN_ROOT_DIR=${CUDNN_ROOT_DIR}
+    export TRT_ROOT_DIR=${TRT_ROOT_DIR}
+fi
+
+check_cuda_cudnn_trt_version
+check_python_version_is_valid "${ALL_PYTHON}" "${FULL_PYTHON_VER}"
 
 PYTHON_DIR=
 PYTHON_LIBRARY=
 PYTHON_INCLUDE_DIR=
-WINDOWS_WHL_HOME=${SRC_DIR}/scripts/whl/windows/windows_whl_home
-if [[ -z $PYTHON_ROOT ]]; then
-    export PYTHON_ROOT="/c/Users/${USER}/mge_whl_python_env"
-fi
-
+WINDOWS_WHL_HOME=${SRC_DIR}/scripts/whl/windows/windows_whl_home/${SDK_NAME}
 if [ -e "${WINDOWS_WHL_HOME}" ]; then
     echo "remove old windows whl file"
     rm -rf ${WINDOWS_WHL_HOME}
@@ -53,7 +180,7 @@ fi
 mkdir -p ${WINDOWS_WHL_HOME}
 
 function config_python_env() {
-    PYTHON_DIR=$PYTHON_ROOT/$1
+    PYTHON_DIR=${DFT_PYTHON_BIN}/../$1
     PYTHON_BIN=${PYTHON_DIR}
     if [ ! -f "${PYTHON_BIN}/python3.exe" ]; then
         echo "ERR: can not find $PYTHON_BIN , Invalid python package"
@@ -76,42 +203,6 @@ then
     BUILD_WHL_CPU_ONLY="OFF"
 fi
 
-if [[ -z ${CUDA_ROOT_DIR} ]]; then
-    export CUDA_ROOT_DIR="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1"
-fi
-
-if [[ -z ${CUDNN_ROOT_DIR} ]]; then
-    export CUDNN_ROOT_DIR="/c/Program Files/NVIDIA GPU Computing Toolkit/cudnn-10.1-windows10-x64-v7.6.5.32/cuda"
-fi
-
-if [[ -z ${TRT_ROOT_DIR} ]]; then
-    export TRT_ROOT_DIR="/c/Program Files/NVIDIA GPU Computing Toolkit/TensorRT-6.0.1.5"
-fi
-
-# config NVIDIA libs
-TRT_LIBS=`ls $TRT_ROOT_DIR/lib/nvinfer*.dll`
-if [[ $TRT_VERSION == "7.2.3.4" ]]; then
-    MYELIN_LIB=`ls $TRT_ROOT_DIR/lib/myelin64_*.dll`
-fi
-CUDNN_LIBS=`ls $CUDNN_ROOT_DIR/bin/cudnn*.dll`
-CUSOLVER_LIB=`ls $CUDA_ROOT_DIR/bin/cusolver64_*.dll`
-CUBLAS_LIB=`ls $CUDA_ROOT_DIR/bin/cublas64_*.dll`
-CURAND_LIB=`ls $CUDA_ROOT_DIR/bin/curand64_*.dll`
-CUBLASLT_LIB=`ls $CUDA_ROOT_DIR/bin/cublasLt64_*.dll`
-CUDART_LIB=`ls $CUDA_ROOT_DIR/bin/cudart64_*.dll`
-if [[ $TRT_VERSION == 7.2.3.4 ]]; then
-    NVTRC_LIB=`ls $CUDA_ROOT_DIR/bin/nvrtc64_111_0.dll`
-else
-    NVTRC_LIB=`ls $CUDA_ROOT_DIR/bin/nvrtc64_*.dll`
-fi
-
-if [[ $SDK_NAME == "cu118" ]]; then
-    ZLIBWAPI=`ls $CUDA_ROOT_DIR/bin/zlibwapi.dll`
-fi
-# CUDART_LIB="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/bin/cudart64_101.dll"
-MGE_EXPORT_DLL="${SRC_DIR}/build_dir/host/build/src/megengine_shared.dll"
-MGE_EXPORT_LIB="${SRC_DIR}/build_dir/host/build/src/megengine_shared.lib"
-
 function depend_real_copy() {
     REAL_DST=$1
     echo "real copy lib to $1"
@@ -120,36 +211,27 @@ function depend_real_copy() {
 
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "copy nvidia lib...."
-        for TRT_LIB in $TRT_LIBS
+
+        IFS=: read -a lib_name_array <<<"$TRT_LIBS"
+        for lib_name in ${lib_name_array[@]};
         do
-            echo "Copy ${TRT_LIB} to ${REAL_DST}"
-            cp "${TRT_LIB}" ${REAL_DST}
+            echo "Copy ${lib_name} to ${REAL_DST}"
+            cp ${lib_name} ${REAL_DST}
         done
-        if [[ ! -z $MYELIN_LIB ]]; then
-            cp "$MYELIN_LIB" ${REAL_DST} 
-        fi
-        for CUDNN_LIB in $CUDNN_LIBS
+
+        IFS=: read -a lib_name_array <<<"$CUDNN_LIBS"
+        for lib_name in ${lib_name_array[@]};
         do
-            echo "Copy ${CUDNN_LIB} to ${REAL_DST}"
-            cp "${CUDNN_LIB}" ${REAL_DST}
+            echo "Copy ${lib_name} to ${REAL_DST}"
+            cp ${lib_name} ${REAL_DST}
         done
-        cp "${CUSOLVER_LIB}" ${REAL_DST}
-        cp "${CUBLAS_LIB}" ${REAL_DST}
-        cp "${CURAND_LIB}" ${REAL_DST}
-        cp "${CUBLASLT_LIB}" ${REAL_DST}
-        cp "${CUDART_LIB}" ${REAL_DST}
-        if [[ ! -z ${NVTRC_LIB} ]]; then
-          for lib in ${NVTRC_LIB} 
-          do
-            echo "Copy ${lib} to ${REAL_DST}"
-            cp "${lib}" ${REAL_DST}
-          done
-        fi
-        
-        if [[ ! -z ${ZLIBWAPI} ]]; then
-            echo "Copy ${ZLIBWAPI} to ${REAL_DST}"
-            cp "${ZLIBWAPI}" ${REAL_DST} 
-        fi
+
+        IFS=: read -a lib_name_array <<<"$CUDA_LIBS"
+        for lib_name in ${lib_name_array[@]};
+        do
+            echo "Copy ${lib_name} to ${REAL_DST}"
+            cp ${lib_name} ${REAL_DST}
+        done
     fi
 }
 
@@ -300,12 +382,5 @@ function third_party_prepare() {
 
 ######################
 export ALREADY_CONFIG_PYTHON_VER="yes"
-if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
-    if [[ -z $SDK_NAME ]]; then
-        export SDK_NAME="cu101"
-    fi
-else
-    export SDK_NAME="cpu"
-fi
 third_party_prepare
 do_build

@@ -25,7 +25,10 @@ if [ $OS = "Darwin" ];then
 fi
 
 SRC_DIR=$($READLINK -f "`dirname $0`/../../")
-source $SRC_DIR/scripts/cmake-build/utils/utils.sh
+source ${SRC_DIR}/scripts/cmake-build/utils/utils.sh
+if [[ $OS =~ "NT" ]]; then
+    source ${SRC_DIR}/scripts/whl/windows/config.sh
+fi
 config_ninja_default_max_jobs
 
 echo "EXTRA_CMAKE_ARGS: ${EXTRA_CMAKE_ARGS}"
@@ -165,28 +168,31 @@ function cmake_build() {
 function windows_env_err() {
     echo "check windows env failed!!"
     echo "please install env refs for: scripts/cmake-build/BUILD_README.md"
+    echo "also refs for: scripts/whl/windows/env_prepare.sh"
     exit -1
 }
 
 function prepare_env_for_windows_build() {
     echo "check Visual Studio install path env..."
-    if [[ -z $VS_PATH ]];then
-        echo "can not find visual_studio_path env, pls export you Visual Studio install dir to VS_PATH"
-        echo "examle for export Visual Studio 2019 Enterprise default install dir"
-        echo "export VS_PATH=/c/Program\ Files\ \(x86\)/Microsoft\ Visual\ Studio/2019/Enterprise"
-        exit -1
+    # check VS_INSTALL_PATH is valid or not
+    if [ ! -d ${VS_INSTALL_PATH}/Licenses ];then
+        echo "can not find ${VS_INSTALL_PATH}/Licenses, pls check VS_INSTALL_PATH env"
+        echo "pls install VisualStudio by scripts/whl/windows/env_prepare.sh"
+
+        windows_env_err
+    else
+        echo "use ${VS_INSTALL_PATH}"
     fi
-    echo $VS_PATH
 
     # only use cmake/Ninja install from Visual Studio, if not, may build failed
     # some user env may install cmake/clang-cl/Ninja at windows-git-bash env, so we put Visual Studio
     # path at the head of PATH, and check the valid
     echo "check cmake install..."
-    export PATH=$VS_PATH/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/:$PATH
+    export PATH=${VS_INSTALL_PATH}/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/:$PATH
     which cmake
     cmake_loc=`which cmake`
-    if [[ $cmake_loc =~ "vs" ]]; then
-        echo "cmake valid ..."
+    if [[ $cmake_loc =~ ${MEGENGINE_DEV_TOOLS_PREFIX_DIR} ]]; then
+        echo "use cmake: $cmake_loc"
     else
         echo "cmake Invalid: ..."
         windows_env_err
@@ -195,51 +201,98 @@ function prepare_env_for_windows_build() {
     echo "check clang-cl install..."
     # llvm install by Visual Studio have some issue, eg, link crash on large project, so we
     # use official LLVM download from https://releases.llvm.org/download.html
-    if [[ -z ${LLVM_PATH} ]];then
-        echo "can not find LLVM_PATH env, pls export you LLVM install dir to LLVM_PATH"
-        echo "examle for export LLVM_12_0_1"
-        echo "export LLVM_PATH=/c/Program\ Files/LLVM_12_0_1"
-        exit -1
+    # check LLVM_MEGENGINE_DEV_DIR is valid or not
+    if [ ! -f ${LLVM_MEGENGINE_DEV_DIR}/bin/clang-cl.exe ];then
+        echo "can not find ${LLVM_MEGENGINE_DEV_DIR}/bin/clang-cl.exe, pls check LLVM_MEGENGINE_DEV_DIR env"
+        echo "pls install LLVM by scripts/whl/windows/env_prepare.sh"
+        windows_env_err
+    else
+        echo "use ${LLVM_MEGENGINE_DEV_DIR}"
     fi
-    echo ${LLVM_PATH}
-    export PATH=${LLVM_PATH}/bin/:$PATH
+    echo ${LLVM_MEGENGINE_DEV_DIR}
+    export PATH=${LLVM_MEGENGINE_DEV_DIR}/bin/:$PATH
     clang_loc=`which clang-cl`
-    if [[ $clang_loc =~ "Visual" ]]; then
+    if [[ $clang_loc =~ ${VS_INSTALL_PATH} ]]; then
         echo "clang-cl Invalid: we do not support use LLVM installed by Visual Studio"
         windows_env_err
     else
         echo "clang-cl valid ..."
     fi
+    if [[ $clang_loc =~ ${LLVM_MEGENGINE_DEV_DIR} ]]; then
+        echo "use clang-cl : $clang_loc"
+    else
+        echo "clang-cl Invalid: ..."
+        windows_env_err
+    fi
 
     echo "check Ninja install..."
-    export PATH=$VS_PATH/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/:$PATH
+    export PATH=${VS_INSTALL_PATH}/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/:$PATH
     which Ninja
     ninja_loc=`which Ninja`
-    if [[ $ninja_loc =~ "vs" ]]; then
-        echo "Ninja valid ..."
+    if [[ $ninja_loc =~ ${MEGENGINE_DEV_TOOLS_PREFIX_DIR} ]]; then
+        echo "use Ninja: $ninja_loc"
     else
         echo "Ninja Invalid: ..."
         windows_env_err
     fi
 
     echo "put vcvarsall.bat path to PATH env.."
-    export PATH=$VS_PATH/VC/Auxiliary/Build:$PATH
+    # check vcvarsall.bat is valid or not
+    if [ ! -f ${VS_INSTALL_PATH}/VC/Auxiliary/Build/vcvarsall.bat ];then
+        echo "can not find ${VS_INSTALL_PATH}/VC/Auxiliary/Build/vcvarsall.bat, pls check VS_INSTALL_PATH env"
+        echo "pls install VisualStudio by scripts/whl/windows/env_prepare.sh"
+        windows_env_err
+    else
+        echo "use ${VS_INSTALL_PATH}"
+    fi
+    export PATH=$VS_INSTALL_PATH/VC/Auxiliary/Build:$PATH
 
-    echo "config cuda/cudnn/TensorRT env..."
-    
-    export CUDA_PATH=$CUDA_ROOT_DIR
-    export PATH=:$CUDA_PATH/bin:$PATH
-    export CUDA_BIN_PATH=$CUDA_PATH
-    export PC_CUDNN_INCLUDE_DIRS=$CUDNN_ROOT_DIR/include
-    export LD_LIBRARY_PATH=$TRT_ROOT_DIR/lib:$CUDA_ROOT_DIR/lib/x64:$CUDNN_ROOT_DIR/lib:$CUDNN_ROOT_DIR/lib/x64:$LD_LIBRARY_PATH
-    export INCLUDE=$INCLUDE:$CPATH
+    if [ $MGE_WITH_CUDA = "ON" ];then
+        echo "config cuda/cudnn/TensorRT env..."
+        if [[ -z ${CUDA_ROOT_DIR} ]]; then
+            echo "CUDA_ROOT_DIR is not set, use default: ${CUDA_DFT_ROOT}"
+            export CUDA_ROOT_DIR=${CUDA_DFT_ROOT}
+        fi
+        # check CUDA_ROOT_DIR is valid or not
+        if [ ! -f "${CUDA_ROOT_DIR}/bin/nvcc.exe" ];then
+            echo "can not find ${CUDA_ROOT_DIR}/bin/nvcc.exe, pls check env"
+            windows_env_err
+        else
+            echo "use CUDA_ROOT_DIR: ${CUDA_ROOT_DIR}"
+            # put cuda/bin to PATH env
+            export PATH=${CUDA_ROOT_DIR}/bin/:$PATH
+        fi
+
+        if [[ -z ${CUDNN_ROOT_DIR} ]]; then
+            echo "CUDNN_ROOT_DIR is not set, use default: ${CUDNN_DFT_ROOT}"
+            export CUDNN_ROOT_DIR=${CUDNN_DFT_ROOT}
+        fi
+        # check CUDNN_ROOT_DIR is valid or not
+        if [ ! -f "${CUDNN_ROOT_DIR}/include/cudnn.h" ];then
+            echo "can not find ${CUDNN_ROOT_DIR}/include/cudnn.h, pls check env"
+            windows_env_err
+        else
+            echo "use CUDNN_ROOT_DIR: ${CUDNN_ROOT_DIR}"
+        fi
+
+        if [[ -z ${TRT_ROOT_DIR} ]]; then
+            echo "TRT_ROOT_DIR is not set, use default: ${TRT_DFT_ROOT}"
+            export TRT_ROOT_DIR=${TRT_DFT_ROOT}
+        fi
+        # check TRT_ROOT_DIR is valid or not
+        if [ ! -f "${TRT_ROOT_DIR}/include/NvInfer.h" ];then
+            echo "can not find ${TRT_ROOT_DIR}/include/NvInfer.h, pls check env"
+            windows_env_err
+        else
+            echo "use TRT_ROOT_DIR: ${TRT_ROOT_DIR}"
+        fi
+    fi
 
     # python version will be config by whl build script or ci script, we need
     # a DFT version for build success when we just call host_build.sh
     if [[ -z ${ALREADY_CONFIG_PYTHON_VER} ]]
     then
         echo "config a default python3"
-        DFT_PYTHON_BIN=/c/Users/${USER}/mge_whl_python_env/3.8.3
         if [ ! -f "${DFT_PYTHON_BIN}/python3.exe" ]; then
             echo "ERR: can not find ${DFT_PYTHON_BIN}/python3.exe , Invalid env"
             windows_env_err
@@ -250,8 +303,15 @@ function prepare_env_for_windows_build() {
         fi
     fi
 
-    echo "export swig pwd to PATH"
-    export PATH=/c/Users/${USER}/swigwin-4.0.2::$PATH
+    # check swig is valid or not
+    if [ ! -f ${SWIG_INSTALL_DIR}/swig.exe ];then
+        echo "can not find ${SWIG_INSTALL_DIR}/swig.exe, pls check SWIG_INSTALL_DIR env"
+        echo "pls install swig by scripts/whl/windows/env_prepare.sh"
+        windows_env_err
+    else
+        echo "use swig: ${SWIG_INSTALL_DIR}"
+        export PATH=${SWIG_INSTALL_DIR}:$PATH
+    fi
 }
 
 function cmake_build_windows() {
@@ -288,7 +348,7 @@ function cmake_build_windows() {
     export CFLAGS=-$MGE_WINDOWS_BUILD_MARCH
     export CXXFLAGS=-$MGE_WINDOWS_BUILD_MARCH
     cmd.exe /C " \
-        vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH -vcvars_ver=14.26.28801 && cmake  -G "Ninja" \
+        vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH -vcvars_ver=${CVARS_VER_NEED} && cmake  -G "Ninja" \
         -DMGE_ARCH=$MGE_ARCH \
         -DMGE_INFERENCE_ONLY=$MGE_INFERENCE_ONLY \
         -DMGE_WITH_CUDA=$MGE_WITH_CUDA \
@@ -300,7 +360,7 @@ function cmake_build_windows() {
         ${EXTRA_CMAKE_ARGS} ../../.. "
 
     config_ninja_target_cmd ${NINJA_VERBOSE} ${BUILD_DEVELOP} "${SPECIFIED_TARGET}" ${NINJA_DRY_RUN} ${NINJA_MAX_JOBS}
-    cmd.exe /C " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH -vcvars_ver=14.26.28801 && ${NINJA_CMD} "
+    cmd.exe /C " vcvarsall.bat $MGE_WINDOWS_BUILD_ARCH -vcvars_ver=${CVARS_VER_NEED} && ${NINJA_CMD} "
 }
 
 if [[ $OS =~ "NT" ]]; then

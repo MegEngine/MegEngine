@@ -755,8 +755,11 @@ if(MGE_WITH_CUDA)
        OR ${MGE_ARCH} STREQUAL "i386"
        OR ${MGE_ARCH} STREQUAL "aarch64")
       set(MEGDNN_THREADS_512 0)
+      # ON windows platform, static library just a shell, always fallback to DLL
       if(MGE_WITH_CUDA
          AND MGE_CUDA_USE_STATIC
+         AND NOT MSVC
+         AND NOT WIN32
          AND ("${CUDNN_VERSION}" VERSION_GREATER "8.0.0" OR "${CUDNN_VERSION}"
                                                             VERSION_EQUAL "8.0.0")
          AND (NOT MGE_WITH_CUDNN_SHARED))

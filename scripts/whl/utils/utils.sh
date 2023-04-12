@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+# if you want debug this script, please set -ex
+
 OS=$(uname -s)
 
 docker_file=""
@@ -168,4 +170,121 @@ function check_python_version_is_valid() {
             exit -1
         fi
     done
+}
+
+function check_cuda_cudnn_trt_version() {
+    # check cuda/cudnn/trt version
+    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+        if [[ -z ${CUDA_ROOT_DIR} ]]; then
+            echo "Environment variable CUDA_ROOT_DIR not set."
+            exit -1
+        fi
+        if [[ -z ${CUDNN_ROOT_DIR} ]]; then
+            echo "Environment variable CUDNN_ROOT_DIR not set."
+            exit -1
+        fi
+        if [[ -z ${TENSORRT_ROOT_DIR} ]]; then
+            echo "Environment variable TENSORRT_ROOT_DIR not set."
+            if [[ -z ${TRT_ROOT_DIR} ]]; then
+                echo "Environment variable TRT_ROOT_DIR not set."
+                exit -1
+            else
+                echo "put ${TRT_ROOT_DIR} to TENSORRT_ROOT_DIR env"
+                TENSORRT_ROOT_DIR=${TRT_ROOT_DIR}
+            fi
+        fi
+
+        ## YOU SHOULD MODIFY CUDA VERSION AS BELOW WHEN UPGRADE
+        CUDA_ROOT_DIR_=${CUDA_ROOT_DIR%*/}
+        CUDNN_ROOT_DIR_=${CUDNN_ROOT_DIR%*/}
+        TENSORRT_ROOT_DIR_=${TENSORRT_ROOT_DIR%*/}
+
+        CUBLAS_VERSION_PATH=${CUDA_ROOT_DIR_}/include/cublas_api.h
+        CUDA_VERSION_PATH=${CUDA_ROOT_DIR_}/include/cuda.h
+        if [ -e ${CUDNN_ROOT_DIR_}/include/cudnn_version.h ];then
+            CUDNN_VERSION_PATH=${CUDNN_ROOT_DIR_}/include/cudnn_version.h
+        elif [ -e ${CUDNN_ROOT_DIR_}/include/cudnn.h ];then
+            CUDNN_VERSION_PATH=${CUDNN_ROOT_DIR_}/include/cudnn.h
+        else
+            echo "cannot determine CUDNN_VERSION_PATH from CUDNN_ROOT_DIR."
+            exit -1
+        fi
+        TENSORRT_VERSION_PATH=${TENSORRT_ROOT_DIR_}/include/NvInferVersion.h
+
+        if [ ! -e $CUDA_VERSION_PATH ] ; then
+            echo file $CUDA_VERSION_PATH is not exist
+            echo please check the Environment must use CUDA-$REQUIR_CUDA_VERSION
+            exit -1
+        fi
+        if [ ! -e $CUDNN_VERSION_PATH ] ; then
+            echo file $CUDNN_VERSION_PATH is not exist
+            echo please check the Environment must use CUDNN-V$REQUIR_CUDNN_VERSION
+            exit -1
+        fi
+        if [ ! -e $TENSORRT_VERSION_PATH ] ; then
+            echo file $TENSORRT_VERSION_PATH is not exist
+            echo please check the Environment must use TensorRT-$REQUIR_TENSORRT_VERSION
+            exit -1
+        fi
+        if [ ! -e $CUBLAS_VERSION_PATH ] ; then
+            echo file $CUBLAS_VERSION_PATH is not exist
+            exit -1
+        fi
+
+        CUBLAS_VERSION_CONTEXT=$(head -150 ${CUBLAS_VERSION_PATH})
+        CUDA_VERSION_CONTEXT=$(head -300 ${CUDA_VERSION_PATH})
+        CUDNN_VERSION_CONTEXT=$(head -62 ${CUDNN_VERSION_PATH})
+        TENSORRT_VERSION_CONTEXT=$(tail -20 ${TENSORRT_VERSION_PATH})
+
+        if [ "$REQUIR_CUDA_VERSION" -ge "11000" ];then
+            CUDA_API_VERSION=$(echo $CUDA_VERSION_CONTEXT | grep -Eo "define CUDA_VERSION * +([0-9]+)")
+        else
+            CUDA_API_VERSION=$(echo $CUDA_VERSION_CONTEXT | grep -Eo "define __CUDA_API_VERSION * +([0-9]+)")
+        fi
+        CUDA_VERSION=${CUDA_API_VERSION:0-5}
+        echo CUDA_VERSION:$CUDA_VERSION
+
+        CUDNN_VERSION_MAJOR=$(echo $CUDNN_VERSION_CONTEXT | grep -Eo "define CUDNN_MAJOR * +([0-9]+)")
+        CUDNN_VERSION_MINOR=$(echo $CUDNN_VERSION_CONTEXT | grep -Eo "define CUDNN_MINOR * +([0-9]+)")
+        CUDNN_VERSION_PATCH=$(echo $CUDNN_VERSION_CONTEXT | grep -Eo "define CUDNN_PATCHLEVEL * +([0-9]+)")
+        CUDNN_VERSION=${CUDNN_VERSION_MAJOR:0-1}.${CUDNN_VERSION_MINOR:0-1}.${CUDNN_VERSION_PATCH:0-1}
+        echo CUDNN_VERSION:$CUDNN_VERSION
+
+        TENSORRT_VERSION_MAJOR=$(echo $TENSORRT_VERSION_CONTEXT | grep -Eo "NV_TENSORRT_MAJOR * +([0-9]+)")
+        TENSORRT_VERSION_MINOR=$(echo $TENSORRT_VERSION_CONTEXT | grep -Eo "NV_TENSORRT_MINOR * +([0-9]+)")
+        TENSORRT_VERSION_PATCH=$(echo $TENSORRT_VERSION_CONTEXT | grep -Eo "NV_TENSORRT_PATCH * +([0-9]+)")
+        TENSORRT_VERSION_BUILD=$(echo $TENSORRT_VERSION_CONTEXT | grep -Eo "NV_TENSORRT_BUILD * +([0-9]+)")
+        TENSORRT_VERSION=${TENSORRT_VERSION_MAJOR:0-1}.${TENSORRT_VERSION_MINOR:0-1}.${TENSORRT_VERSION_PATCH:0-1}.${TENSORRT_VERSION_BUILD:0-1}
+        echo TENSORRT_VERSION:$TENSORRT_VERSION
+
+        CUBLAS_VERSION_MAJOR=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_MAJOR * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+        CUBLAS_VERSION_MINOR=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_MINOR * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+        CUBLAS_VERSION_PATCH=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_PATCH * +([0-9]+)" | grep -Eo "*+([0-9]+)")
+        if CUBLAS_VERSION_BUILD=$(echo $CUBLAS_VERSION_CONTEXT | grep -Eo "define CUBLAS_VER_BUILD * +([0-9]+)" | grep -Eo "*+([0-9]+)"); then
+            CUBLAS_VERSION=${CUBLAS_VERSION_MAJOR}.${CUBLAS_VERSION_MINOR}.${CUBLAS_VERSION_PATCH}.${CUBLAS_VERSION_BUILD}
+        else
+            CUBLAS_VERSION=${CUBLAS_VERSION_MAJOR}.${CUBLAS_VERSION_MINOR}.${CUBLAS_VERSION_PATCH}
+        fi
+        echo CUBLAS_VERSION:$CUBLAS_VERSION
+
+        if [ $CUDA_VERSION != $REQUIR_CUDA_VERSION ] ; then
+            echo please check the Environment must use CUDA NO.$REQUIR_CUDA_VERSION
+            exit -1
+        fi
+
+        if [ $CUDNN_VERSION != $REQUIR_CUDNN_VERSION ] ; then
+            echo please check the Environment must use CUDNN-V$REQUIR_CUDNN_VERSION
+            exit -1
+        fi
+
+        if [ $TENSORRT_VERSION != $REQUIR_TENSORRT_VERSION ] ; then
+            echo please check the Environment must use TENSORRT-$REQUIR_TENSORRT_VERSION
+            exit -1
+        fi
+
+        if [ $CUBLAS_VERSION != $REQUIR_CUBLAS_VERSION ] ; then
+            echo please check the Environment must use CUBLAS-$REQUIR_CUBLAS_VERSION
+            exit -1
+        fi
+    fi
 }

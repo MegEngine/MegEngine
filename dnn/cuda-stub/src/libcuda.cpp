@@ -28,31 +28,21 @@ CUresult on_init_failed(int func_idx) {
 #define _WRAPLIB_API_CALL CUDAAPI
 #define _WRAPLIB_CALLBACK CUDA_CB
 
+//! as some symbols link from cuda lib, but used at other module, export here
+#ifdef WIN32
+#pragma comment(linker, "/export:cudaSetDevice")
+#pragma comment(linker, "/export:cuCtxGetCurrent")
+#pragma comment(linker, "/export:cudaGetDeviceCount")
+#pragma comment(linker, "/export:cudaGetDeviceProperties")
+#pragma comment(linker, "/export:cudaRuntimeGetVersion")
+#pragma comment(linker, "/export:cudaGetDevice")
+#pragma comment(linker, "/export:cudaDeviceSynchronize")
+#endif
+
 #if CUDA_VERSION == 10010
 #include "./libcuda-wrap_10.1.h"
-
-//! as some symbols link from cuda lib, but used at other module, export here
-#ifdef WIN32
-#pragma comment(linker, "/export:cudaSetDevice")
-#pragma comment(linker, "/export:cuCtxGetCurrent")
-#pragma comment(linker, "/export:cudaGetDeviceCount")
-#pragma comment(linker, "/export:cudaGetDeviceProperties")
-#pragma comment(linker, "/export:cudaRuntimeGetVersion")
-#pragma comment(linker, "/export:cudaGetDevice")
-#pragma comment(linker, "/export:cudaDeviceSynchronize")
-#endif
 #elif CUDA_VERSION == 10020
 #include "./libcuda-wrap_10.2.h"
-//! as some symbols link from cuda lib, but used at other module, export here
-#ifdef WIN32
-#pragma comment(linker, "/export:cudaSetDevice")
-#pragma comment(linker, "/export:cuCtxGetCurrent")
-#pragma comment(linker, "/export:cudaGetDeviceCount")
-#pragma comment(linker, "/export:cudaGetDeviceProperties")
-#pragma comment(linker, "/export:cudaRuntimeGetVersion")
-#pragma comment(linker, "/export:cudaGetDevice")
-#pragma comment(linker, "/export:cudaDeviceSynchronize")
-#endif
 #elif CUDA_VERSION == 11010
 #include "./libcuda-wrap_11.1.h"
 #elif CUDA_VERSION == 11020
@@ -64,7 +54,6 @@ CUresult on_init_failed(int func_idx) {
 #else
 #error "cuda stub not support this cuda version, you can close cuda stub to passby"
 #endif
-
 
 #undef _WRAPLIB_CALLBACK
 #undef _WRAPLIB_API_CALL

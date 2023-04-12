@@ -48,7 +48,7 @@ commands:
 ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cu101
 ```
 
-* If you just want to build with cpu only version, you can set `-sdk` environment 'cpu'. such as:
+* If you just want to build with cpu only version, you can set `-sdk` to 'cpu'. such as:
 ```bash
 ALL_PYTHON="36m" ./scripts/whl/manylinux2014/build_wheel_common.sh -sdk cpu
 ```
@@ -71,12 +71,12 @@ ALL_PYTHON="3.7.7" ./scripts/whl/macos/macos_build_whl.sh
 
 * If you just want to build for a specific Python verison, you can use `ALL_PYTHON` environment variable. such as:
 ```bash
-ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh
+ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh -sdk cu118
 ```
 
-* If you just want to build with cpu only version, you can set `BUILD_WHL_CPU_ONLY` environment 'ON'. such as:
+* If you just want to build with cpu only version, you can set `-sdk` to cpu. such as:
 ```
-BUILD_WHL_CPU_ONLY="ON" ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh
+ALL_PYTHON="3.8.3" ./scripts/whl/windows/windows_build_whl.sh -sdk cpu
 ```
 
 ## Build for Android

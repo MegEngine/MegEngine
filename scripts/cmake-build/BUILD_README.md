@@ -49,61 +49,29 @@ But some dependencies need to be installed manually:
 ### Windows host build
 * commands:
 ```
+0: about all windows config
+    * please check scripts/whl/windows/config.sh
 1: install git (Windows GUI)
 	* download git-install.exe from https://git-scm.com/download/win
 	* only need choose git-lfs component
 	* install to default dir:  /c/Program\ Files/Git
-2: install visual studio 2019 Enterprise (Windows GUI)
-	* download install exe from https://visualstudio.microsoft.com
-	* choose "c++ develop" -> choose cmake/MSVC/cmake/windows-sdk when install
-	* NOTICE: windows sdk version >=14.28.29910 do not compat with CUDA 10.1, please
-		choose version < 14.28.29910
-	* then install choosed components
-3: install LLVM from https://releases.llvm.org/download.html (Windows GUI)
-    * llvm install by Visual Studio have some issue, eg, link crash on large project, please use official version
-    * download install exe from https://releases.llvm.org/download.html
-	* our ci use LLVM 12.0.1, if u install other version, please modify LLVM_PATH
-    * install 12.0.1 to /c/Program\ Files/LLVM_12_0_1
-4: install python3 (Windows GUI)
-	* download python 64-bit install exe (we support python3.6-python3.9 now)
-	     https://www.python.org/ftp/python/3.6.8/python-3.6.8-amd64.exe
-	     https://www.python.org/ftp/python/3.7.7/python-3.7.7-amd64.exe
-	     https://www.python.org/ftp/python/3.8.3/python-3.8.3-amd64.exe
-	     https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe
-	     https://www.python.org/ftp/python/3.10.1/python-3.10.1-amd64.exe
-	* install 3.6.8 to /c/Users/${USER}/mge_whl_python_env/3.6.8
-	* install 3.7.7 to /c/Users/${USER}/mge_whl_python_env/3.7.7
-	* install 3.8.3 to /c/Users/${USER}/mge_whl_python_env/3.8.3
-	* install 3.9.4 to /c/Users/${USER}/mge_whl_python_env/3.9.4
-	* install 3.10.1 to /c/Users/${USER}/mge_whl_python_env/3.10.1
-	* cp python.exe to python3.exe
-		loop cd /c/Users/${USER}/mge_whl_python_env/*
-		copy python.exe to python3.exe
-	* install python depends components
-		loop cd /c/Users/${USER}/mge_whl_python_env/*
-		python3.exe -m pip install --upgrade pip
-		python3.exe -m pip install -r imperative/python/requires.txt
-		python3.exe -m pip install -r imperative/python/requires-test.txt
-5: install cuda components (Windows GUI)
-	* now we support cuda10.1+cudnn7.6+TensorRT6.0 on Windows
-	* install cuda10.1 to C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1
-	* install cudnn7.6 to C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32
-	* install TensorRT6.0 to C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT-6.0.1.5
-6: edit system env variables (Windows GUI)
-	* create new key: "VS_PATH", value: "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
-	* create new key: "LLVM_PATH", value: "C:\Program Files\LLVM_12_0_1"
+2: install cuda components (Windows GUI) if you want to build with CUDA
+    * download cuda/cudnn/trt from NVIDIA or by scripts/whl/windows/cuda_cudnn_install.py
+    * export CUDA_ROOT_DIR/CUDNN_ROOT_DIR/TRT_ROOT_DIR to real cuda/cudnn/trt location
+3: install all env except cuda env
+    * just run scripts/whl/windows/env_prepare.sh
+4: edit system env variables (Windows GUI)
 	* append "Path" env value
         C:\Program Files\Git\cmd
-		C:\Users\build\mge_whl_python_env\3.8.3
-		C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin
-		C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\libnvvp
-		C:\Program Files\NVIDIA GPU Computing Toolkit\cudnn-10.1-windows10-x64-v7.6.5.32\cuda\bin
-		C:\Program Files\LLVM_12_0_1\lib\clang\12.0.1\lib\windows
+		C:\Users\build\megengine_dev_tools\pyenv-win\pyenv-win\versions\3.10.1
+        change `build` to your real user name
 ```
 
 ### Linux host build
 * commands:
 ```
+0: we provide Dockerfile if you do not prepare local env
+    * check about scripts/whl/manylinux2014/build_image.sh
 1: install Cmake, which version >= 3.15.2, ninja-build
 2: install gcc/g++, which version >= 6, (gcc/g++ >= 7, if need build training mode)
 3: install build-essential git git-lfs gfortran libgfortran-6-dev autoconf gnupg flex bison gperf curl zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev libxml2-utils xsltproc unzip libtool librdmacm-dev rdmacm-utils python3-dev python3-numpy texinfo

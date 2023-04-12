@@ -628,6 +628,9 @@ class FileBaton:
 
 def _build_with_ninja(build_dir: str, verbose: bool, error_prefix: str):
     command = ["ninja", "-v"]
+    # as cuda 10.1 do not compat with latest VC compiler, we need to specify the version of VC compiler, please refs to CVARS_VER_NEED@scripts/whl/windows/config.sh
+    # for example put vcvarsall.bat to PATH, then modify command to
+    # command = ["vcvarsall.bat", "x64", "-vcvars_ver=14.26.28801", "&&", "ninja", "-v"]
     env = os.environ.copy()
     try:
         sys.stdout.flush()
