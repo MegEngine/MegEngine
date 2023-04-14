@@ -37,3 +37,9 @@ from .quant_dequant import DequantStub, QuantStub
 from .rnn import LSTM, RNN, LSTMCell, RNNCell
 from .sequential import Sequential
 from .sliding_window import SlidingWindow, SlidingWindowTranspose
+from .vision import (
+    AdditiveElemwise,
+    AdditiveGaussianNoise,
+    AdditiveLaplaceNoise,
+    AdditivePoissonNoise,
+)
