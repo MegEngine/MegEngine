@@ -51,10 +51,14 @@ void GradKeyWrapper::backward(GradKeyWrapper* self, py::list tensors, py::list g
     std::vector<ValueRef> args;
     mgb_assert(tensors.size() == grads.size());
     for (auto&& tensor : tensors) {
-        args.push_back(TensorWrapper::try_cast(tensor.ptr())->m_tensor->data());
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        mgb_assert(tw, "expect Tensor");
+        args.push_back(tw->m_tensor->data());
     }
     for (auto&& grad : grads) {
-        args.push_back(TensorWrapper::try_cast(grad.ptr())->m_tensor->data());
+        auto* tw = TensorWrapper::try_cast(grad.ptr());
+        mgb_assert(tw, "expect Tensor");
+        args.push_back(tw->m_tensor->data());
     }
     imperative::apply(GradBackward(self->m_key), {args.data(), args.size()});
 }
@@ -63,7 +67,9 @@ pybind11::function GradKeyWrapper::get_backward_closure(
         GradKeyWrapper* self, py::list tensors) {
     std::vector<ValueRef> args;
     for (auto&& tensor : tensors) {
-        args.push_back(TensorWrapper::try_cast(tensor.ptr())->m_tensor->data());
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        mgb_assert(tw, "expect Tensor");
+        args.push_back(tw->m_tensor->data());
     }
     auto closure_value = imperative::apply(GetBackwardColsure(self->m_key), args)[0];
     auto closure = closure_value.as_ref<FunctionValue>();

@@ -239,6 +239,13 @@ class trace:
             }
 
     def _process_outputs(self, outputs):
+        assert (
+            isinstance(outputs, RawTensor)
+            or (
+                isinstance(outputs, Sequence) and not (isinstance(outputs[0], Sequence))
+            )
+            or isinstance(outputs, collections.abc.Mapping)
+        ), "Unsupport outputs type, should be Tensor, List[Tensor] or Dict[tensor_name, Tensor]"
         if isinstance(outputs, RawTensor):
             outputs = [outputs]
         if not isinstance(outputs, Sequence):

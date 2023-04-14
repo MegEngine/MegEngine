@@ -24,7 +24,9 @@ private:
         ValueRefList outputs(output_tws.size());
         auto it = outputs.begin();
         for (auto&& output_tw : output_tws) {
-            *(it++) = TensorWrapper::try_cast(output_tw.ptr())->m_tensor->data();
+            auto* tw = TensorWrapper::try_cast(output_tw.ptr());
+            mgb_assert(tw, "expect Tensor");
+            *(it++) = tw->m_tensor->data();
         }
         return outputs;
     }

@@ -418,7 +418,8 @@ py::object get_res_by_refhdl(
 }
 
 mgb::DType _get_dtype(py::handle tensor) {
-    auto tw = TensorWrapper::try_cast(tensor.ptr());
+    auto* tw = TensorWrapper::try_cast(tensor.ptr());
+    mgb_assert(tw, "expect Tensor");
     return tw->m_tensor->dtype();
 }
 
