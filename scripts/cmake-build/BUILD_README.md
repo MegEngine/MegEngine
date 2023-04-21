@@ -213,7 +213,7 @@ Now we only support cross build to IOS from MACOS
 
 
 ## Other ARM-Linux-Like board support
-It`s easy to support other customized arm-linux-like board, example:
+It's easy to support other customized arm-linux-like board, example:
 
 * 1: HISI 3516/3519, infact u can just use toolchains from arm developer or linaro
 then call scripts/cmake-build/cross_build_linux_arm_inference.sh to build a ELF
