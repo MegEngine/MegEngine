@@ -212,21 +212,7 @@ function depend_real_copy() {
     if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
         echo "copy nvidia lib...."
 
-        IFS=: read -a lib_name_array <<<"$TRT_LIBS"
-        for lib_name in ${lib_name_array[@]};
-        do
-            echo "Copy ${lib_name} to ${REAL_DST}"
-            cp ${lib_name} ${REAL_DST}
-        done
-
-        IFS=: read -a lib_name_array <<<"$CUDNN_LIBS"
-        for lib_name in ${lib_name_array[@]};
-        do
-            echo "Copy ${lib_name} to ${REAL_DST}"
-            cp ${lib_name} ${REAL_DST}
-        done
-
-        IFS=: read -a lib_name_array <<<"$CUDA_LIBS"
+        IFS=: read -a lib_name_array <<<"${TRT_LIBS}:${CUDNN_LIBS}:${CUDA_LIBS}"
         for lib_name in ${lib_name_array[@]};
         do
             echo "Copy ${lib_name} to ${REAL_DST}"

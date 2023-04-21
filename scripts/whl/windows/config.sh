@@ -10,6 +10,9 @@ if [ -z "$NT" ];then
 fi
 
 # MegEngine dev tools install prefix
+# please do not modify the prefix, because megvii3 will use this prefix
+# detail: megvii3/tools/toolchain/windows/configure.bzl and
+# megvii3/tools/toolchain/windows/windows_cc_configure.bzl
 MEGENGINE_DEV_TOOLS_PREFIX_DIR=/c/Users/${USER}/megengine_dev_tools
 
 # vs_buildtools download url
@@ -23,6 +26,9 @@ WIN_SDK_VER="18362"
 
 # VC Component version
 # please install 14.26.28801, others may cause build error or windows xp sp3 runtime error
+# please do not modify this tag, because megvii3 will use this prefix
+# detail: megvii3/tools/toolchain/windows/configure.bzl and
+# megvii3/tools/toolchain/windows/windows_cc_configure.bzl
 VC_VER="14.26"
 CVARS_VER_NEED="14.26.28801"
 

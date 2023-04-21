@@ -229,6 +229,30 @@ function install_vs() {
         echo "vs is already installed at ${VS_INSTALL_PATH}"
     fi
     echo "vs install success"
+
+    # config vs default vcvars_ver
+    # at NONE bazel-cuda, we have chance to config cvars_ver from scripts/cmake-build/host_build.sh
+    # but at bazel-cuda, we have no chance to config cvars_ver, why nvcc do not provide a flag to
+    # do this? or we do not find it? what`s more, latest cvars_ver have some compat issue, for example
+    # 14.29.30133 will have mutex issue, which will cause runtime crash on windows xp sp3 env
+    # also 14.29.30037 do not compat with cuda 10.1 at build stage, 'STL1002: Unexpected compiler version, expected CUDA 10.1 Update 2 or newer'
+    # as a workload, we config default cvars_ver to CVARS_VER_NEED define in scripts/whl/windows/config.sh
+    # by force modify some config file
+    if [ ! -f ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCRedistVersion.default.txt ];then
+        echo "broken env?(may need remote ${VS_INSTALL_PATH}) can not find ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCRedistVersion.default.txt"
+        exit -1
+    fi
+    if [ ! -f ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt ];then
+        echo "broken env?(may need remote ${VS_INSTALL_PATH}) can not find ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"
+        exit -1
+    fi
+    if [ ! -f ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCToolsVersion.v142.default.txt ];then
+        echo "broken env?(may need remote ${VS_INSTALL_PATH}) can not find ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCToolsVersion.v142.default.txt"
+        exit -1
+    fi
+    echo ${CVARS_VER_NEED} > ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCRedistVersion.default.txt
+    echo ${CVARS_VER_NEED} > ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt
+    echo ${CVARS_VER_NEED} > ${VS_INSTALL_PATH}/VC/Auxiliary/Build/Microsoft.VCToolsVersion.v142.default.txt
 }
 
 ##########################################################
