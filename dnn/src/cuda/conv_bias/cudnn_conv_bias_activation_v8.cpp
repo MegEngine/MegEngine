@@ -82,8 +82,6 @@ bool ConvBiasForwardImpl::AlgoCUDNNConvBiasActivationV8::is_available(
                 return false;
             break;
         case param::ConvBias::NonlineMode::H_SWISH:
-            if (args.src_layout->dtype.category() == DTypeCategory::QUANTIZED)
-                break;
             return false;
         default:
             megdnn_throw("unsupported NonlineMode");
