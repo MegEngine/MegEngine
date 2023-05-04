@@ -4,6 +4,9 @@ import re
 from typing import Optional
 
 from .core._imperative_rt.common import CompNode, DeviceType
+from .core._imperative_rt.common import (
+    get_cuda_driver_version as _get_cuda_driver_version,
+)
 from .core._imperative_rt.common import get_cuda_version as _get_cuda_version
 from .core._imperative_rt.common import get_cudnn_version as _get_cudnn_version
 from .core._imperative_rt.common import get_device_prop as _get_device_prop
@@ -26,6 +29,7 @@ __all__ = [
     "get_cuda_version",
     "get_cudnn_version",
     "get_tensorrt_version",
+    "get_cuda_driver_version",
     "get_allocated_memory",
     "get_reserved_memory",
     "get_max_reserved_memory",
@@ -299,3 +303,12 @@ def get_tensorrt_version():
         a version number, indicating `NV_TENSORRT_MAJOR * 1000 + NV_TENSORRT_MINOR * 100 + NV_TENSORRT_PATCH`.
     """
     return _get_tensorrt_version()
+
+
+def get_cuda_driver_version():
+    r"""Gets the latest version of CUDA supported by the driver.
+
+    Returns:
+        a supported latest cuda version number, indicating `CUDA_VERSION_MAJOR * 1000 + CUDA_VERSION_MINOR * 10`.
+    """
+    return _get_cuda_driver_version()

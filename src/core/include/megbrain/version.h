@@ -23,6 +23,7 @@ MGE_WIN_DECLSPEC_FUC Version get_version();
 MGE_WIN_DECLSPEC_FUC int get_cuda_version();
 MGE_WIN_DECLSPEC_FUC int get_cudnn_version();
 MGE_WIN_DECLSPEC_FUC int get_tensorrt_version();
+MGE_WIN_DECLSPEC_FUC int get_cuda_driver_version();
 }  // namespace mgb
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

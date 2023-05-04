@@ -63,4 +63,21 @@ int mgb::get_cudnn_version() {
 }
 #endif
 
+#if __has_include("cuda.h") && MGB_CUDA
+#include "cuda.h"
+int mgb::get_cuda_driver_version() {
+    int driver_version = -1;
+    auto error_code = cudaDriverGetVersion(&driver_version);
+    if (error_code != cudaSuccess) {
+        mgb_log_warn("cudaDriverGetVersion failed, error code: %d", error_code);
+        return -1;
+    }
+    return driver_version;
+}
+#else
+int mgb::get_cuda_driver_version() {
+    return -1;
+}
+#endif
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

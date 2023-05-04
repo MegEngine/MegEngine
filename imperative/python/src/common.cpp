@@ -268,6 +268,7 @@ void init_common(py::module m) {
     m.def("get_cuda_version", []() { return mgb::get_cuda_version(); });
     m.def("get_cudnn_version", []() { return mgb::get_cudnn_version(); });
     m.def("get_tensorrt_version", []() { return mgb::get_tensorrt_version(); });
+    m.def("get_cuda_driver_version", []() { return mgb::get_cuda_driver_version(); });
 
     m.def("what_is_xpu",
           [] { return CompNode::Locator::parse("xpux").to_physical().type; });

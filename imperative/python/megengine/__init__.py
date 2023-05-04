@@ -42,8 +42,6 @@ def _exit(code):
 
 def _atexit(handler):
     _exit_handlers.append(handler)
-
-
 _atexit(_close)
 
 _persistent_cache = _PersistentCacheOnServer()
