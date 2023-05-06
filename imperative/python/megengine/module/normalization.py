@@ -77,7 +77,7 @@ class GroupNorm(Module):
 
 class InstanceNorm(Module):
     r"""Applies Instance Normalization over a mini-batch of inputs
-    Refer to `Instance Normalization <https://arxiv.org/abs/1607.08022>`__
+    Refer to `Instance Normalization https://arxiv.org/abs/1607.08022`__
     
     .. math::
             y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
