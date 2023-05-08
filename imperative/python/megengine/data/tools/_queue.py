@@ -8,7 +8,9 @@ from multiprocessing import Queue
 import pyarrow
 import pyarrow.plasma as plasma
 
-MGE_PLASMA_MEMORY = int(os.environ.get("MGE_PLASMA_MEMORY", 4000000000))  # 4GB
+from ...logger import get_logger
+
+logger = get_logger(__name__)
 
 # Each process only need to start one plasma store, so we set it as a global variable.
 # TODO: how to share between different processes?
@@ -24,6 +26,49 @@ def _clear_plasma_store():
         MGE_PLASMA_STORE_MANAGER = None
 
 
+class _ExceptionWrapper:
+    def __init__(self, exc_type=None, exc_msg=None, where="in background"):
+        self.exc_type = exc_type
+        self.exc_msg = exc_msg
+        self.where = where
+
+    def reraise(self):
+        if self.exc_type == "PlasmaStoreFull" or self.exc_type == queue.Full:
+            msg = "Caught {} {}.\nSolution: {}".format(
+                self.exc_type,
+                self.where,
+                'Because of PlasmaStore out of memory, so you can fix it by using: os.environ["MGE_PLASMA_MEMORY"] = x000000000(4GB for default) or reduce the number-workers',
+            )
+            raise RuntimeError(msg)
+        elif self.exc_type == "ObjectIDGetError":
+            logger.warning(
+                "ObjectID not found in plasma store, some data will be lost, try to reduce the number-workers for debugging!"
+            )
+            return
+        else:
+            msg = "Caught {} {}.\nOriginal {}".format(
+                self.exc_type, self.where, self.exc_msg
+            )
+        raise RuntimeError(msg)
+
+    @staticmethod
+    def _serialize_Exception(val):
+        return {"exc_type": val.exc_type, "exc_msg": val.exc_msg, "where": val.where}
+
+    @staticmethod
+    def _deserialize_Exception(data):
+        return _ExceptionWrapper(data["exc_type"], data["exc_msg"], data["where"])
+
+
+context = pyarrow.SerializationContext()
+context.register_type(
+    _ExceptionWrapper,
+    "_ExceptionWrapper",
+    custom_serializer=_ExceptionWrapper._serialize_Exception,
+    custom_deserializer=_ExceptionWrapper._deserialize_Exception,
+)
+
+
 class _PlasmaStoreManager:
     __initialized = False
 
@@ -32,6 +77,9 @@ class _PlasmaStoreManager:
             binascii.hexlify(os.urandom(8)).decode()
         )
         debug_flag = bool(os.environ.get("MGE_DATALOADER_PLASMA_DEBUG", 0))
+        MGE_PLASMA_MEMORY = int(
+            os.environ.get("MGE_PLASMA_MEMORY", 4 * 1024 * 1024 * 1024)
+        )  # 4GB
         # NOTE: this is a hack. Directly use `plasma_store` may make subprocess
         # difficult to handle the exception happened in `plasma-store-server`.
         # For `plasma_store` is just a wrapper of `plasma-store-server`, which use
@@ -87,13 +135,22 @@ class PlasmaShmQueue:
         # Used to store the header for the data.(ObjectIDs)
         self.queue = Queue(maxsize)  # type: Queue
 
+    def get_error(self, exc_type, where="in background"):
+        data = _ExceptionWrapper(exc_type=exc_type, where=where)
+        data_buffer = pyarrow.serialize(data, context=context).to_buffer()
+        return data_buffer
+
     def put(self, data, block=True, timeout=None):
         if self.client is None:
             self.client = plasma.connect(self.socket_name)
         try:
             object_id = self.client.put(data)
         except plasma.PlasmaStoreFull:
-            raise RuntimeError("plasma store out of memory!")
+            where = "in DataLoader Plasma Store Put Full"
+            exc_type = "PlasmaStoreFull"
+            error = self.get_error(exc_type, where)
+            object_id = self.client.put((error,))
+
         try:
             self.queue.put(object_id, block, timeout)
         except queue.Full:
@@ -105,11 +162,11 @@ class PlasmaShmQueue:
             self.client = plasma.connect(self.socket_name)
         object_id = self.queue.get(block, timeout)
         if not self.client.contains(object_id):
-            raise RuntimeError(
-                "ObjectID: {} not found in plasma store".format(object_id)
-            )
-        data = self.client.get(object_id)
-        self.client.delete([object_id])
+            exc_type = "ObjectIDGetError"
+            data = (self.get_error(exc_type),)
+        else:
+            data = self.client.get(object_id)
+            self.client.delete([object_id])
         return data
 
     def qsize(self):

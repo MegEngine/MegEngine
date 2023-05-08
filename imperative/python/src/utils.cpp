@@ -2,12 +2,20 @@
 #ifdef WIN32
 #include <stdio.h>
 #include <windows.h>
+#else
+#include <sys/wait.h>
 #endif
 
+#include <frameobject.h>
 #include <pybind11/operators.h>
+#include <structseq.h>
 #include <atomic>
+#include <csignal>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <shared_mutex>
+#include <sstream>
 #include "./imperative_rt.h"
 #include "megbrain/common.h"
 #include "megbrain/comp_node.h"
@@ -144,6 +152,158 @@ int fork_exec_impl(
     return pid;
 #endif
 }
+
+#ifndef _WIN32
+
+#define SIGNAL_HANDLER(SIGNAL, HANDLER_NAME, ERROR_MSG)                              \
+    static void HANDLER_NAME(int sig, siginfo_t* info, void* ctx) {                  \
+        auto _w = write(STDERR_FILENO, ERROR_MSG, sizeof(ERROR_MSG) / sizeof(char)); \
+        (void)_w;                                                                    \
+        struct sigaction sa {};                                                      \
+        sa.sa_handler = SIG_DFL;                                                     \
+        sa.sa_flags = 0;                                                             \
+        if (sigemptyset(&sa.sa_mask) != 0 || sigaction(SIGNAL, &sa, nullptr) != 0) { \
+            _exit(EXIT_FAILURE);                                                     \
+        } else {                                                                     \
+            raise(SIGNAL);                                                           \
+        }                                                                            \
+    }
+
+static inline void set_signal_handler(
+        int signal, void (*handler)(int, siginfo_t*, void*),
+        struct sigaction* old_sa_ptr) {
+    struct sigaction sa {};
+    sa.sa_sigaction = handler;
+    sa.sa_flags = SA_RESTART | SA_SIGINFO | SA_NOCLDSTOP | SA_NODEFER;
+    if (sigemptyset(&sa.sa_mask) != 0 || sigaction(signal, &sa, old_sa_ptr) != 0) {
+        std::ostringstream oss;
+        oss << "An error occurred while setting handler for " << strsignal(signal)
+            << ".";
+        throw std::runtime_error(oss.str());
+    }
+}
+
+SIGNAL_HANDLER(
+        SIGSEGV, handler_SIGSEGV,
+        "ERROR: Unexpected segmentation fault encountered in worker.\n");
+SIGNAL_HANDLER(
+        SIGFPE, handler_SIGFPE,
+        "ERROR: Unexpected floating-point exception encountered in worker.\n");
+
+static void handler_SIGTERM(int sig, siginfo_t* info, void* ctx) {
+    if (info->si_pid == getppid()) {
+        _exit(EXIT_SUCCESS);
+    }
+    struct sigaction sa {};
+    sa.sa_handler = SIG_DFL;
+    sa.sa_flags = 0;
+    if (sigemptyset(&sa.sa_mask) != 0 || sigaction(SIGTERM, &sa, nullptr) != 0) {
+        _exit(EXIT_FAILURE);
+    } else {
+        raise(SIGTERM);
+    }
+}
+
+static void set_worker_signal_handlers() {
+    set_signal_handler(SIGSEGV, &handler_SIGSEGV, nullptr);
+    set_signal_handler(SIGTERM, &handler_SIGTERM, nullptr);
+    set_signal_handler(SIGFPE, &handler_SIGFPE, nullptr);
+}
+
+static std::unordered_map<int64_t, std::set<pid_t>> worker_pids = {};
+
+static void check_any_worker_failed() {
+    int error;
+    std::set<pid_t>* pid_set;
+    pid_t worker_pid;
+    siginfo_t infop;
+
+    for (auto& w : worker_pids) {
+        pid_set = &(w.second);
+        for (auto pid_it = pid_set->begin(); pid_it != pid_set->end(); ++pid_it) {
+            worker_pid = *pid_it;
+            infop.si_pid = 0;
+            error = waitid(P_PID, worker_pid, &infop, WEXITED | WNOHANG | WNOWAIT);
+            if (error < 0 || infop.si_pid == 0)
+                continue;
+            if (infop.si_code == CLD_EXITED &&
+                infop.si_status != EXIT_SUCCESS) {  // exit with error
+                std::ostringstream oss;
+                oss << "DataLoader worker (pid " << worker_pid << ") exited "
+                    << "unexpectedly with exit code " << infop.si_status << ". ";
+                pid_set->clear();
+                throw std::runtime_error(oss.str());
+            } else if (
+                    infop.si_code == CLD_KILLED ||
+                    infop.si_code == CLD_DUMPED) {  // killed by signal
+                std::ostringstream oss;
+                oss << "DataLoader worker (pid " << worker_pid << ") is killed "
+                    << "by signal: " << strsignal(infop.si_status) << ". "
+                    << "This error maybe casued by other libraries is not supported "
+                    << "well in mutiprocessing(fork), e.g. grpcio this python library. "
+                    << "Please check grpcio version and try to a lower version like "
+                       "1.47.0. If grpcio version is suitable, please check your "
+                       "environment.";
+                pid_set->clear();
+                throw std::runtime_error(oss.str());
+            }
+        }
+    }
+}
+
+inline int64_t unpackLong(PyObject* obj) {
+    int overflow;
+    long long value = PyLong_AsLongLongAndOverflow(obj, &overflow);
+    if (value == -1 && PyErr_Occurred()) {
+        throw std::runtime_error(
+                "python occur error, maybe the id input is not standard");
+    }
+    if (overflow != 0) {
+        throw std::runtime_error("Overflow when unpacking long");
+    }
+    return (int64_t)value;
+}
+
+static void set_worker_pids(PyObject* id, PyObject* tuple_item) {
+    int64_t key = unpackLong(id);
+    if (worker_pids.find(key) != worker_pids.end()) {
+        throw std::runtime_error(
+                "_set_worker_pids should be called only once for each "
+                "DataLoaderIter.");
+    }
+
+    if (!PyTuple_Check(tuple_item)) {
+        throw std::runtime_error("_set_worker_pids expects a tuple for child_pids");
+    }
+
+    std::set<pid_t> pids_set = {};
+    auto size = PyTuple_GET_SIZE(tuple_item);
+    for (Py_ssize_t idx = 0; idx < size; ++idx) {
+        PyObject* obj = PyTuple_GET_ITEM(tuple_item, idx);
+        pids_set.insert(static_cast<pid_t>(unpackLong(obj)));
+    }
+
+    worker_pids[key] = pids_set;
+}
+
+static void reset_worker_pids(PyObject* loader_id) {
+    int64_t key = unpackLong(loader_id);
+    auto it = worker_pids.find(key);
+    if (it == worker_pids.end()) {
+        throw std::runtime_error(
+                "Cannot find worker information for DataLoaderIter with id");
+    }
+    worker_pids.erase(it);
+}
+
+#else
+
+static void set_worker_signal_handlers() {}
+static void set_worker_pids(PyObject* id, PyObject* tuple_item) {}
+static void reset_worker_pids(PyObject* loader_id) {}
+static void check_any_worker_failed() {}
+
+#endif
 
 }  // namespace
 
@@ -327,4 +487,10 @@ void init_utils(py::module m) {
             .def_readwrite("on_fail", &ConfigurablePersistentCache::Config::on_fail)
             .def_readwrite(
                     "on_success", &ConfigurablePersistentCache::Config::on_success);
+    m.def("_set_worker_signal_handlers", []() { set_worker_signal_handlers(); });
+    m.def("_set_worker_pids", [](py::object id, py::object tuple_item) {
+        set_worker_pids(id.ptr(), tuple_item.ptr());
+    });
+    m.def("_reset_worker_pids", [](py::object id) { reset_worker_pids(id.ptr()); });
+    m.def("_check_any_worker_failed", []() { check_any_worker_failed(); });
 }

@@ -7,8 +7,10 @@ import os
 import platform
 import queue
 import random
+import sys
 import threading
 import time
+import traceback
 
 import numpy as np
 
@@ -20,12 +22,22 @@ from ..tensor import Tensor
 from .collator import Collator
 from .dataset import Dataset, StreamDataset
 from .sampler import MapSampler, Sampler, SequentialSampler, StreamSampler
+from .signal_handling import (
+    _reset_worker_pids,
+    _set_sigchld_handler,
+    _set_worker_pids,
+    _set_worker_signal_handlers,
+)
 from .transform import PseudoTransform, Transform
 
 try:
     import thread
 except:
     import _thread as thread
+
+if platform.system() != "Windows":
+    import pyarrow
+    from .tools._queue import _ExceptionWrapper, context
 
 
 logger = get_logger(__name__)
@@ -295,6 +307,10 @@ class _ParallelDataLoaderIter:
             self._workers.append(w)
 
         self._data_queue = self._worker_result_queue
+        self._worker_pids_set = False
+        _set_worker_pids(id(self), tuple(w.pid for w in self._workers))
+        _set_sigchld_handler()
+        self._worker_pids_set = True
         self._reset()
 
     def _try_put_index(self):
@@ -314,6 +330,9 @@ class _ParallelDataLoaderIter:
     def _process_data(self, data):
         self._rcvd_idx += 1
         self._try_put_index()
+        if isinstance(data, pyarrow.lib.Buffer):
+            exception = pyarrow.deserialize(data, context=context)
+            exception.reraise()
         return data
 
     def _get_data(self):
@@ -348,7 +367,15 @@ class _ParallelDataLoaderIter:
                 data = self._task_info.pop(self._rcvd_idx)[1]
                 return self._process_data(data)
 
-            idx, data = self._get_data()
+            _get_data = self._get_data()
+            if len(_get_data) == 1:
+                assert isinstance(_get_data[0], pyarrow.lib.Buffer)
+                exception = pyarrow.deserialize(_get_data[0], context=context)
+                exception.reraise()
+                self._try_put_index()
+                continue
+            else:
+                idx, data = _get_data
 
             if isinstance(data, int):  # Check if StopIteration in StreamDataset
                 self._mark_worker_as_unavailable(data)
@@ -405,6 +432,8 @@ class _ParallelDataLoaderIter:
                     if self._workers_status[worker_id]:
                         self._mark_worker_as_unavailable(worker_id, shutdown=True)
                 for w in self._workers:
+                    if w.is_alive():
+                        w.terminate()
                     w.join(timeout=GLOBAL_TIMEOUT)
                 for q in self._index_queues:
                     q.cancel_join_thread()
@@ -412,9 +441,9 @@ class _ParallelDataLoaderIter:
                 self._data_queue.cancel_join_thread()
                 self._data_queue.close()
             finally:
-                for w in self._workers:
-                    if w.is_alive():
-                        w.terminate()
+                if self._worker_pids_set:
+                    _reset_worker_pids(id(self))
+                    self._worker_pids_set = False
 
     def __del__(self):
         self._shutdown_workers()
@@ -659,6 +688,7 @@ def _worker_loop(
     datakind,
     parallel_stream,
 ):
+    _set_worker_signal_handlers()
     random.seed(seed)
     np.random.seed(seed)
     watchdog = ManagerWatchdog()
@@ -691,7 +721,12 @@ def _worker_loop(
                 data = worker_id
                 iteration_end = True
             else:
-                raise e
+                exc_info = sys.exc_info()
+                where = "in DataLoader worker process {}".format(worker_id)
+                exc_msg = "".join(traceback.format_exception(*exc_info))
+                data = _ExceptionWrapper(exc_info[0].__name__, exc_msg, where)
+                data = pyarrow.serialize(data, context=context).to_buffer()
+
         data_queue.put((idx, data))
         del data, idx, place_holder, r
 

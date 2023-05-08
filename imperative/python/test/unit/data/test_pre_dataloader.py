@@ -201,7 +201,9 @@ def test_dataloader_parallel_worker_exception():
         num_workers=2,
         preload=True,
     )
-    with pytest.raises(RuntimeError, match=r"exited unexpectedly"):
+    with pytest.raises(
+        RuntimeError, match=r"Caught RuntimeError in DataLoader worker process"
+    ):
         data_iter = iter(dataloader)
         batch_data = next(data_iter)
 

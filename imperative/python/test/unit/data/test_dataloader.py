@@ -10,6 +10,7 @@ import math
 import multiprocessing
 import os
 import platform
+import subprocess
 import time
 
 import numpy as np
@@ -17,7 +18,7 @@ import pytest
 
 from megengine.data.collator import Collator
 from megengine.data.dataloader import DataLoader, get_worker_info
-from megengine.data.dataset import ArrayDataset, StreamDataset
+from megengine.data.dataset import ArrayDataset, Dataset, StreamDataset
 from megengine.data.sampler import RandomSampler, SequentialSampler, StreamSampler
 from megengine.data.transform import (
     Compose,
@@ -71,6 +72,75 @@ class MyStream(StreamDataset):
             data = np.random.randint(0, 256, (2, 2, 3), dtype="uint8")
             yield (data, cnt)
         raise StopIteration
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
+)
+def test_dataloader_worker_signal_exception():
+    dataset = init_dataset()
+
+    class FakeErrorTransform(Transform):
+        def __init__(self):
+            pass
+
+        def apply(self, input):
+            pid = os.getpid()
+            subprocess.run(["kill", "-11", str(pid)])
+            return input
+
+    dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=FakeErrorTransform(),
+        num_workers=2,
+    )
+    with pytest.raises(RuntimeError, match=r"DataLoader worker.* exited unexpectedly"):
+        data_iter = iter(dataloader)
+        batch_data = next(data_iter)
+
+
+class IndexErrorTransform(Transform):
+    def __init__(self):
+        self.array = [0, 1, 2]
+
+    def apply(self, input):
+        error_item = self.array[3]
+        return input
+
+
+class TypeErrorTransform(Transform):
+    def __init__(self):
+        self.adda = 1
+        self.addb = "2"
+
+    def apply(self, input):
+        error_item = self.adda + self.addb
+        return input
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.parametrize("transform", [IndexErrorTransform(), TypeErrorTransform()])
+def test_dataloader_worker_baseerror(transform):
+    dataset = init_dataset()
+
+    dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=transform,
+        num_workers=2,
+    )
+    with pytest.raises(RuntimeError, match=r"Caught .*Error in DataLoader worker"):
+        data_iter = iter(dataloader)
+        batch_data = next(data_iter)
 
 
 @pytest.mark.parametrize("num_workers", [0, 2])
@@ -187,7 +257,9 @@ def test_dataloader_parallel_worker_exception():
         transform=FakeErrorTransform(),
         num_workers=2,
     )
-    with pytest.raises(RuntimeError, match=r"exited unexpectedly"):
+    with pytest.raises(
+        RuntimeError, match=r"Caught RuntimeError in DataLoader worker process"
+    ):
         data_iter = iter(dataloader)
         batch_data = next(data_iter)
 
@@ -318,7 +390,9 @@ def test_predataloader_parallel_worker_exception():
         num_workers=2,
         parallel_stream=True,
     )
-    with pytest.raises(RuntimeError, match=r"exited unexpectedly"):
+    with pytest.raises(
+        RuntimeError, match=r"Caught RuntimeError in DataLoader worker process"
+    ):
         data_iter = iter(dataloader)
         batch_data = next(data_iter)
         print(batch_data.shape)
