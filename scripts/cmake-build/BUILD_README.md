@@ -52,7 +52,8 @@ But some dependencies need to be installed manually:
 0: about all windows config
     * please check scripts/whl/windows/config.sh
 1: install git (Windows GUI)
-	* download git-install.exe from https://git-scm.com/download/win
+	* download git-install.exe from https://github.com/git-for-windows/git/releases
+	* NOTICE: We find some version, which bigger than v2.35 may report: Bad address issue when run cmd.exe /C "dir", so we suggest install v2.34
 	* only need choose git-lfs component
 	* install to default dir:  /c/Program\ Files/Git
 2: install cuda components (Windows GUI) if you want to build with CUDA
