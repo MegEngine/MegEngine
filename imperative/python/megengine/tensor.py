@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-from typing import Union
+import enum
+from typing import Tuple, Union
 
 import numpy as np
 
 from .core._imperative_rt import CompNode
 from .core._imperative_rt.core2 import FormatType
 from .core._imperative_rt.core2 import Tensor as _Tensor
-from .core._imperative_rt.core2 import apply, set_py_tensor_type
+from .core._imperative_rt.core2 import _to_dlpack, apply, set_py_tensor_type
 from .core._trace_option import use_symbolic_shape
 from .core._wrap import as_device
 from .core.ops.builtin import Borrow, Copy, GetVarShape
@@ -248,6 +249,22 @@ class Tensor(_Tensor, ArrayMethodMixin):
         else:
             qparams = None
         self._qparams = qparams
+
+    def __dlpack__(self, stream=None):
+        if stream is not None and not isinstance(stream, int):
+            raise TypeError("stream must be ``int`` or ``none``")
+        elif stream is not None and stream != -1:
+            mdevice, mrank, mstream = self.device.physical_locator
+            if mdevice == "gpu":
+                if mstream != stream:
+                    device = "gpu{}:{}".format(mrank, mstream)
+                    self.to(device, _borrow=True)
+            elif mdevice == "cpu":
+                device = "cpu{}:{}".format(mrank, mstream)
+                self.to(device, _borrow=True)
+            else:
+                raise ValueError("dlpack not support this device: {}!".format(mdevice))
+        return _to_dlpack(self)
 
 
 set_py_tensor_type(Tensor)

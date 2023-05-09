@@ -25,6 +25,8 @@
 #include "megdnn/algorithm_cache.h"
 
 #include "./common.h"
+#include "./dlpack.h"
+#include "./dlpack_convertor.h"
 #include "./grad.h"
 #include "./graph_rt.h"
 #include "./helper.h"
@@ -739,6 +741,35 @@ PyObject* TensorWrapper::_graph() {
             imperative::apply(GetVarVal(), m_tensor->data())[0].as_ref<NodeValue>();
     auto* graph = value->graph();
     return py::cast(graph).release().ptr();
+}
+
+void dlpack_capsule_destructor(PyObject* data) {
+    if (!PyCapsule_IsValid(data, "dltensor")) {
+        // early out, see DLPack spec: if a consuming library sets the capsule
+        // name to something else, they own it and we don't need to do anything
+        return;
+    }
+    DLManagedTensor* dlMTensor =
+            (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+    dlMTensor->deleter(const_cast<DLManagedTensor*>(dlMTensor));
+}
+
+PyObject* tensor_to_dlpack(PyObject* tensor) {
+    TensorWrapper* wrapper = TensorWrapper::try_cast(tensor);
+    DLManagedTensor* dlMTensor = to_dlpack(wrapper->m_tensor->data());
+    return PyCapsule_New(dlMTensor, "dltensor", dlpack_capsule_destructor);
+}
+
+PyObject* tensor_from_dlpack(PyObject* data, PyObject* stream) {
+    DLManagedTensor* dlMTensor =
+            (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+    if (!PyLong_Check(stream)) {
+        throw py::type_error("expect int");
+    }
+    int sid = PyLong_AsLong(stream);
+    PyCapsule_SetName(data, "used_dltensor");
+    auto tensor = from_dlpack(dlMTensor, sid);
+    return TensorWrapper::make(py_tensor_type, std::move(tensor)).release().ptr();
 }
 
 struct TensorWeakRef {
@@ -1465,6 +1496,14 @@ void init_tensor(py::module m) {
     m.def("get_auto_format_convert",
           [format_trans]() { return format_trans->get_auto_convert(); });
 
+    m.def("_to_dlpack", [](py::object tensor) {
+        return py::reinterpret_steal<py::object>(tensor_to_dlpack(tensor.ptr()));
+    });
+
+    m.def("_from_dlpack", [](py::object data, py::object stream) {
+        return py::reinterpret_steal<py::object>(
+                tensor_from_dlpack(data.ptr(), stream.ptr()));
+    });
     py::register_exception<TraceError>(m, "TraceError");
 
     m.def("create_complex", [](py::object real, py::object imag) {

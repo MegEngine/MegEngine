@@ -66,6 +66,28 @@ std::string get_default_device() {
     return default_device;
 }
 
+std::string device_type2str(CompNode::DeviceType type) {
+    using DT = CompNode::DeviceType;
+    switch (type) {
+        case DT::UNSPEC:
+            return "xpu";
+        case DT::CUDA:
+            return "gpu";
+        case DT::CPU:
+            return "cpu";
+        case DT::ATLAS:
+            return "atlas";
+        case DT::ROCM:
+            return "rocm";
+        case DT::CAMBRICON:
+            return "cambricon";
+        case DT::MULTITHREAD:
+            return "multithread";
+        default:
+            mgb_throw(MegBrainError, "bad device type");
+    }
+}
+
 py::handle py_comp_node_type;
 
 void init_common(py::module m) {
@@ -80,6 +102,16 @@ void init_common(py::module m) {
                     .def_property_readonly(
                             "physical_name",
                             [](const CompNode& cn) { return cn.to_string_physical(); })
+                    .def_property_readonly(
+                            "physical_locator",
+                            [](const CompNode& cn) {
+                                py::list res;
+                                auto locator = cn.locator();
+                                res.append(device_type2str(locator.type));
+                                res.append(locator.device);
+                                res.append(locator.stream);
+                                return res;
+                            })
                     .def_property_readonly(
                             "get_mem_status_bytes",
                             [](const CompNode& cn) {
