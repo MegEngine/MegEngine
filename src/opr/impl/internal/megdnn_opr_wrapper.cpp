@@ -302,6 +302,10 @@ void MegDNNOprHolder::mixin_init_output_comp_node(OperatorNodeBase& self) {
 
 void MegDNNOprHolder::mixin_on_output_comp_node_stream_changed(OperatorNodeBase& self) {
     SingleCNOperatorNode::mixin_on_output_comp_node_stream_changed(self);
+    //! some backend do not imp opr, show more opr info when before call create megdnn
+    //! opr failed
+    mgb_log_debug("try create opr: %s: %s", self.cname(), self.dyn_typeinfo()->name);
+
     create_megdnn_opr();
     mgb_assert(m_dnn_opr);
     m_dnn_opr->set_error_tracker(&self);

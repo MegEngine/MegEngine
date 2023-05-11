@@ -124,7 +124,9 @@ void HandleImpl::ConstScalars::init() {
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {
-    megdnn_throw("unsupported rocm opr");
+    megdnn_throw(
+            "unsupported rocm opr, try export RUNTIME_OVERRIDE_LOG_LEVEL=0 to get more "
+            "info");
     return nullptr;
 }
 

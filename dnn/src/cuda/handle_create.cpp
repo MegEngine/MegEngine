@@ -236,7 +236,9 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(MultiHeadAttnBackward);
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {
-    megdnn_throw("unsupported cuda opr");
+    megdnn_throw(
+            "unsupported cuda opr, try export RUNTIME_OVERRIDE_LOG_LEVEL=0 to get more "
+            "info");
     return nullptr;
 }
 

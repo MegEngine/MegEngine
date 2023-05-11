@@ -24,7 +24,9 @@ HandleImpl::~HandleImpl() noexcept = default;
 
 template <typename Opr>
 std::unique_ptr<Opr> HandleImpl::create_operator() {
-    megdnn_throw("unsupported atlas opr");
+    megdnn_throw(
+            "unsupported atlas opr, try export RUNTIME_OVERRIDE_LOG_LEVEL=0 to get "
+            "more info");
     return nullptr;
 }
 
