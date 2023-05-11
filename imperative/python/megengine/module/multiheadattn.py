@@ -22,23 +22,22 @@ class MultiHeadAttention(Module):
         \text{MultiHeadAttn}\big(q,K,V, W_Q, W_V, W_O\big) = \sum^{nHeads-1}_{i=0}W_{O,i}h_i
 
     where :math:`h_i=W_{V,i}V \text{Softmax}\Big( \text{smScaler} \cdot K^TW^T_{K,i}W_{Q,i}q \Big),\text{for }i\text{ = 0 ... nHeads-1}`.
-    
-    Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported, and if the cudnn version >=8.6.0, the calculation results are completely correct; If the cudnn version >=8.0.4 but <8.6.0, if there is a bias, only the dbias result calculated from the backward is incorrect. If there is no bias, the forward and backward calculations are correct; If the cudnn version is less than 8.0.4, this operator is not supported.
-    
-    When the following conditions are met, you can go to the cudnn backend:
 
-    - ``cudnn version`` greater than or equal to 8.0.4 and ``bias`` is ``False`` and ``training`` is ``False``
-    - ``cudnn version`` greater than or equal to 8.6.0
+    Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported.
+
+    The implementation of cudnn can be run if the following conditions are met:
+
+    - cuda is available, cudnn is available, and the version of cudnn is greater than or equal to 8.0.4.
+    - ``bias`` is ``False``, when ``training`` is ``False`` and ``cudnn version`` greater than or equal to 8.0.4. if the ``cudnn version`` greater than or equal to 8.6.0, this point can be ignored.
     - ``add_bias_kv`` is ``False``
     - ``add_zero_attn`` is ``False``
     - ``need_weights`` is ``False``
     - ``average_attn_weights`` is ``False``
-    - ``maybe_cudnn_style_mask`` is ``True`` if support else ``False``
+    - ``maybe_cudnn_style_mask`` is ``True``
     - ``attn_mask`` and ``key_padding_mask`` is cudnn style mask, i.e. the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
       - The shape of attn_mask is :math:`(2, L)`, where :math:`(0, :)` elements specify the start index, :math:`(1, :)` elements specify the end index, the start index is inclusive, and the end index is not exclusive. The start index (i.e. elements in `attn_mask[0, x]`) must be less than the corresponding end index (i.e. elements in `attn_mask[1, x]`). The end index must be less than or equal to :math:`S`, where :math:`S` is the source sequence length, :math:`L` is the target sequence length.
       - The shape of key_padding_mask is :math:`(2, N)`, where :math:`(0, :)` elements specify the target sequence padding in cudnn style mask and the element must equal to or less than :math:`L`, :math:`(1, :)` elements specify the source sequence padding in cudnn style mask and the element must equal to or less than :math:`S`, where :math:`S` is the source sequence length, :math:`L` is the target sequence length.
-    - ``qbias``, ``kbias``, ``vbias`` and ``obias`` are equal
-      
+      Note: If there is no mask or the default mask is used, cudnn impl will also be used. At this time, cudnn will automatically generate the corresponding cudnn style mask.
 
     Args:
         embed_dim: Total dimension of the model.
@@ -139,11 +138,9 @@ class MultiHeadAttention(Module):
 
         if self.add_bias_kv:
             xavier_uniform_(self.bias_k)
-        else:
-            self.bias_k = None
-        if self.add_bias_kv:
             xavier_uniform_(self.bias_v)
         else:
+            self.bias_k = None
             self.bias_v = None
 
     def forward(
@@ -159,59 +156,36 @@ class MultiHeadAttention(Module):
         maybe_cudnn_style_mask: bool = False,
     ):
         r"""
-    Args:
-        query: Query embeddings of shape :math:`(N, L, E_q)`, 
-            where :math:`N` is the batch size, :math:`L` is the target sequence length, and :math:`E_q` is the query embedding dimension ``embed_dim``. Queries are compared against key-value pairs to produce the output. See "Attention Is All You Need" for more details.
-        key: Key embeddings of shape :math:`(N, S, E_k)`, 
-            where :math:`N` is the batch size, :math:`S` is the source sequence length, and :math:`E_k` is the key embedding dimension ``kdim``. See "Attention Is All You Need" for more details.
-        value: Value embeddings of shape :math:`(N, S, E_v)`, 
-            where :math:`N` is the batch size, :math:`S` is the source sequence length, and :math:`E_v` is the value embedding dimension ``vdim``. See "Attention Is All You Need" for more details.
-        key_padding_mask: If specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of 
-            attention (i.e. treat as "padding"). For unbatched `query`, shape should be :math:`(S)`. Binary and float masks are supported. For a binary mask, a ``True`` value indicates that the corresponding ``key`` value will be ignored for the purpose of attention. For a float mask, it will be directly added to the corresponding ``key`` value.
-            Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
-        attn_mask: 2D or 3D mask that prevents attention to certain positions. A 2D mask will be broadcasted for all
-            the batches while a 3D mask allows to specify a different mask for the entries of each batch.
-            Note: User-defined mask not supported now, only support no mask or default mask, where the upper right triangle is all -inf, and the diagonal and lower left triangle are all 0. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
-        need_weights: indicates whether to return the attention weight, which is the output result of softmax. Default: `True`
-            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
-        average_attn_weights: If true, indicates that the returned ``attn_weights`` should be averaged across
-            heads. Otherwise, ``attn_weights`` are provided separately per head. Note that this flag only has an
-            effect when ``need_weights=True``. Default: ``True`` (i.e. average weights across heads)
-            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
-        is_causal: If specified, applies a causal mask as attention mask. Default: ``False``
-            Warning: ``is_causal`` provides a hint that ``attn_mask`` is the causal mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility.
-        maybe_cudnn_style_mask: if specified, applies a cudnn style mask as attention mask. Default: ``False``
-            Note: In the cudnn style, the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
-            Warning: like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is a cudnn style mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility. In addition, if the ``_merge_masks`` function returns ``merge_type=cudnn_style_mask``, please ensure that other conditions are correct so that it can run the implementation of cudnn, otherwise an error will be reported.
-            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that the underlying implementation only accepts two types of mask type, namely "no_mask" and "default_mask", and we may try to loosen this option after submitting the commit that users can pass in custom attention mask tensors.
+        Args:
+            query: Query embeddings of shape :math:`(N, L, E_q)`,
+                where :math:`N` is the batch size, :math:`L` is the target sequence length, and :math:`E_q` is the query embedding dimension ``embed_dim``. Queries are compared against key-value pairs to produce the output. See "Attention Is All You Need" for more details.
+            key: Key embeddings of shape :math:`(N, S, E_k)`,
+                where :math:`N` is the batch size, :math:`S` is the source sequence length, and :math:`E_k` is the key embedding dimension ``kdim``. See "Attention Is All You Need" for more details.
+            value: Value embeddings of shape :math:`(N, S, E_v)`,
+                where :math:`N` is the batch size, :math:`S` is the source sequence length, and :math:`E_v` is the value embedding dimension ``vdim``. See "Attention Is All You Need" for more details.
+            key_padding_mask: If specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of
+                attention (i.e. treat as "padding"). For unbatched `query`, shape should be :math:`(S)`. Binary and float masks are supported. For a binary mask, a ``True`` value indicates that the corresponding ``key`` value will be ignored for the purpose of attention. For a float mask, it will be directly added to the corresponding ``key`` value.
+            attn_mask: 2D or 3D mask that prevents attention to certain positions. A 2D mask will be broadcasted for all
+                the batches while a 3D mask allows to specify a different mask for the entries of each batch.
+            need_weights: indicates whether to return the attention weight, which is the output result of softmax. Default: `False`
+            average_attn_weights: If true, indicates that the returned ``attn_weights`` should be averaged across
+                heads. Otherwise, ``attn_weights`` are provided separately per head. Note that this flag only has an
+                effect when ``need_weights=True``. Default: ``False`` (i.e. not average weights across heads)
+            is_causal: If specified, applies a causal mask as attention mask. Default: ``False``
+                Warning: ``is_causal`` provides a hint that ``attn_mask`` is the causal mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility.
+            maybe_cudnn_style_mask: if specified, applies a cudnn style mask as attention mask. Default: ``False``
+                Note: In the cudnn style, the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
+                Warning: like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is a cudnn style mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility. In addition, if the ``_merge_masks`` function returns ``merge_type=cudnn_style_mask``, please ensure that other conditions are correct so that it can run the implementation of cudnn, otherwise an error will be reported.
 
-    Outputs:
-        - **attn_output** - Attention outputs of shape :math:`(N, L, E)`, 
-          where :math:`L` is the target sequence length, :math:`N` is
-          the batch size, and :math:`E` is the embedding dimension ``embed_dim``.
-        - **attn_output_weights** - Only returned when ``need_weights=True``. If ``average_attn_weights=True``,
-          returns attention weights averaged across heads of shape :math:`(L, S)` when input is unbatched or
-          :math:`(N, L, S)`, where :math:`N` is the batch size, :math:`L` is the target sequence length, and
-          :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per
-          head of shape :math:`(\text{num\_heads}, L, S)` when input is unbatched or :math:`(N * \text{num\_heads}, L, S)`.
-          Note: Now only None will be returned. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        Outputs:
+            - **attn_output** - Attention outputs of shape :math:`(N, L, E)`,
+              where :math:`L` is the target sequence length, :math:`N` is
+              the batch size, and :math:`E` is the embedding dimension ``embed_dim``.
+            - **attn_output_weights** - Only returned when ``need_weights=True``. If ``average_attn_weights=True``,
+              returns attention weights averaged across heads of shape :math:`(L, S)` when input is unbatched or
+              :math:`(N, L, S)`, where :math:`N` is the batch size, :math:`L` is the target sequence length, and
+              :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per head of shape :math:`(\text{num\_heads}, L, S)` when input is unbatched or :math:`(N * \text{num\_heads}, L, S)`.
         """
-        assert key_padding_mask is None, (
-            "key_padding_mask should be None, and configuration of this parameter is not supported now."
-            + self.unsupport_reason
-        )
-        assert need_weights == False, (
-            "need_weights should be set to False, and configuration of this parameter is not supported now."
-            + self.unsupport_reason
-        )
-        assert average_attn_weights == False, (
-            "average_attn_weights should be set to False, and configuration of this parameter is not supported now."
-            + self.unsupport_reason
-        )
-        assert maybe_cudnn_style_mask == False, (
-            "maybe_cudnn_style_mask should be set to False, and configuration of this parameter is not supported now."
-            + self.unsupport_reason
-        )
 
         return multi_head_attention(
             query,

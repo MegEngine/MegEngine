@@ -5288,16 +5288,16 @@ std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const 
     props_.emplace_back("sm_scaler", std::to_string(op_.sm_scaler));
     props_.emplace_back("input_order", std::to_string(op_.input_order));
     switch (op_.attn_mask_type){
-    case MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK:
+    case MultiHeadAttn::AttnMaskType::NO_MASK:
         props_.emplace_back("attn_mask_type", "NO_MASK");
         break;
-    case MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK:
+    case MultiHeadAttn::AttnMaskType::DEFAULT_MASK:
         props_.emplace_back("attn_mask_type", "DEFAULT_MASK");
         break;
-    case MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK:
+    case MultiHeadAttn::AttnMaskType::CUDNN_STYLE_MASK:
         props_.emplace_back("attn_mask_type", "CUDNN_STYLE_MASK");
         break;
-    case MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK:
+    case MultiHeadAttn::AttnMaskType::USER_DEFINED_MASK:
         props_.emplace_back("attn_mask_type", "USER_DEFINED_MASK");
         break;
     default:
@@ -5305,16 +5305,16 @@ std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const 
         break;
     }
     switch (op_.tensor_combination_type){
-    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE:
+    case MultiHeadAttn::TensorCombinationType::NONE:
         props_.emplace_back("tensor_combination_type", "NONE");
         break;
-    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK:
+    case MultiHeadAttn::TensorCombinationType::ONLY_MASK:
         props_.emplace_back("tensor_combination_type", "ONLY_MASK");
         break;
-    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV:
+    case MultiHeadAttn::TensorCombinationType::ONLY_BIASKV:
         props_.emplace_back("tensor_combination_type", "ONLY_BIASKV");
         break;
-    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL:
+    case MultiHeadAttn::TensorCombinationType::ALL:
         props_.emplace_back("tensor_combination_type", "ALL");
         break;
     default:

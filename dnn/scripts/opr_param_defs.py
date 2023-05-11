@@ -1346,12 +1346,12 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  .add_fields('bool', Doc('obias', 'Whether to add out bias.'), 'false')
  .add_fields('float32', Doc('sm_scaler', 'Softmax smoothing (1.0 >= smScaler >= 0.0) or sharpening (smScaler > 1.0) coefficient.'), '1.f')
  .add_fields('uint32', Doc('input_order', 'The sequence data layout, allows the user to select 3! = 6 different data layouts or permutations of BEAM, BATCH and TIME dimensions.'), '0')
- .add_enum('ATTN_MASK_TYPE',
+ .add_enum('AttnMaskType',
            Doc('NO_MASK = 0', 'Indicates that there is no mask.'),
            Doc('DEFAULT_MASK = 1', 'Use the default mask which the upper right triangle of the mask is -inf, and the diagonal and lower left triangle are all 0.'),
            Doc('CUDNN_STYLE_MASK = 2', 'Indicates the use of a cudnn style mask.'),
            Doc('USER_DEFINED_MASK = 3', 'Use the user-defined mask.'), name_field="attn_mask_type")
- .add_enum(Doc('TENSOR_COMBINATION_TYPE', 'Used to determine whether mask tensor and bias_kv tensor exist in the input. Note that bias_kv here is not kbias and vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.'),
+ .add_enum(Doc('TensorCombinationType', 'Used to determine whether mask tensor and bias_kv tensor exist in the input. Note that bias_kv here is not m_kbias and m_vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.'),
            Doc('NONE = 0', 'Indicates that there are no mask tensor and bias_kv tensor in the input.'),
            Doc('ONLY_MASK = 1',
                'Indicates that there is only mask tensor in input.'),
@@ -1363,5 +1363,5 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  .add_fields('bool', Doc('training', 'Whether it is in training mode.'), 'true')
  .add_fields('uint64', Doc('seed', 'Random number seed for drop'), '0')
  .add_fields('float32', Doc('attn_prob', 'Dropout probability on attention, is applied directly to the softmax output'), '0.f')
- .add_fields('float32', Doc('out_prob', 'Dropout probability on output, alters the multi-head attention output'), '0.f')
+ .add_fields('float32', Doc('out_prob', 'Dropout probability on output, alters the multi-m_head attention output'), '0.f')
  )

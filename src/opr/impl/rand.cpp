@@ -1,8 +1,10 @@
 #include "megbrain/opr/rand.h"
 #include "megbrain/graph/grad_impl.h"
+#include "megbrain/graph/static_infer.h"
 #include "megbrain/opr/utility.h"
 
 #include "./internal/megdnn_opr_wrapper.inl"
+#include "megdnn/basic_types.h"
 
 using namespace mgb;
 using namespace opr;
@@ -424,7 +426,7 @@ void DropoutBackward::scn_do_execute() {
 }
 
 /* ==================== MultiHeadAttnForward ==================== */
-using INPUT_TYPE = MultiHeadAttnForward::Param::TENSOR_COMBINATION_TYPE;
+using InputType = MultiHeadAttnForward::Param::TensorCombinationType;
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultiHeadAttnForward);
 
@@ -439,9 +441,11 @@ MultiHeadAttnForward::MultiHeadAttnForward(
                 param} {
     mgb_assert(
             param.tensor_combination_type ==
-            MultiHeadAttnForward::Param::TENSOR_COMBINATION_TYPE::ALL);
+            MultiHeadAttnForward::Param::TensorCombinationType::ALL);
     add_input({queries, keys, values, qkvo_weight_bias, attn_mask, bias_k, bias_v});
-    add_output(None)->dtype(queries->dtype());
+    add_output(None)
+            ->dtype(queries->dtype())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_output(None)
             ->dtype(queries->dtype())
             .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
@@ -463,9 +467,11 @@ MultiHeadAttnForward::MultiHeadAttnForward(
                 param} {
     mgb_assert(
             param.tensor_combination_type ==
-            MultiHeadAttnForward::Param::TENSOR_COMBINATION_TYPE::ONLY_MASK);
+            MultiHeadAttnForward::Param::TensorCombinationType::ONLY_MASK);
     add_input({queries, keys, values, qkvo_weight_bias, attn_mask});
-    add_output(None)->dtype(queries->dtype());
+    add_output(None)
+            ->dtype(queries->dtype())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_output(None)
             ->dtype(queries->dtype())
             .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
@@ -488,9 +494,11 @@ MultiHeadAttnForward::MultiHeadAttnForward(
                 param} {
     mgb_assert(
             param.tensor_combination_type ==
-            MultiHeadAttnForward::Param::TENSOR_COMBINATION_TYPE::ONLY_BIASKV);
+            MultiHeadAttnForward::Param::TensorCombinationType::ONLY_BIASKV);
     add_input({queries, keys, values, qkvo_weight_bias, bias_k, bias_v});
-    add_output(None)->dtype(queries->dtype());
+    add_output(None)
+            ->dtype(queries->dtype())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_output(None)
             ->dtype(queries->dtype())
             .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
@@ -512,9 +520,11 @@ MultiHeadAttnForward::MultiHeadAttnForward(
                 param} {
     mgb_assert(
             param.tensor_combination_type ==
-            MultiHeadAttnForward::Param::TENSOR_COMBINATION_TYPE::NONE);
+            MultiHeadAttnForward::Param::TensorCombinationType::NONE);
     add_input({queries, keys, values, qkvo_weight_bias});
-    add_output(None)->dtype(queries->dtype());
+    add_output(None)
+            ->dtype(queries->dtype())
+            .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     add_output(None)
             ->dtype(queries->dtype())
             .add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
@@ -540,6 +550,7 @@ SymbolVarArray MultiHeadAttnForward::make(
     mgb_assert(outs.size() == 5);
     return {outs[0], outs[1], outs[2], outs[3]};
 }
+
 SymbolVarArray MultiHeadAttnForward::make(
         SymbolVar queries, SymbolVar keys, SymbolVar values, SymbolVar qkvo_weight_bias,
         SymbolVar attn_mask, const Param& param, const OperatorNodeConfig& config) {
@@ -553,6 +564,7 @@ SymbolVarArray MultiHeadAttnForward::make(
     mgb_assert(outs.size() == 5);
     return {outs[0], outs[1], outs[2], outs[3]};
 }
+
 SymbolVarArray MultiHeadAttnForward::make(
         SymbolVar queries, SymbolVar keys, SymbolVar values, SymbolVar qkvo_weight_bias,
         SymbolVar bias_k, SymbolVar bias_v, const Param& param,
@@ -567,6 +579,7 @@ SymbolVarArray MultiHeadAttnForward::make(
     mgb_assert(outs.size() == 5);
     return {outs[0], outs[1], outs[2], outs[3]};
 }
+
 SymbolVarArray MultiHeadAttnForward::make(
         SymbolVar queries, SymbolVar keys, SymbolVar values, SymbolVar qkvo_weight_bias,
         const Param& param, const OperatorNodeConfig& config) {
@@ -583,54 +596,98 @@ SymbolVarArray MultiHeadAttnForward::make(
 void MultiHeadAttnForward::init_output_static_infer_desc() {
     using namespace cg::static_infer;
     auto&& mgr = owner_graph()->static_infer_manager();
-    mgr.register_shape_infer(output(0), ShapeInferDesc::make_identity(input(0)));
+    auto input_type = param().tensor_combination_type;
 
-    auto infer_oshp1 = [this](TensorShape& dest, const InpVal& iv) {
-        TensorLayout in0{iv.val[0].shape(), input(0)->dtype()};
-        TensorLayout in1{iv.val[1].shape(), input(1)->dtype()};
-        TensorLayout in2{iv.val[2].shape(), input(2)->dtype()};
-        TensorLayout in3{iv.val[3].shape(), input(3)->dtype()};
-        TensorLayout in4{iv.val[4].shape(), input(4)->dtype()};
-        TensorLayout in5{iv.val[5].shape(), input(5)->dtype()};
-        TensorLayout in6{iv.val[6].shape(), input(6)->dtype()};
+#define DECLARE_LAYOUT_FROM_INPVAL(iv)                      \
+    TensorLayout in0{iv.val[0].shape(), input(0)->dtype()}; \
+    TensorLayout in1{iv.val[1].shape(), input(1)->dtype()}; \
+    TensorLayout in2{iv.val[2].shape(), input(2)->dtype()}; \
+    TensorLayout in3{iv.val[3].shape(), input(3)->dtype()}; \
+    TensorLayout in4, in5, in6;                             \
+    if (input_type == InputType::ONLY_MASK) {               \
+        in4 = {iv.val[4].shape(), input(4)->dtype()};       \
+    }                                                       \
+    if (input_type == InputType::ONLY_BIASKV) {             \
+        in5 = {iv.val[4].shape(), input(4)->dtype()};       \
+        in6 = {iv.val[5].shape(), input(5)->dtype()};       \
+    }                                                       \
+    if (input_type == InputType::ALL) {                     \
+        in4 = {iv.val[4].shape(), input(4)->dtype()};       \
+        in5 = {iv.val[5].shape(), input(5)->dtype()};       \
+        in6 = {iv.val[6].shape(), input(6)->dtype()};       \
+    }
+
+    auto infer_oshp0 = [this, input_type](TensorShape& dest, const InpVal& iv) {
+        ensure_megdnn_opr();
+        DECLARE_LAYOUT_FROM_INPVAL(iv)
+        TensorLayout o0, o1, o2, o3;
+        m_dnn_opr->deduce_layout(in0, in1, in2, in3, in4, in5, in6, o0, o1, o2, o3);
+        dest = o0;
+        return true;
+    };
+    auto infer_oshp1 = [this, input_type](TensorShape& dest, const InpVal& iv) {
+        ensure_megdnn_opr();
+        DECLARE_LAYOUT_FROM_INPVAL(iv)
         TensorLayout o0, o1, o2, o3;
         m_dnn_opr->deduce_layout(in0, in1, in2, in3, in4, in5, in6, o0, o1, o2, o3);
         dest = o1;
         return true;
     };
-    mgr.register_shape_infer(
-            output(1), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_oshp1});
-
-    auto infer_mask = [this](TensorShape& dest, const InpVal& iv) {
+    auto infer_mask = [this, input_type](TensorShape& dest, const InpVal& iv) {
         ensure_megdnn_opr();
         dest.ndim = 1;
+        DECLARE_LAYOUT_FROM_INPVAL(iv)
         dest.shape[0] = m_dnn_opr->get_mask_reservespace_in_bytes(
-                {iv.val[0].shape(), input(0)->dtype()},
-                {iv.val[1].shape(), input(1)->dtype()},
-                {iv.val[2].shape(), input(2)->dtype()},
-                {iv.val[3].shape(), input(3)->dtype()},
-                {iv.val[4].shape(), input(4)->dtype()},
-                {iv.val[5].shape(), input(5)->dtype()},
-                {iv.val[6].shape(), input(6)->dtype()}, {}, {}, {}, {});
+                in0, in1, in2, in3, in4, in5, in6, {}, {}, {}, {});
         return true;
     };
-    auto infer_othr = [this](TensorShape& dest, const InpVal& iv) {
+    auto infer_othr = [this, input_type](TensorShape& dest, const InpVal& iv) {
         ensure_megdnn_opr();
         dest.ndim = 1;
-        dest.shape[0] = m_dnn_opr->get_othr_reservespace_in_bytes(
-                {iv.val[0].shape(), input(0)->dtype()},
-                {iv.val[1].shape(), input(1)->dtype()},
-                {iv.val[2].shape(), input(2)->dtype()},
-                {iv.val[3].shape(), input(3)->dtype()},
-                {iv.val[4].shape(), input(4)->dtype()},
-                {iv.val[5].shape(), input(5)->dtype()},
-                {iv.val[6].shape(), input(6)->dtype()}, {}, {}, {}, {});
+        DECLARE_LAYOUT_FROM_INPVAL(iv)
+        size_t size = m_dnn_opr->get_othr_reservespace_in_bytes(
+                in0, in1, in2, in3, in4, in5, in6, {}, {}, {}, {});
+        dest.shape[0] = size / input(0)->dtype().size();
         return true;
     };
-    mgr.register_shape_infer(
-            output(2), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_mask});
-    mgr.register_shape_infer(
-            output(3), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_othr});
+    auto infer_wk = [this, input_type](TensorShape& dest, const InpVal& iv) {
+        ensure_megdnn_opr();
+        dest.ndim = 1;
+        DECLARE_LAYOUT_FROM_INPVAL(iv)
+        dest.shape[0] = m_dnn_opr->get_workspace_in_bytes(
+                in0, in1, in2, in3, in4, in5, in6, {}, {}, {}, {});
+        return true;
+    };
+
+    DepElement inp0{input(0), DepType::SHAPE};
+    DepElement inp1{input(1), DepType::SHAPE};
+    DepElement inp2{input(2), DepType::SHAPE};
+    DepElement inp3{input(3), DepType::SHAPE};
+    DepVal out_dep;
+    if (input_type == InputType::NONE) {
+        out_dep = {inp0, inp1, inp2, inp3};
+    }
+    if (input_type == InputType::ONLY_MASK) {
+        DepElement inp4 = {input(4), DepType::SHAPE};
+        out_dep = {inp0, inp1, inp2, inp3, inp4};
+    }
+    if (input_type == InputType::ONLY_BIASKV) {
+        DepElement inp5 = {input(4), DepType::SHAPE};
+        DepElement inp6 = {input(5), DepType::SHAPE};
+        out_dep = {inp0, inp1, inp2, inp3, inp5, inp6};
+    }
+    if (input_type == InputType::ALL) {
+        DepElement inp4 = {input(4), DepType::SHAPE};
+        DepElement inp5 = {input(5), DepType::SHAPE};
+        DepElement inp6 = {input(6), DepType::SHAPE};
+        out_dep = {inp0, inp1, inp2, inp3, inp4, inp5, inp6};
+    }
+    mgr.register_shape_infer(output(0), {SourceType::DEP, out_dep, infer_oshp0});
+    mgr.register_shape_infer(output(1), {SourceType::DEP, out_dep, infer_oshp1});
+    mgr.register_shape_infer(output(2), {SourceType::DEP, out_dep, infer_mask});
+    mgr.register_shape_infer(output(3), {SourceType::DEP, out_dep, infer_othr});
+    mgr.register_shape_infer(output(4), {SourceType::DEP, out_dep, infer_wk});
+#undef DECLARE_LAYOUT_FROM_INPVAL
 }
 
 void MultiHeadAttnForward::add_input_layout_constraint() {
@@ -647,47 +704,30 @@ void MultiHeadAttnForward::scn_do_execute() {
         mgb_assert(ret->dev_tensor().empty());
         return;
     }
-    megdnn::TensorND empty_dnn;
-    if (input_type == INPUT_TYPE::ALL) {
-        m_dnn_opr->exec(
-                input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
-                input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),
-                input(4)->dev_tensor().as_megdnn(), input(5)->dev_tensor().as_megdnn(),
-                input(6)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
-                output(1)->dev_tensor().as_megdnn(),
-                output(2)->dev_tensor().as_megdnn(),
-                output(3)->dev_tensor().as_megdnn(),
-                get_megdnn_workspace_from_var(output(4)));
-    } else if (input_type == INPUT_TYPE::ONLY_MASK) {
-        m_dnn_opr->exec(
-                input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
-                input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),
-                input(4)->dev_tensor().as_megdnn(), empty_dnn, empty_dnn,
-                output(0)->dev_tensor().as_megdnn(),
-                output(1)->dev_tensor().as_megdnn(),
-                output(2)->dev_tensor().as_megdnn(),
-                output(3)->dev_tensor().as_megdnn(),
-                get_megdnn_workspace_from_var(output(4)));
-    } else if (input_type == INPUT_TYPE::ONLY_BIASKV) {
-        m_dnn_opr->exec(
-                input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
-                input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),
-                empty_dnn, input(4)->dev_tensor().as_megdnn(),
-                input(5)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
-                output(1)->dev_tensor().as_megdnn(),
-                output(2)->dev_tensor().as_megdnn(),
-                output(3)->dev_tensor().as_megdnn(),
-                get_megdnn_workspace_from_var(output(4)));
-    } else {
-        m_dnn_opr->exec(
-                input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
-                input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),
-                empty_dnn, empty_dnn, empty_dnn, output(0)->dev_tensor().as_megdnn(),
-                output(1)->dev_tensor().as_megdnn(),
-                output(2)->dev_tensor().as_megdnn(),
-                output(3)->dev_tensor().as_megdnn(),
-                get_megdnn_workspace_from_var(output(4)));
+
+    megdnn::TensorND in4;
+    megdnn::TensorND in5;
+    megdnn::TensorND in6;
+    if (input_type == InputType::ONLY_MASK) {
+        in4 = input(4)->dev_tensor().as_megdnn();
     }
+    if (input_type == InputType::ONLY_BIASKV) {
+        in5 = input(4)->dev_tensor().as_megdnn();
+        in6 = input(5)->dev_tensor().as_megdnn();
+    }
+    if (input_type == InputType::ALL) {
+        in4 = input(4)->dev_tensor().as_megdnn();
+        in5 = input(5)->dev_tensor().as_megdnn();
+        in6 = input(6)->dev_tensor().as_megdnn();
+    }
+
+    m_dnn_opr->exec(
+            input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
+            input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(), in4,
+            in5, in6, output(0)->dev_tensor().as_megdnn(),
+            output(1)->dev_tensor().as_megdnn(), output(2)->dev_tensor().as_megdnn(),
+            output(3)->dev_tensor().as_megdnn(),
+            get_megdnn_workspace_from_var(output(4)));
 }
 
 cg::OperatorNodeBase::NodeProp* MultiHeadAttnForward::do_make_node_prop() const {
@@ -707,7 +747,7 @@ MGB_IMPL_OPR_GRAD(MultiHeadAttnForward) {
     VarNodeArray ret;
     mgb_assert(wrt_idx < 7, "wrt_idx %zu is out of range", wrt_idx);
     auto input_type = opr.param().tensor_combination_type;
-    if (input_type == INPUT_TYPE::ALL or input_type == INPUT_TYPE::ONLY_MASK)
+    if (input_type == InputType::ALL or input_type == InputType::ONLY_MASK)
         grad = MultiHeadAttnBackward::make(
                 out_grad[0], opr.input(0), opr.input(1), opr.input(2), opr.input(3),
                 opr.input(4), opr.output(1), opr.output(2), opr.output(3), opr.param());
@@ -716,11 +756,11 @@ MGB_IMPL_OPR_GRAD(MultiHeadAttnForward) {
                 out_grad[0], opr.input(0), opr.input(1), opr.input(2), opr.input(3),
                 opr.output(1), opr.output(2), opr.output(3), opr.param());
     uint32_t nr_ret = 7;
-    if (input_type == INPUT_TYPE::NONE)
+    if (input_type == InputType::NONE)
         nr_ret = 4;
-    if (input_type == INPUT_TYPE::ONLY_MASK)
+    if (input_type == InputType::ONLY_MASK)
         nr_ret = 5;
-    if (input_type == INPUT_TYPE::ONLY_BIASKV)
+    if (input_type == InputType::ONLY_BIASKV)
         nr_ret = 6;
     for (uint32_t i = 0; i < nr_ret; ++i) {
         ret.push_back(grad[i].node());
@@ -747,10 +787,14 @@ MultiHeadAttnBackward::MultiHeadAttnBackward(
     add_input(
             {diff, queries, keys, values, qkvo_weight_bias, attn_mask, attn_weight,
              mask_reservespace, othr_reservespace});
+    this->output()[0]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    this->output()[1]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    this->output()[2]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     this->output()[3]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     this->output()[4]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     this->output()[5]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
 }
+
 MultiHeadAttnBackward::MultiHeadAttnBackward(
         VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values,
         VarNode* qkvo_weight_bias, VarNode* attn_weight, VarNode* mask_reservespace,
@@ -766,6 +810,9 @@ MultiHeadAttnBackward::MultiHeadAttnBackward(
     add_input(
             {diff, queries, keys, values, qkvo_weight_bias, attn_weight,
              mask_reservespace, othr_reservespace});
+    this->output()[0]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    this->output()[1]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    this->output()[2]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     this->output()[3]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     this->output()[4]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
     this->output()[5]->add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
@@ -788,6 +835,7 @@ SymbolVarArray MultiHeadAttnBackward::make(
 
     return {outs[0], outs[1], outs[2], outs[3], outs[4], outs[5], {}};
 }
+
 SymbolVarArray MultiHeadAttnBackward::make(
         SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
         SymbolVar qkvo_weight_bias, SymbolVar attn_weight, SymbolVar mask_reservespace,
@@ -814,7 +862,7 @@ void MultiHeadAttnBackward::init_output_static_infer_desc() {
     mgr.register_shape_infer(output(2), ShapeInferDesc::make_identity(input(3)));
     mgr.register_shape_infer(output(3), ShapeInferDesc::make_identity(input(4)));
     auto input_type = param().tensor_combination_type;
-    if (input_type == INPUT_TYPE::ALL or input_type == INPUT_TYPE::ONLY_BIASKV) {
+    if (input_type == InputType::ALL or input_type == InputType::ONLY_BIASKV) {
         mgr.register_shape_infer(output(4), ShapeInferDesc::make_identity(input(4)));
         mgr.register_shape_infer(output(5), ShapeInferDesc::make_identity(input(4)));
     } else {
@@ -838,46 +886,36 @@ size_t MultiHeadAttnBackward::get_workspace_size_bytes(
         const TensorShapeArray& input_shapes,
         const TensorShapeArray& output_shapes) const {
     auto input_type = megdnn_opr()->param().tensor_combination_type;
-    megdnn::TensorLayout empty_dnn;
-    if (input_type == INPUT_TYPE::ALL or input_type == INPUT_TYPE::ONLY_MASK)
-        return megdnn_opr()->get_workspace_in_bytes(
-                {input_shapes[0], input(0)->dtype(), input(0)->format()},
-                {input_shapes[1], input(1)->dtype(), input(1)->format()},
-                {input_shapes[2], input(2)->dtype(), input(2)->format()},
-                {input_shapes[3], input(3)->dtype(), input(3)->format()},
-                {input_shapes[4], input(4)->dtype(), input(4)->format()},
-                {input_shapes[5], input(5)->dtype(), input(5)->format()},
-                {input_shapes[6], input(6)->dtype(), input(6)->format()},
-                {input_shapes[7], input(7)->dtype(), input(7)->format()},
-                {input_shapes[8], input(8)->dtype(), input(8)->format()},
-                {output_shapes[0], output(0)->dtype(), output(0)->format()},
-                {output_shapes[1], output(1)->dtype(), output(1)->format()},
-                {output_shapes[2], output(2)->dtype(), output(2)->format()},
-                {output_shapes[3], output(3)->dtype(), output(3)->format()},
-                {output_shapes[4], output(4)->dtype(), output(4)->format()},
-                {output_shapes[5], output(5)->dtype(), output(5)->format()});
-    else
-        return megdnn_opr()->get_workspace_in_bytes(
-                {input_shapes[0], input(0)->dtype(), input(0)->format()},
-                {input_shapes[1], input(1)->dtype(), input(1)->format()},
-                {input_shapes[2], input(2)->dtype(), input(2)->format()},
-                {input_shapes[3], input(3)->dtype(), input(3)->format()},
-                {input_shapes[4], input(4)->dtype(), input(4)->format()}, empty_dnn,
-                {input_shapes[5], input(5)->dtype(), input(5)->format()},
-                {input_shapes[6], input(6)->dtype(), input(6)->format()},
-                {input_shapes[7], input(7)->dtype(), input(7)->format()},
-                {output_shapes[0], output(0)->dtype(), output(0)->format()},
-                {output_shapes[1], output(1)->dtype(), output(1)->format()},
-                {output_shapes[2], output(2)->dtype(), output(2)->format()},
-                {output_shapes[3], output(3)->dtype(), output(3)->format()},
-                {output_shapes[4], output(4)->dtype(), output(4)->format()},
-                {output_shapes[5], output(5)->dtype(), output(5)->format()});
+    megdnn::TensorLayout in0{input_shapes[0], input(0)->dtype(), input(0)->format()};
+    megdnn::TensorLayout in1{input_shapes[1], input(1)->dtype(), input(1)->format()};
+    megdnn::TensorLayout in2{input_shapes[2], input(2)->dtype(), input(2)->format()};
+    megdnn::TensorLayout in3{input_shapes[3], input(3)->dtype(), input(3)->format()};
+    megdnn::TensorLayout in4{input_shapes[4], input(4)->dtype(), input(4)->format()};
+    megdnn::TensorLayout in5, in6, in7, in8;
+    if (input_type == InputType::ALL or input_type == InputType::ONLY_MASK) {
+        in5 = {input_shapes[5], input(5)->dtype(), input(5)->format()};
+        in6 = {input_shapes[6], input(6)->dtype(), input(6)->format()};
+        in7 = {input_shapes[7], input(7)->dtype(), input(7)->format()};
+        in8 = {input_shapes[8], input(8)->dtype(), input(8)->format()};
+    } else {
+        in6 = {input_shapes[5], input(5)->dtype(), input(5)->format()};
+        in7 = {input_shapes[6], input(6)->dtype(), input(6)->format()};
+        in8 = {input_shapes[7], input(7)->dtype(), input(7)->format()};
+    }
+    return megdnn_opr()->get_workspace_in_bytes(
+            in0, in1, in2, in3, in4, in5, in6, in7, in8,
+            {output_shapes[0], output(0)->dtype(), output(0)->format()},
+            {output_shapes[1], output(1)->dtype(), output(1)->format()},
+            {output_shapes[2], output(2)->dtype(), output(2)->format()},
+            {output_shapes[3], output(3)->dtype(), output(3)->format()},
+            {output_shapes[4], output(4)->dtype(), output(4)->format()},
+            {output_shapes[5], output(5)->dtype(), output(5)->format()});
 }
 
 void MultiHeadAttnBackward::scn_do_execute() {
     auto input_type = megdnn_opr()->param().tensor_combination_type;
     megdnn::TensorND empty_dnn;
-    if (input_type == INPUT_TYPE::ALL or input_type == INPUT_TYPE::ONLY_MASK)
+    if (input_type == InputType::ALL or input_type == InputType::ONLY_MASK)
         megdnn_opr()->exec(
                 input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
                 input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),

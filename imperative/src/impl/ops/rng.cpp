@@ -613,25 +613,25 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> _infer_output_attrs<MultiHeadAt
 template <>
 SmallVector<LogicalTensorDesc> infer_output_attrs<MultiHeadAttn>(
         const OpDef& op, const SmallVector<TensorPtr>& inputs) {
-    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    using InputType = opr::MultiHeadAttn::Param::TensorCombinationType;
     auto&& cn = inputs[0]->comp_node();
     auto input_type = op.cast_final_safe<MultiHeadAttn>().tensor_combination_type;
 
     std::tuple<SmallVector<LogicalTensorDesc>, bool> ret;
     TensorLayout empty_layout;
-    if (input_type == INPUT_TYPE::NONE)
+    if (input_type == InputType::NONE)
         ret = _infer_output_attrs<MultiHeadAttn>(
                 op,
                 {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
                  inputs[3]->layout(), empty_layout, empty_layout, empty_layout},
                 cn);
-    else if (input_type == INPUT_TYPE::ONLY_MASK)
+    else if (input_type == InputType::ONLY_MASK)
         ret = _infer_output_attrs<MultiHeadAttn>(
                 op,
                 {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
                  inputs[3]->layout(), inputs[4]->layout(), empty_layout, empty_layout},
                 cn);
-    else if (input_type == INPUT_TYPE::ONLY_BIASKV)
+    else if (input_type == InputType::ONLY_BIASKV)
         ret = _infer_output_attrs<MultiHeadAttn>(
                 op,
                 {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
@@ -666,7 +666,7 @@ template <>
 SmallVector<TensorPtr> apply_on_physical_tensor<MultiHeadAttn>(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
-    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    using InputType = opr::MultiHeadAttn::Param::TensorCombinationType;
     SmallVector<TensorPtr> outputs;
     SmallVector<LogicalTensorDesc> desc =
             infer_output_attrs<MultiHeadAttn>(def, inputs);
@@ -705,7 +705,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor<MultiHeadAttn>(
     TensorLayout empty_layout;
     megdnn::TensorND empty_tensor;
 
-    if (input_type == INPUT_TYPE::ALL) {
+    if (input_type == InputType::ALL) {
         wk_size = dnn_op->get_workspace_in_bytes(
                 inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
                 inputs[3]->layout(), inputs[4]->layout(), inputs[5]->layout(),
@@ -725,7 +725,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor<MultiHeadAttn>(
                 outputs[1]->dev_tensor().as_megdnn(),
                 outputs[2]->dev_tensor().as_megdnn(),
                 outputs[3]->dev_tensor().as_megdnn(), dnn_wk);
-    } else if (input_type == INPUT_TYPE::ONLY_MASK) {
+    } else if (input_type == InputType::ONLY_MASK) {
         wk_size = dnn_op->get_workspace_in_bytes(
                 inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
                 inputs[3]->layout(), inputs[4]->layout(), empty_layout, empty_layout,
@@ -743,7 +743,7 @@ SmallVector<TensorPtr> apply_on_physical_tensor<MultiHeadAttn>(
                 outputs[1]->dev_tensor().as_megdnn(),
                 outputs[2]->dev_tensor().as_megdnn(),
                 outputs[3]->dev_tensor().as_megdnn(), dnn_wk);
-    } else if (input_type == INPUT_TYPE::ONLY_BIASKV) {
+    } else if (input_type == InputType::ONLY_BIASKV) {
         wk_size = dnn_op->get_workspace_in_bytes(
                 inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
                 inputs[3]->layout(), empty_layout, inputs[4]->layout(),
@@ -801,13 +801,13 @@ template <>
 SymbolVarArray apply_on_var_node<MultiHeadAttn, SymbolVarArray>(
         const OpDef& def, const VarNodeArray& inputs) {
     auto&& rng = def.cast_final_safe<MultiHeadAttn>();
-    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    using InputType = opr::MultiHeadAttn::Param::TensorCombinationType;
     auto input_type = rng.tensor_combination_type;
-    if (input_type == INPUT_TYPE::ALL) {
+    if (input_type == InputType::ALL) {
         return _RNGOprMaker<7>::make(inputs, rng);
-    } else if (input_type == INPUT_TYPE::ONLY_BIASKV) {
+    } else if (input_type == InputType::ONLY_BIASKV) {
         return _RNGOprMaker<6>::make(inputs, rng);
-    } else if (input_type == INPUT_TYPE::ONLY_MASK) {
+    } else if (input_type == InputType::ONLY_MASK) {
         return _RNGOprMaker<5>::make(inputs, rng);
     } else {
         return _RNGOprMaker<4>::make(inputs, rng);
@@ -884,25 +884,25 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<Dro
 template <>
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<
         MultiHeadAttn>(const OpDef& op, const SmallVector<LogicalTensorDesc>& inputs) {
-    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    using InputType = opr::MultiHeadAttn::Param::TensorCombinationType;
     auto&& cn = inputs[0].comp_node;
     auto input_type = op.cast_final_safe<MultiHeadAttn>().tensor_combination_type;
 
     std::tuple<SmallVector<LogicalTensorDesc>, bool> ret;
     TensorLayout empty_layout;
-    if (input_type == INPUT_TYPE::NONE)
+    if (input_type == InputType::NONE)
         ret = _infer_output_attrs<MultiHeadAttn>(
                 op,
                 {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
                  empty_layout, empty_layout, empty_layout},
                 cn);
-    else if (input_type == INPUT_TYPE::ONLY_MASK)
+    else if (input_type == InputType::ONLY_MASK)
         ret = _infer_output_attrs<MultiHeadAttn>(
                 op,
                 {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
                  inputs[4].layout, empty_layout, empty_layout},
                 cn);
-    else if (input_type == INPUT_TYPE::ONLY_BIASKV)
+    else if (input_type == InputType::ONLY_BIASKV)
         ret = _infer_output_attrs<MultiHeadAttn>(
                 op,
                 {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,

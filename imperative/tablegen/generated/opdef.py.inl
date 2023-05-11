@@ -1479,38 +1479,38 @@ MeshIndexingInst
 
 py::class_<MultiHeadAttn, std::shared_ptr<MultiHeadAttn>, OpDef> MultiHeadAttnInst(m, "MultiHeadAttn");
 
-py::enum_<MultiHeadAttn::ATTN_MASK_TYPE>(MultiHeadAttnInst, "ATTN_MASK_TYPE")
-    .value("NO_MASK", MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK)
-    .value("DEFAULT_MASK", MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK)
-    .value("CUDNN_STYLE_MASK", MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK)
-    .value("USER_DEFINED_MASK", MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK)
+py::enum_<MultiHeadAttn::AttnMaskType>(MultiHeadAttnInst, "AttnMaskType")
+    .value("NO_MASK", MultiHeadAttn::AttnMaskType::NO_MASK)
+    .value("DEFAULT_MASK", MultiHeadAttn::AttnMaskType::DEFAULT_MASK)
+    .value("CUDNN_STYLE_MASK", MultiHeadAttn::AttnMaskType::CUDNN_STYLE_MASK)
+    .value("USER_DEFINED_MASK", MultiHeadAttn::AttnMaskType::USER_DEFINED_MASK)
     .def(py::init([](const std::string& in) {
         auto&& str = normalize_enum(in);
-        if (str == "NO_MASK") return MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK;
-        if (str == "DEFAULT_MASK") return MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK;
-        if (str == "CUDNN_STYLE_MASK") return MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK;
-        if (str == "USER_DEFINED_MASK") return MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK;
+        if (str == "NO_MASK") return MultiHeadAttn::AttnMaskType::NO_MASK;
+        if (str == "DEFAULT_MASK") return MultiHeadAttn::AttnMaskType::DEFAULT_MASK;
+        if (str == "CUDNN_STYLE_MASK") return MultiHeadAttn::AttnMaskType::CUDNN_STYLE_MASK;
+        if (str == "USER_DEFINED_MASK") return MultiHeadAttn::AttnMaskType::USER_DEFINED_MASK;
         throw py::cast_error("invalid enum value " + in);
     }));
-py::implicitly_convertible<std::string, MultiHeadAttn::ATTN_MASK_TYPE>();
+py::implicitly_convertible<std::string, MultiHeadAttn::AttnMaskType>();
 
-py::enum_<MultiHeadAttn::TENSOR_COMBINATION_TYPE>(MultiHeadAttnInst, "TENSOR_COMBINATION_TYPE")
-    .value("NONE", MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE)
-    .value("ONLY_MASK", MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK)
-    .value("ONLY_BIASKV", MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV)
-    .value("ALL", MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL)
+py::enum_<MultiHeadAttn::TensorCombinationType>(MultiHeadAttnInst, "TensorCombinationType")
+    .value("NONE", MultiHeadAttn::TensorCombinationType::NONE)
+    .value("ONLY_MASK", MultiHeadAttn::TensorCombinationType::ONLY_MASK)
+    .value("ONLY_BIASKV", MultiHeadAttn::TensorCombinationType::ONLY_BIASKV)
+    .value("ALL", MultiHeadAttn::TensorCombinationType::ALL)
     .def(py::init([](const std::string& in) {
         auto&& str = normalize_enum(in);
-        if (str == "NONE") return MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE;
-        if (str == "ONLY_MASK") return MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK;
-        if (str == "ONLY_BIASKV") return MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV;
-        if (str == "ALL") return MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL;
+        if (str == "NONE") return MultiHeadAttn::TensorCombinationType::NONE;
+        if (str == "ONLY_MASK") return MultiHeadAttn::TensorCombinationType::ONLY_MASK;
+        if (str == "ONLY_BIASKV") return MultiHeadAttn::TensorCombinationType::ONLY_BIASKV;
+        if (str == "ALL") return MultiHeadAttn::TensorCombinationType::ALL;
         throw py::cast_error("invalid enum value " + in);
     }));
-py::implicitly_convertible<std::string, MultiHeadAttn::TENSOR_COMBINATION_TYPE>();
+py::implicitly_convertible<std::string, MultiHeadAttn::TensorCombinationType>();
 
 MultiHeadAttnInst
-    .def(py::init<uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, bool, bool, bool, bool, float, uint32_t, ::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE, ::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE, bool, bool, bool, bool, uint64_t, float, float, size_t, std::string>(), py::arg("num_heads") = 1, py::arg("embeding_size") = 0, py::arg("k_size") = 0, py::arg("v_size") = 0, py::arg("qproj_size") = 0, py::arg("kproj_size") = 0, py::arg("vproj_size") = 0, py::arg("oproj_size") = 0, py::arg("qbias") = false, py::arg("kbias") = false, py::arg("vbias") = false, py::arg("obias") = false, py::arg("sm_scaler") = 1.f, py::arg("input_order") = 0, py::arg("attn_mask_type") = ::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK, py::arg("tensor_combination_type") = ::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE, py::arg("add_zero_attn") = false, py::arg("need_weights") = false, py::arg("reslink") = false, py::arg("training") = true, py::arg("seed") = 0, py::arg("attn_prob") = 0.f, py::arg("out_prob") = 0.f, py::arg("handle"), py::arg("scope") = {})
+    .def(py::init<uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, bool, bool, bool, bool, float, uint32_t, ::megdnn::param::MultiHeadAttn::AttnMaskType, ::megdnn::param::MultiHeadAttn::TensorCombinationType, bool, bool, bool, bool, uint64_t, float, float, size_t, std::string>(), py::arg("num_heads") = 1, py::arg("embeding_size") = 0, py::arg("k_size") = 0, py::arg("v_size") = 0, py::arg("qproj_size") = 0, py::arg("kproj_size") = 0, py::arg("vproj_size") = 0, py::arg("oproj_size") = 0, py::arg("qbias") = false, py::arg("kbias") = false, py::arg("vbias") = false, py::arg("obias") = false, py::arg("sm_scaler") = 1.f, py::arg("input_order") = 0, py::arg("attn_mask_type") = ::megdnn::param::MultiHeadAttn::AttnMaskType::NO_MASK, py::arg("tensor_combination_type") = ::megdnn::param::MultiHeadAttn::TensorCombinationType::NONE, py::arg("add_zero_attn") = false, py::arg("need_weights") = false, py::arg("reslink") = false, py::arg("training") = true, py::arg("seed") = 0, py::arg("attn_prob") = 0.f, py::arg("out_prob") = 0.f, py::arg("handle"), py::arg("scope") = {})
     .def(py::init<>())
     .def_readwrite("num_heads", &MultiHeadAttn::num_heads)
     .def_readwrite("embeding_size", &MultiHeadAttn::embeding_size)

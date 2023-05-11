@@ -15043,39 +15043,39 @@ void _init_py_MeshIndexing(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MeshIndexing::typeinfo(), &py_type).second);
 }
 
-template<> struct EnumTrait<MultiHeadAttn::ATTN_MASK_TYPE> {
-    static constexpr const char *name = "MultiHeadAttn.ATTN_MASK_TYPE";
-    static constexpr std::underlying_type_t<MultiHeadAttn::ATTN_MASK_TYPE> max = 4 - 1;
+template<> struct EnumTrait<MultiHeadAttn::AttnMaskType> {
+    static constexpr const char *name = "MultiHeadAttn.AttnMaskType";
+    static constexpr std::underlying_type_t<MultiHeadAttn::AttnMaskType> max = 4 - 1;
 };
-template<> PyTypeObject* EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::type = nullptr;
+template<> PyTypeObject* EnumWrapper<MultiHeadAttn::AttnMaskType>::type = nullptr;
 
 template<> const char*
-EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::members[] = {"NO_MASK", "DEFAULT_MASK", "CUDNN_STYLE_MASK", "USER_DEFINED_MASK"};
+EnumWrapper<MultiHeadAttn::AttnMaskType>::members[] = {"NO_MASK", "DEFAULT_MASK", "CUDNN_STYLE_MASK", "USER_DEFINED_MASK"};
 
-template<> std::unordered_map<std::string, MultiHeadAttn::ATTN_MASK_TYPE>
-EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::mem2value = {{normalize_enum("NO_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK}, {normalize_enum("DEFAULT_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK}, {normalize_enum("CUDNN_STYLE_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK}, {normalize_enum("USER_DEFINED_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK}};
-template<> PyObject* EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[4] = {nullptr};
+template<> std::unordered_map<std::string, MultiHeadAttn::AttnMaskType>
+EnumWrapper<MultiHeadAttn::AttnMaskType>::mem2value = {{normalize_enum("NO_MASK"), MultiHeadAttn::AttnMaskType::NO_MASK}, {normalize_enum("DEFAULT_MASK"), MultiHeadAttn::AttnMaskType::DEFAULT_MASK}, {normalize_enum("CUDNN_STYLE_MASK"), MultiHeadAttn::AttnMaskType::CUDNN_STYLE_MASK}, {normalize_enum("USER_DEFINED_MASK"), MultiHeadAttn::AttnMaskType::USER_DEFINED_MASK}};
+template<> PyObject* EnumWrapper<MultiHeadAttn::AttnMaskType>::pyobj_insts[4] = {nullptr};
 
-void _init_py_MultiHeadAttn_ATTN_MASK_TYPE(PyTypeObject& py_type) {
-    auto& e_type = EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::type;
+void _init_py_MultiHeadAttn_AttnMaskType(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<MultiHeadAttn::AttnMaskType>::type;
 
     static PyMethodDef tp_methods[] = {
-        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::py_dump, METH_NOARGS, NULL},
+        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<MultiHeadAttn::AttnMaskType>::py_dump, METH_NOARGS, NULL},
         {NULL}  /* Sentinel */
         };
     
     static PyType_Slot slots[] = {
-        {Py_tp_repr, (void*)EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::py_repr},
-        {Py_tp_richcompare, (void*)EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::tp_richcompare},
+        {Py_tp_repr, (void*)EnumWrapper<MultiHeadAttn::AttnMaskType>::py_repr},
+        {Py_tp_richcompare, (void*)EnumWrapper<MultiHeadAttn::AttnMaskType>::tp_richcompare},
         {Py_tp_methods, tp_methods},
 
         {0, NULL}
     };
     static PyType_Spec spec = {
         // name
-        "megengine.core._imperative_rt.ops.MultiHeadAttn.ATTN_MASK_TYPE",
+        "megengine.core._imperative_rt.ops.MultiHeadAttn.AttnMaskType",
         // basicsize
-        sizeof(EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>),
+        sizeof(EnumWrapper<MultiHeadAttn::AttnMaskType>),
         // itemsize
         0,
         // flags
@@ -15089,7 +15089,7 @@ void _init_py_MultiHeadAttn_ATTN_MASK_TYPE(PyTypeObject& py_type) {
             e_type->tp_setattro(
                     reinterpret_cast<PyObject*>(e_type),
                     py::cast("__name__").release().ptr(),
-                    py::cast("ATTN_MASK_TYPE").release().ptr()) >= 0);
+                    py::cast("AttnMaskType").release().ptr()) >= 0);
 
     mgb_assert(
             e_type->tp_setattro(
@@ -15101,66 +15101,66 @@ void _init_py_MultiHeadAttn_ATTN_MASK_TYPE(PyTypeObject& py_type) {
             e_type->tp_setattro(
                     reinterpret_cast<PyObject*>(e_type),
                     py::cast("__qualname__").release().ptr(),
-                    py::cast("MultiHeadAttn.ATTN_MASK_TYPE").release().ptr()) >= 0);
+                    py::cast("MultiHeadAttn.AttnMaskType").release().ptr()) >= 0);
 {
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::AttnMaskType>*>(inst)->value = MultiHeadAttn::AttnMaskType::NO_MASK;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "NO_MASK", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[0] = inst;
+    EnumWrapper<MultiHeadAttn::AttnMaskType>::pyobj_insts[0] = inst;
 }{
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::AttnMaskType>*>(inst)->value = MultiHeadAttn::AttnMaskType::DEFAULT_MASK;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "DEFAULT_MASK", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[1] = inst;
+    EnumWrapper<MultiHeadAttn::AttnMaskType>::pyobj_insts[1] = inst;
 }{
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::AttnMaskType>*>(inst)->value = MultiHeadAttn::AttnMaskType::CUDNN_STYLE_MASK;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "CUDNN_STYLE_MASK", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[2] = inst;
+    EnumWrapper<MultiHeadAttn::AttnMaskType>::pyobj_insts[2] = inst;
 }{
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::AttnMaskType>*>(inst)->value = MultiHeadAttn::AttnMaskType::USER_DEFINED_MASK;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "USER_DEFINED_MASK", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[3] = inst;
+    EnumWrapper<MultiHeadAttn::AttnMaskType>::pyobj_insts[3] = inst;
 }
     Py_INCREF(e_type);
     mgb_assert(PyDict_SetItemString(
-        py_type.tp_dict, "ATTN_MASK_TYPE", reinterpret_cast<PyObject*>(e_type)) >= 0);
+        py_type.tp_dict, "AttnMaskType", reinterpret_cast<PyObject*>(e_type)) >= 0);
 }
 
-template<> struct EnumTrait<MultiHeadAttn::TENSOR_COMBINATION_TYPE> {
-    static constexpr const char *name = "MultiHeadAttn.TENSOR_COMBINATION_TYPE";
-    static constexpr std::underlying_type_t<MultiHeadAttn::TENSOR_COMBINATION_TYPE> max = 4 - 1;
+template<> struct EnumTrait<MultiHeadAttn::TensorCombinationType> {
+    static constexpr const char *name = "MultiHeadAttn.TensorCombinationType";
+    static constexpr std::underlying_type_t<MultiHeadAttn::TensorCombinationType> max = 4 - 1;
 };
-template<> PyTypeObject* EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::type = nullptr;
+template<> PyTypeObject* EnumWrapper<MultiHeadAttn::TensorCombinationType>::type = nullptr;
 
 template<> const char*
-EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::members[] = {"NONE", "ONLY_MASK", "ONLY_BIASKV", "ALL"};
+EnumWrapper<MultiHeadAttn::TensorCombinationType>::members[] = {"NONE", "ONLY_MASK", "ONLY_BIASKV", "ALL"};
 
-template<> std::unordered_map<std::string, MultiHeadAttn::TENSOR_COMBINATION_TYPE>
-EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::mem2value = {{normalize_enum("NONE"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE}, {normalize_enum("ONLY_MASK"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK}, {normalize_enum("ONLY_BIASKV"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV}, {normalize_enum("ALL"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL}};
-template<> PyObject* EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[4] = {nullptr};
+template<> std::unordered_map<std::string, MultiHeadAttn::TensorCombinationType>
+EnumWrapper<MultiHeadAttn::TensorCombinationType>::mem2value = {{normalize_enum("NONE"), MultiHeadAttn::TensorCombinationType::NONE}, {normalize_enum("ONLY_MASK"), MultiHeadAttn::TensorCombinationType::ONLY_MASK}, {normalize_enum("ONLY_BIASKV"), MultiHeadAttn::TensorCombinationType::ONLY_BIASKV}, {normalize_enum("ALL"), MultiHeadAttn::TensorCombinationType::ALL}};
+template<> PyObject* EnumWrapper<MultiHeadAttn::TensorCombinationType>::pyobj_insts[4] = {nullptr};
 
-void _init_py_MultiHeadAttn_TENSOR_COMBINATION_TYPE(PyTypeObject& py_type) {
-    auto& e_type = EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::type;
+void _init_py_MultiHeadAttn_TensorCombinationType(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<MultiHeadAttn::TensorCombinationType>::type;
 
     static PyMethodDef tp_methods[] = {
-        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::py_dump, METH_NOARGS, NULL},
+        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<MultiHeadAttn::TensorCombinationType>::py_dump, METH_NOARGS, NULL},
         {NULL}  /* Sentinel */
         };
     
     static PyType_Slot slots[] = {
-        {Py_tp_repr, (void*)EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::py_repr},
-        {Py_tp_richcompare, (void*)EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::tp_richcompare},
+        {Py_tp_repr, (void*)EnumWrapper<MultiHeadAttn::TensorCombinationType>::py_repr},
+        {Py_tp_richcompare, (void*)EnumWrapper<MultiHeadAttn::TensorCombinationType>::tp_richcompare},
         {Py_tp_methods, tp_methods},
 
         {0, NULL}
     };
     static PyType_Spec spec = {
         // name
-        "megengine.core._imperative_rt.ops.MultiHeadAttn.TENSOR_COMBINATION_TYPE",
+        "megengine.core._imperative_rt.ops.MultiHeadAttn.TensorCombinationType",
         // basicsize
-        sizeof(EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>),
+        sizeof(EnumWrapper<MultiHeadAttn::TensorCombinationType>),
         // itemsize
         0,
         // flags
@@ -15174,7 +15174,7 @@ void _init_py_MultiHeadAttn_TENSOR_COMBINATION_TYPE(PyTypeObject& py_type) {
             e_type->tp_setattro(
                     reinterpret_cast<PyObject*>(e_type),
                     py::cast("__name__").release().ptr(),
-                    py::cast("TENSOR_COMBINATION_TYPE").release().ptr()) >= 0);
+                    py::cast("TensorCombinationType").release().ptr()) >= 0);
 
     mgb_assert(
             e_type->tp_setattro(
@@ -15186,31 +15186,31 @@ void _init_py_MultiHeadAttn_TENSOR_COMBINATION_TYPE(PyTypeObject& py_type) {
             e_type->tp_setattro(
                     reinterpret_cast<PyObject*>(e_type),
                     py::cast("__qualname__").release().ptr(),
-                    py::cast("MultiHeadAttn.TENSOR_COMBINATION_TYPE").release().ptr()) >= 0);
+                    py::cast("MultiHeadAttn.TensorCombinationType").release().ptr()) >= 0);
 {
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TensorCombinationType>*>(inst)->value = MultiHeadAttn::TensorCombinationType::NONE;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "NONE", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[0] = inst;
+    EnumWrapper<MultiHeadAttn::TensorCombinationType>::pyobj_insts[0] = inst;
 }{
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TensorCombinationType>*>(inst)->value = MultiHeadAttn::TensorCombinationType::ONLY_MASK;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ONLY_MASK", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[1] = inst;
+    EnumWrapper<MultiHeadAttn::TensorCombinationType>::pyobj_insts[1] = inst;
 }{
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TensorCombinationType>*>(inst)->value = MultiHeadAttn::TensorCombinationType::ONLY_BIASKV;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ONLY_BIASKV", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[2] = inst;
+    EnumWrapper<MultiHeadAttn::TensorCombinationType>::pyobj_insts[2] = inst;
 }{
     PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL;
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TensorCombinationType>*>(inst)->value = MultiHeadAttn::TensorCombinationType::ALL;
     mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ALL", inst) >= 0);
-    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[3] = inst;
+    EnumWrapper<MultiHeadAttn::TensorCombinationType>::pyobj_insts[3] = inst;
 }
     Py_INCREF(e_type);
     mgb_assert(PyDict_SetItemString(
-        py_type.tp_dict, "TENSOR_COMBINATION_TYPE", reinterpret_cast<PyObject*>(e_type)) >= 0);
+        py_type.tp_dict, "TensorCombinationType", reinterpret_cast<PyObject*>(e_type)) >= 0);
 }
 
 PyOpDefBegin(MultiHeadAttn) // {
@@ -15708,7 +15708,7 @@ PyMethodDef PyOp(MultiHeadAttn)::py_init_methoddef = {
     "__init__",
     (PyCFunction)PyOp(MultiHeadAttn)::py_init_proxy,
     METH_VARARGS | METH_KEYWORDS,
-    "__init__(self, num_heads: int = ..., embeding_size: int = ..., k_size: int = ..., v_size: int = ..., qproj_size: int = ..., kproj_size: int = ..., vproj_size: int = ..., oproj_size: int = ..., qbias: bool = ..., kbias: bool = ..., vbias: bool = ..., obias: bool = ..., sm_scaler: float = ..., input_order: int = ..., attn_mask_type: Union[str, ATTN_MASK_TYPE] = ..., tensor_combination_type: Union[str, TENSOR_COMBINATION_TYPE] = ..., add_zero_attn: bool = ..., need_weights: bool = ..., reslink: bool = ..., training: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
+    "__init__(self, num_heads: int = ..., embeding_size: int = ..., k_size: int = ..., v_size: int = ..., qproj_size: int = ..., kproj_size: int = ..., vproj_size: int = ..., oproj_size: int = ..., qbias: bool = ..., kbias: bool = ..., vbias: bool = ..., obias: bool = ..., sm_scaler: float = ..., input_order: int = ..., attn_mask_type: Union[str, AttnMaskType] = ..., tensor_combination_type: Union[str, TensorCombinationType] = ..., add_zero_attn: bool = ..., need_weights: bool = ..., reslink: bool = ..., training: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
 };
 
 void _init_py_MultiHeadAttn(py::module m) {
@@ -15730,8 +15730,8 @@ void _init_py_MultiHeadAttn(py::module m) {
     PyObject* descr = PyDescr_NewMethod(&PyOpType(MultiHeadAttn), &PyOp(MultiHeadAttn)::py_init_methoddef);
     PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
-        _init_py_MultiHeadAttn_ATTN_MASK_TYPE(py_type);
-    _init_py_MultiHeadAttn_TENSOR_COMBINATION_TYPE(py_type);
+        _init_py_MultiHeadAttn_AttnMaskType(py_type);
+    _init_py_MultiHeadAttn_TensorCombinationType(py_type);
 
     PyType_Modified(&py_type);
     m.add_object("MultiHeadAttn", reinterpret_cast<PyObject*>(&py_type));

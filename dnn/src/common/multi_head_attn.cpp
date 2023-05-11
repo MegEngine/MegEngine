@@ -9,7 +9,8 @@
 namespace megdnn {
 
 using Param = MultiHeadAttnBase::Param;
-using INPUT_TYPE = Param::TENSOR_COMBINATION_TYPE;
+using InputType = Param::TensorCombinationType;
+using MaskType = Param::AttnMaskType;
 
 void MultiHeadAttnForward::check_exec(
         const TensorLayout& queries, const TensorLayout& keys,
@@ -33,12 +34,12 @@ void MultiHeadAttnForward::check_exec(
     bool have_mask = false;
     bool have_biaskv = false;
     auto input_type = p.tensor_combination_type;
-    if (input_type == INPUT_TYPE::ONLY_BIASKV or input_type == INPUT_TYPE::ALL) {
+    if (input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL) {
         have_biaskv = true;
         megdnn_assert_contiguous(bias_k);
         megdnn_assert_contiguous(bias_v);
     }
-    if (input_type == INPUT_TYPE::ONLY_MASK or input_type == INPUT_TYPE::ALL) {
+    if (input_type == InputType::ONLY_MASK or input_type == InputType::ALL) {
         have_mask = true;
         megdnn_assert_contiguous(attn_mask);
     }
@@ -162,9 +163,10 @@ void MultiHeadAttnForward::check_exec(
     if (qprojsize == 0 and kprojsize == 0)
         megdnn_assert(embeding_size == ksize, "%s", param_errmsg().c_str());
     if (qprojsize == 0 and kprojsize != 0)
-        megdnn_assert(embeding_size == kprojsize, "%s", param_errmsg().c_str());
+        megdnn_assert(
+                embeding_size * p.num_heads == kprojsize, "%s", param_errmsg().c_str());
     if (qprojsize != 0 and kprojsize == 0)
-        megdnn_assert(qprojsize == ksize, "%s", param_errmsg().c_str());
+        megdnn_assert(qprojsize == ksize * p.num_heads, "%s", param_errmsg().c_str());
     if (qprojsize != 0 and kprojsize != 0)
         megdnn_assert(qprojsize == kprojsize, "%s", param_errmsg().c_str());
     if (p.qbias)
@@ -184,7 +186,7 @@ void MultiHeadAttnForward::check_exec(
     if (p.oproj_size > 0 and p.vproj_size > 0)
         weight_len += vprojsize * oprojsize + (p.obias ? oprojsize : 0);
     else if (p.oproj_size > 0 and p.vproj_size == 0)
-        weight_len += vsize * oprojsize + (p.obias ? oprojsize : 0);
+        weight_len += p.num_heads * vsize * oprojsize + (p.obias ? oprojsize : 0);
     megdnn_assert(
             weight_len == qkvo_weight_bias.total_nr_elems(),
             "qkvo_weight_bias length should be %zu, but got %zu. details: %s",
@@ -208,7 +210,7 @@ void MultiHeadAttnBackward::deduce_layout(
     dvalues = values;
     dqkvo_weight_bias = qkvo_weight_bias;
     auto input_type = param().tensor_combination_type;
-    if (input_type == INPUT_TYPE::ONLY_BIASKV or input_type == INPUT_TYPE::ALL) {
+    if (input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL) {
         dbias_k = TensorLayout(
                 {1, 1, param().kproj_size ? param().kproj_size : param().k_size},
                 keys.dtype);
@@ -255,8 +257,8 @@ void MultiHeadAttnBackward::check_exec(
     auto input_type = p.tensor_combination_type;
     bool have_mask = false;
     bool have_biaskv =
-            input_type == INPUT_TYPE::ONLY_BIASKV or input_type == INPUT_TYPE::ALL;
-    if (input_type == INPUT_TYPE::ONLY_MASK or input_type == INPUT_TYPE::ALL) {
+            input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL;
+    if (input_type == InputType::ONLY_MASK or input_type == InputType::ALL) {
         have_mask = true;
         megdnn_assert_contiguous(attn_mask);
     }
@@ -296,8 +298,9 @@ void MultiHeadAttnBackward::check_exec(
     };
 
     // layout check
-    size_t osize = p.oproj_size != 0 ? p.oproj_size
-                                     : (p.vproj_size != 0 ? p.vproj_size : p.v_size);
+    size_t osize = p.oproj_size != 0
+                         ? p.oproj_size
+                         : (p.vproj_size != 0 ? p.vproj_size : p.v_size * p.num_heads);
     TensorLayout diff_expect = TensorLayout(
             TensorShape{queries.shape[0], queries.shape[1], osize}, queries.dtype);
     megdnn_assert(equal_layout(diff, diff_expect), "%s", errmsg().c_str());
@@ -409,9 +412,10 @@ void MultiHeadAttnBackward::check_exec(
     if (qprojsize == 0 and kprojsize == 0)
         megdnn_assert(embeding_size == ksize, "%s", param_errmsg().c_str());
     if (qprojsize == 0 and kprojsize != 0)
-        megdnn_assert(embeding_size == kprojsize, "%s", param_errmsg().c_str());
+        megdnn_assert(
+                embeding_size * p.num_heads == kprojsize, "%s", param_errmsg().c_str());
     if (qprojsize != 0 and kprojsize == 0)
-        megdnn_assert(qprojsize == ksize, "%s", param_errmsg().c_str());
+        megdnn_assert(qprojsize == ksize * p.num_heads, "%s", param_errmsg().c_str());
     if (qprojsize != 0 and kprojsize != 0)
         megdnn_assert(qprojsize == kprojsize, "%s", param_errmsg().c_str());
     if (p.qbias)
@@ -431,7 +435,7 @@ void MultiHeadAttnBackward::check_exec(
     if (p.oproj_size > 0 and p.vproj_size > 0)
         weight_len += vprojsize * oprojsize + (p.obias ? oprojsize : 0);
     else if (p.oproj_size > 0 and p.vproj_size == 0)
-        weight_len += vsize * oprojsize + (p.obias ? oprojsize : 0);
+        weight_len += p.num_heads * vsize * oprojsize + (p.obias ? oprojsize : 0);
     megdnn_assert(
             weight_len == qkvo_weight_bias.total_nr_elems(),
             "qkvo_weight_bias length should be %zu, but got %zu. details: %s",
