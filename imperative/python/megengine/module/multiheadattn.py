@@ -9,7 +9,7 @@ from megengine import Parameter
 from ..device import get_cudnn_version, is_cuda_available
 from ..functional.nn import multi_head_attention
 from ..tensor import Tensor
-from .init import ones_, zeros_
+from .init import ones_, xavier_uniform_, zeros_
 from .module import Module
 
 
@@ -24,19 +24,37 @@ class MultiHeadAttention(Module):
     where :math:`h_i=W_{V,i}V \text{Softmax}\Big( \text{smScaler} \cdot K^TW^T_{K,i}W_{Q,i}q \Big),\text{for }i\text{ = 0 ... nHeads-1}`.
     
     Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported, and if the cudnn version >=8.6.0, the calculation results are completely correct; If the cudnn version >=8.0.4 but <8.6.0, if there is a bias, only the dbias result calculated from the backward is incorrect. If there is no bias, the forward and backward calculations are correct; If the cudnn version is less than 8.0.4, this operator is not supported.
+    
+    When the following conditions are met, you can go to the cudnn backend:
+
+    - ``cudnn version`` greater than or equal to 8.0.4 and ``bias`` is ``False`` and ``training`` is ``False``
+    - ``cudnn version`` greater than or equal to 8.6.0
+    - ``add_bias_kv`` is ``False``
+    - ``add_zero_attn`` is ``False``
+    - ``need_weights`` is ``False``
+    - ``average_attn_weights`` is ``False``
+    - ``maybe_cudnn_style_mask`` is ``True`` if support else ``False``
+    - ``attn_mask`` and ``key_padding_mask`` is cudnn style mask, i.e. the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
+      - The shape of attn_mask is :math:`(2, L)`, where :math:`(0, :)` elements specify the start index, :math:`(1, :)` elements specify the end index, the start index is inclusive, and the end index is not exclusive. The start index (i.e. elements in `attn_mask[0, x]`) must be less than the corresponding end index (i.e. elements in `attn_mask[1, x]`). The end index must be less than or equal to :math:`S`, where :math:`S` is the source sequence length, :math:`L` is the target sequence length.
+      - The shape of key_padding_mask is :math:`(2, N)`, where :math:`(0, :)` elements specify the target sequence padding in cudnn style mask and the element must equal to or less than :math:`L`, :math:`(1, :)` elements specify the source sequence padding in cudnn style mask and the element must equal to or less than :math:`S`, where :math:`S` is the source sequence length, :math:`L` is the target sequence length.
+    - ``qbias``, ``kbias``, ``vbias`` and ``obias`` are equal
+      
 
     Args:
         embed_dim: Total dimension of the model.
         num_heads: Number of parallel attention heads. Note that ``embed_dim`` will be split
             across ``num_heads`` (i.e. each head will have dimension ``embed_dim // num_heads``).
-        dropout: Dropout probability on ``attn_output_weights``. Default: ``0.0`` (no dropout).
+        attn_dropout: Dropout probability on ``attn_output_weights``. Default: ``0.0`` (no dropout).
+        out_dropout: Dropout probability on ``output``. Default: ``0.0`` (no dropout).
         bias: If specified, adds bias to input / output projection layers. Default: ``True``.
+        add_bias_kv: If specified, adds bias to the key and value sequences at sequence dim. Default: ``False``.
+            Different from kbias and vbias,  bias_kv here is not kbias and vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        add_zero_attn: If specified, adds a new batch of zeros to the key and value sequences.
+            Default: ``False``.
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         kdim: Total number of features for keys. Default: ``None`` (uses ``kdim=embed_dim``).
         vdim: Total number of features for values. Default: ``None`` (uses ``vdim=embed_dim``).
-        enable_qproj: enable query weight projection. Default: ``True``.
-        enable_kproj: enable key weight projection. Default: ``True``.
-        enable_vproj: enable value weight projection. Default: ``True``.
-        enable_oproj: enable output weight projection. Default: ``True``.
 
     Examples::
         >>> import numpy as np
@@ -44,7 +62,7 @@ class MultiHeadAttention(Module):
         >>> x = Tensor(np.arange(batch_size * seq_len * embed_dim).astype(np.float32).reshape(batch_size, seq_len, embed_dim))
         >>> multihead_attn = M.MultiHeadAttention(embed_dim, num_heads)
         >>> if is_cuda_available() and get_cudnn_version() >= 8004:
-        ...     out = multihead_attn(x, x, x)
+        ...     out = multihead_attn(x, x, x)[0]
         ...     out.numpy().shape
         ... else:
         ...     print(np.zeros((2,4,4)).shape)
@@ -57,84 +75,143 @@ class MultiHeadAttention(Module):
         num_heads,
         attn_dropout=0.0,
         out_dropout=0.0,
+        bias=True,
+        add_bias_kv=False,
+        add_zero_attn=False,
         kdim=None,
         vdim=None,
-        bias=True,
-        enable_qproj=True,
-        enable_kproj=True,
-        enable_vproj=True,
-        enable_oproj=True,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.embed_dim = embed_dim
         self.kdim = kdim if kdim is not None else embed_dim
         self.vdim = vdim if vdim is not None else embed_dim
-        self._qkv_same_embed_dim = self.kdim == embed_dim and self.vdim == embed_dim
+        self.add_bias_kv = add_bias_kv
+        self.add_zero_attn = add_zero_attn
 
         self.num_heads = num_heads
         self.attn_dropout = attn_dropout
         self.out_dropout = out_dropout
         self.head_dim = embed_dim // num_heads
+        self.unsupport_reason = " The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation."
         assert (
             self.head_dim * num_heads == self.embed_dim
         ), "embed_dim must be divisible by num_heads"
-        assert (
-            self._qkv_same_embed_dim
-        ), "it does not support the case where q, k, and v are different."
+        assert add_bias_kv == False, (
+            "add_bias_kv should be set to False, and configuration of this parameter is not supported now."
+            + self.unsupport_reason
+        )
+        assert add_zero_attn == False, (
+            "add_zero_attn should be set to False, and configuration of this parameter is not supported now."
+            + self.unsupport_reason
+        )
+
         self.bias = bias
+        self.weight_bias_len = (
+            self.embed_dim + self.kdim + self.vdim + self.embed_dim
+        ) * self.embed_dim + (4 * self.embed_dim if self.bias else 0)
 
-        self.enable_qproj = enable_qproj
-        self.enable_kproj = enable_kproj
-        self.enable_vproj = enable_vproj
-        self.enable_oproj = enable_oproj
-        self.nproj = enable_qproj + enable_kproj + enable_vproj + enable_oproj
+        self.io_weight_bias = Parameter(
+            np.empty((1, self.weight_bias_len), dtype="float32")
+        )
+        self.bias_k = (
+            Parameter(np.empty((1, 1, embed_dim), dtype="float32"))
+            if self.add_bias_kv
+            else None
+        )
+        self.bias_v = (
+            Parameter(np.empty((1, 1, embed_dim), dtype="float32"))
+            if self.add_bias_kv
+            else None
+        )
 
-        if self.bias:
-            io_weight = np.ones((embed_dim, self.nproj * embed_dim))
-            io_bias = np.zeros((1, self.nproj * embed_dim))
-            self.io_weight_bias = Parameter(
-                np.concatenate((io_weight, io_bias), axis=0), dtype="float32"
-            )
-        else:
-            self.io_weight_bias = Parameter(
-                np.ones((self.nproj * embed_dim, embed_dim), dtype="float32")
-            )
         self.reset_parameters()
 
     def reset_parameters(self):
         self.attn_dropout = 0.0
         self.out_dropout = 0.0
+        xavier_uniform_(self.io_weight_bias)
         if self.bias:
-            io_weight = np.ones((self.embed_dim, self.nproj * self.embed_dim))
-            io_bias = np.zeros((1, self.nproj * self.embed_dim))
-            self.io_weight_bias._reset(np.concatenate((io_weight, io_bias), axis=0))
+            weight_len = (
+                self.embed_dim + self.kdim + self.vdim + self.embed_dim
+            ) * self.embed_dim
+            self.io_weight_bias[0, weight_len:,] = 0
+
+        if self.add_bias_kv:
+            xavier_uniform_(self.bias_k)
         else:
-            ones_(self.io_weight_bias)
+            self.bias_k = None
+        if self.add_bias_kv:
+            xavier_uniform_(self.bias_v)
+        else:
+            self.bias_v = None
 
     def forward(
-        self, query, key, value, attn_mask: bool = True,
+        self,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        key_padding_mask: Optional[Tensor] = None,
+        attn_mask: Optional[Tensor] = None,
+        need_weights: bool = False,
+        average_attn_weights: bool = False,
+        is_causal: bool = False,
+        maybe_cudnn_style_mask: bool = False,
     ):
         r"""
     Args:
-        query: Query embeddings of shape :math:`(N, L, E_q)`, where :math:`N` is the batch size, :math:`L` is the target sequence length,
-            and :math:`E_q` is the query embedding dimension ``embed_dim``. Queries are compared against
-            key-value pairs to produce the output. See "Attention Is All You Need" for more details.
-        key: Key embeddings of shape :math:`(N, S, E_k)`, where :math:`N` is the batch size, :math:`S` is the source sequence length, and
-            :math:`E_k` is the key embedding dimension ``kdim``. See "Attention Is All You Need" for more details.
-        value: Value embeddings of shape :math:`(N, S, E_v)`, where :math:`N` is the batch size, :math:`S` is the source sequence length, and
-            :math:`E_v` is the value embedding dimension ``vdim``. See "Attention Is All You Need" for more details.
-        attn_mask: If specified, a 2D or 3D mask preventing attention to certain positions. Must be of shape
-            :math:`(L, S)` or :math:`(N\cdot\text{num\_heads}, L, S)`, where :math:`N` is the batch size,
-            :math:`L` is the target sequence length, and :math:`S` is the source sequence length. A 2D mask will be
-            broadcasted across the batch while a 3D mask allows for a different mask for each entry in the batch.
-            
+        query: Query embeddings of shape :math:`(N, L, E_q)`, 
+            where :math:`N` is the batch size, :math:`L` is the target sequence length, and :math:`E_q` is the query embedding dimension ``embed_dim``. Queries are compared against key-value pairs to produce the output. See "Attention Is All You Need" for more details.
+        key: Key embeddings of shape :math:`(N, S, E_k)`, 
+            where :math:`N` is the batch size, :math:`S` is the source sequence length, and :math:`E_k` is the key embedding dimension ``kdim``. See "Attention Is All You Need" for more details.
+        value: Value embeddings of shape :math:`(N, S, E_v)`, 
+            where :math:`N` is the batch size, :math:`S` is the source sequence length, and :math:`E_v` is the value embedding dimension ``vdim``. See "Attention Is All You Need" for more details.
+        key_padding_mask: If specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of 
+            attention (i.e. treat as "padding"). For unbatched `query`, shape should be :math:`(S)`. Binary and float masks are supported. For a binary mask, a ``True`` value indicates that the corresponding ``key`` value will be ignored for the purpose of attention. For a float mask, it will be directly added to the corresponding ``key`` value.
+            Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        attn_mask: 2D or 3D mask that prevents attention to certain positions. A 2D mask will be broadcasted for all
+            the batches while a 3D mask allows to specify a different mask for the entries of each batch.
+            Note: User-defined mask not supported now, only support no mask or default mask, where the upper right triangle is all -inf, and the diagonal and lower left triangle are all 0. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        need_weights: indicates whether to return the attention weight, which is the output result of softmax. Default: `True`
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        average_attn_weights: If true, indicates that the returned ``attn_weights`` should be averaged across
+            heads. Otherwise, ``attn_weights`` are provided separately per head. Note that this flag only has an
+            effect when ``need_weights=True``. Default: ``True`` (i.e. average weights across heads)
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        is_causal: If specified, applies a causal mask as attention mask. Default: ``False``
+            Warning: ``is_causal`` provides a hint that ``attn_mask`` is the causal mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility.
+        maybe_cudnn_style_mask: if specified, applies a cudnn style mask as attention mask. Default: ``False``
+            Note: In the cudnn style, the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
+            Warning: like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is a cudnn style mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility. In addition, if the ``_merge_masks`` function returns ``merge_type=cudnn_style_mask``, please ensure that other conditions are correct so that it can run the implementation of cudnn, otherwise an error will be reported.
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that the underlying implementation only accepts two types of mask type, namely "no_mask" and "default_mask", and we may try to loosen this option after submitting the commit that users can pass in custom attention mask tensors.
 
     Outputs:
         - **attn_output** - Attention outputs of shape :math:`(N, L, E)`, 
           where :math:`L` is the target sequence length, :math:`N` is
           the batch size, and :math:`E` is the embedding dimension ``embed_dim``.
+        - **attn_output_weights** - Only returned when ``need_weights=True``. If ``average_attn_weights=True``,
+          returns attention weights averaged across heads of shape :math:`(L, S)` when input is unbatched or
+          :math:`(N, L, S)`, where :math:`N` is the batch size, :math:`L` is the target sequence length, and
+          :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per
+          head of shape :math:`(\text{num\_heads}, L, S)` when input is unbatched or :math:`(N * \text{num\_heads}, L, S)`.
+          Note: Now only None will be returned. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         """
+        assert key_padding_mask is None, (
+            "key_padding_mask should be None, and configuration of this parameter is not supported now."
+            + self.unsupport_reason
+        )
+        assert need_weights == False, (
+            "need_weights should be set to False, and configuration of this parameter is not supported now."
+            + self.unsupport_reason
+        )
+        assert average_attn_weights == False, (
+            "average_attn_weights should be set to False, and configuration of this parameter is not supported now."
+            + self.unsupport_reason
+        )
+        assert maybe_cudnn_style_mask == False, (
+            "maybe_cudnn_style_mask should be set to False, and configuration of this parameter is not supported now."
+            + self.unsupport_reason
+        )
 
         return multi_head_attention(
             query,
@@ -145,13 +222,24 @@ class MultiHeadAttention(Module):
             self.attn_dropout,
             self.out_dropout,
             self.io_weight_bias,
-            self.bias,
+            qproj_size=self.embed_dim,
+            kproj_size=self.embed_dim,
+            vproj_size=self.embed_dim,
+            oproj_size=self.embed_dim,
+            qbias=self.bias,
+            kbias=self.bias,
+            vbias=self.bias,
+            obias=self.bias,
+            bias_k=self.bias_k,
+            bias_v=self.bias_v,
+            add_zero_attn=self.add_zero_attn,
             training=self.training,
+            key_padding_mask=key_padding_mask,
+            need_weights=need_weights,
             attn_mask=attn_mask,
-            enable_qproj=self.enable_qproj,
-            enable_kproj=self.enable_kproj,
-            enable_vproj=self.enable_vproj,
-            enable_oproj=self.enable_oproj,
+            average_attn_weights=average_attn_weights,
+            is_causal=is_causal,
+            maybe_cudnn_style_mask=maybe_cudnn_style_mask,
         )
 
     def _module_info_string(self) -> str:

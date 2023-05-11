@@ -163,7 +163,7 @@ void MultiHeadAttnBackwardImpl::exec(
 #else
 #if CUDNN_VERSION < 8600
     megdnn_assert(
-            !param().bias,
+            !(param().qbias or param().kbias or param().vbias or param().obias),
             "If the cudnn version is lower than 8.6.0, param().bias must be false, "
             "but got true, because there is an error in the "
             "dbias result during the backward calculation.");

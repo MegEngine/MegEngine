@@ -15043,6 +15043,176 @@ void _init_py_MeshIndexing(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MeshIndexing::typeinfo(), &py_type).second);
 }
 
+template<> struct EnumTrait<MultiHeadAttn::ATTN_MASK_TYPE> {
+    static constexpr const char *name = "MultiHeadAttn.ATTN_MASK_TYPE";
+    static constexpr std::underlying_type_t<MultiHeadAttn::ATTN_MASK_TYPE> max = 4 - 1;
+};
+template<> PyTypeObject* EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::type = nullptr;
+
+template<> const char*
+EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::members[] = {"NO_MASK", "DEFAULT_MASK", "CUDNN_STYLE_MASK", "USER_DEFINED_MASK"};
+
+template<> std::unordered_map<std::string, MultiHeadAttn::ATTN_MASK_TYPE>
+EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::mem2value = {{normalize_enum("NO_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK}, {normalize_enum("DEFAULT_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK}, {normalize_enum("CUDNN_STYLE_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK}, {normalize_enum("USER_DEFINED_MASK"), MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK}};
+template<> PyObject* EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[4] = {nullptr};
+
+void _init_py_MultiHeadAttn_ATTN_MASK_TYPE(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::type;
+
+    static PyMethodDef tp_methods[] = {
+        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::py_dump, METH_NOARGS, NULL},
+        {NULL}  /* Sentinel */
+        };
+    
+    static PyType_Slot slots[] = {
+        {Py_tp_repr, (void*)EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::py_repr},
+        {Py_tp_richcompare, (void*)EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::tp_richcompare},
+        {Py_tp_methods, tp_methods},
+
+        {0, NULL}
+    };
+    static PyType_Spec spec = {
+        // name
+        "megengine.core._imperative_rt.ops.MultiHeadAttn.ATTN_MASK_TYPE",
+        // basicsize
+        sizeof(EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>),
+        // itemsize
+        0,
+        // flags
+        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
+        // slots
+        slots
+    };
+    e_type = reinterpret_cast<PyTypeObject*>(PyType_FromSpec(&spec));
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__name__").release().ptr(),
+                    py::cast("ATTN_MASK_TYPE").release().ptr()) >= 0);
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__module__").release().ptr(),
+                    py::cast("megengine.core._imperative_rt.ops").release().ptr()) >= 0);
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__qualname__").release().ptr(),
+                    py::cast("MultiHeadAttn.ATTN_MASK_TYPE").release().ptr()) >= 0);
+{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "NO_MASK", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[0] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "DEFAULT_MASK", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[1] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "CUDNN_STYLE_MASK", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[2] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>*>(inst)->value = MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "USER_DEFINED_MASK", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::ATTN_MASK_TYPE>::pyobj_insts[3] = inst;
+}
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "ATTN_MASK_TYPE", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+template<> struct EnumTrait<MultiHeadAttn::TENSOR_COMBINATION_TYPE> {
+    static constexpr const char *name = "MultiHeadAttn.TENSOR_COMBINATION_TYPE";
+    static constexpr std::underlying_type_t<MultiHeadAttn::TENSOR_COMBINATION_TYPE> max = 4 - 1;
+};
+template<> PyTypeObject* EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::type = nullptr;
+
+template<> const char*
+EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::members[] = {"NONE", "ONLY_MASK", "ONLY_BIASKV", "ALL"};
+
+template<> std::unordered_map<std::string, MultiHeadAttn::TENSOR_COMBINATION_TYPE>
+EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::mem2value = {{normalize_enum("NONE"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE}, {normalize_enum("ONLY_MASK"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK}, {normalize_enum("ONLY_BIASKV"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV}, {normalize_enum("ALL"), MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL}};
+template<> PyObject* EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[4] = {nullptr};
+
+void _init_py_MultiHeadAttn_TENSOR_COMBINATION_TYPE(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::type;
+
+    static PyMethodDef tp_methods[] = {
+        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::py_dump, METH_NOARGS, NULL},
+        {NULL}  /* Sentinel */
+        };
+    
+    static PyType_Slot slots[] = {
+        {Py_tp_repr, (void*)EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::py_repr},
+        {Py_tp_richcompare, (void*)EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::tp_richcompare},
+        {Py_tp_methods, tp_methods},
+
+        {0, NULL}
+    };
+    static PyType_Spec spec = {
+        // name
+        "megengine.core._imperative_rt.ops.MultiHeadAttn.TENSOR_COMBINATION_TYPE",
+        // basicsize
+        sizeof(EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>),
+        // itemsize
+        0,
+        // flags
+        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
+        // slots
+        slots
+    };
+    e_type = reinterpret_cast<PyTypeObject*>(PyType_FromSpec(&spec));
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__name__").release().ptr(),
+                    py::cast("TENSOR_COMBINATION_TYPE").release().ptr()) >= 0);
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__module__").release().ptr(),
+                    py::cast("megengine.core._imperative_rt.ops").release().ptr()) >= 0);
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__qualname__").release().ptr(),
+                    py::cast("MultiHeadAttn.TENSOR_COMBINATION_TYPE").release().ptr()) >= 0);
+{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "NONE", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[0] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ONLY_MASK", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[1] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ONLY_BIASKV", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[2] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>*>(inst)->value = MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ALL", inst) >= 0);
+    EnumWrapper<MultiHeadAttn::TENSOR_COMBINATION_TYPE>::pyobj_insts[3] = inst;
+}
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "TENSOR_COMBINATION_TYPE", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
 PyOpDefBegin(MultiHeadAttn) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -15053,16 +15223,25 @@ PyOpDefBegin(MultiHeadAttn) // {
         std::unordered_map<std::string, py::object> state {
             
             {"num_heads", serialization<decltype(opdef.num_heads)>::dump(opdef.num_heads)},
+            {"embeding_size", serialization<decltype(opdef.embeding_size)>::dump(opdef.embeding_size)},
+            {"k_size", serialization<decltype(opdef.k_size)>::dump(opdef.k_size)},
+            {"v_size", serialization<decltype(opdef.v_size)>::dump(opdef.v_size)},
+            {"qproj_size", serialization<decltype(opdef.qproj_size)>::dump(opdef.qproj_size)},
+            {"kproj_size", serialization<decltype(opdef.kproj_size)>::dump(opdef.kproj_size)},
+            {"vproj_size", serialization<decltype(opdef.vproj_size)>::dump(opdef.vproj_size)},
+            {"oproj_size", serialization<decltype(opdef.oproj_size)>::dump(opdef.oproj_size)},
+            {"qbias", serialization<decltype(opdef.qbias)>::dump(opdef.qbias)},
+            {"kbias", serialization<decltype(opdef.kbias)>::dump(opdef.kbias)},
+            {"vbias", serialization<decltype(opdef.vbias)>::dump(opdef.vbias)},
+            {"obias", serialization<decltype(opdef.obias)>::dump(opdef.obias)},
             {"sm_scaler", serialization<decltype(opdef.sm_scaler)>::dump(opdef.sm_scaler)},
             {"input_order", serialization<decltype(opdef.input_order)>::dump(opdef.input_order)},
+            {"attn_mask_type", serialization<decltype(opdef.attn_mask_type)>::dump(opdef.attn_mask_type)},
+            {"tensor_combination_type", serialization<decltype(opdef.tensor_combination_type)>::dump(opdef.tensor_combination_type)},
+            {"need_weights", serialization<decltype(opdef.need_weights)>::dump(opdef.need_weights)},
+            {"add_zero_attn", serialization<decltype(opdef.add_zero_attn)>::dump(opdef.add_zero_attn)},
             {"reslink", serialization<decltype(opdef.reslink)>::dump(opdef.reslink)},
             {"training", serialization<decltype(opdef.training)>::dump(opdef.training)},
-            {"bias", serialization<decltype(opdef.bias)>::dump(opdef.bias)},
-            {"attn_mask", serialization<decltype(opdef.attn_mask)>::dump(opdef.attn_mask)},
-            {"enable_qproj", serialization<decltype(opdef.enable_qproj)>::dump(opdef.enable_qproj)},
-            {"enable_kproj", serialization<decltype(opdef.enable_kproj)>::dump(opdef.enable_kproj)},
-            {"enable_vproj", serialization<decltype(opdef.enable_vproj)>::dump(opdef.enable_vproj)},
-            {"enable_oproj", serialization<decltype(opdef.enable_oproj)>::dump(opdef.enable_oproj)},
             {"seed", serialization<decltype(opdef.seed)>::dump(opdef.seed)},
             {"attn_prob", serialization<decltype(opdef.attn_prob)>::dump(opdef.attn_prob)},
             {"out_prob", serialization<decltype(opdef.out_prob)>::dump(opdef.out_prob)},
@@ -15085,6 +15264,83 @@ PyOpDefBegin(MultiHeadAttn) // {
         }
 
         {
+        auto&& iter = state.find("embeding_size");
+        if (iter != state.end()) {
+            opdef.embeding_size = serialization<decltype(opdef.embeding_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("k_size");
+        if (iter != state.end()) {
+            opdef.k_size = serialization<decltype(opdef.k_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("v_size");
+        if (iter != state.end()) {
+            opdef.v_size = serialization<decltype(opdef.v_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("qproj_size");
+        if (iter != state.end()) {
+            opdef.qproj_size = serialization<decltype(opdef.qproj_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("kproj_size");
+        if (iter != state.end()) {
+            opdef.kproj_size = serialization<decltype(opdef.kproj_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("vproj_size");
+        if (iter != state.end()) {
+            opdef.vproj_size = serialization<decltype(opdef.vproj_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("oproj_size");
+        if (iter != state.end()) {
+            opdef.oproj_size = serialization<decltype(opdef.oproj_size)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("qbias");
+        if (iter != state.end()) {
+            opdef.qbias = serialization<decltype(opdef.qbias)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("kbias");
+        if (iter != state.end()) {
+            opdef.kbias = serialization<decltype(opdef.kbias)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("vbias");
+        if (iter != state.end()) {
+            opdef.vbias = serialization<decltype(opdef.vbias)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("obias");
+        if (iter != state.end()) {
+            opdef.obias = serialization<decltype(opdef.obias)>::load(iter->second);
+        }
+        }
+
+        {
         auto&& iter = state.find("sm_scaler");
         if (iter != state.end()) {
             opdef.sm_scaler = serialization<decltype(opdef.sm_scaler)>::load(iter->second);
@@ -15099,6 +15355,34 @@ PyOpDefBegin(MultiHeadAttn) // {
         }
 
         {
+        auto&& iter = state.find("attn_mask_type");
+        if (iter != state.end()) {
+            opdef.attn_mask_type = serialization<decltype(opdef.attn_mask_type)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("tensor_combination_type");
+        if (iter != state.end()) {
+            opdef.tensor_combination_type = serialization<decltype(opdef.tensor_combination_type)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("need_weights");
+        if (iter != state.end()) {
+            opdef.need_weights = serialization<decltype(opdef.need_weights)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("add_zero_attn");
+        if (iter != state.end()) {
+            opdef.add_zero_attn = serialization<decltype(opdef.add_zero_attn)>::load(iter->second);
+        }
+        }
+
+        {
         auto&& iter = state.find("reslink");
         if (iter != state.end()) {
             opdef.reslink = serialization<decltype(opdef.reslink)>::load(iter->second);
@@ -15109,48 +15393,6 @@ PyOpDefBegin(MultiHeadAttn) // {
         auto&& iter = state.find("training");
         if (iter != state.end()) {
             opdef.training = serialization<decltype(opdef.training)>::load(iter->second);
-        }
-        }
-
-        {
-        auto&& iter = state.find("bias");
-        if (iter != state.end()) {
-            opdef.bias = serialization<decltype(opdef.bias)>::load(iter->second);
-        }
-        }
-
-        {
-        auto&& iter = state.find("attn_mask");
-        if (iter != state.end()) {
-            opdef.attn_mask = serialization<decltype(opdef.attn_mask)>::load(iter->second);
-        }
-        }
-
-        {
-        auto&& iter = state.find("enable_qproj");
-        if (iter != state.end()) {
-            opdef.enable_qproj = serialization<decltype(opdef.enable_qproj)>::load(iter->second);
-        }
-        }
-
-        {
-        auto&& iter = state.find("enable_kproj");
-        if (iter != state.end()) {
-            opdef.enable_kproj = serialization<decltype(opdef.enable_kproj)>::load(iter->second);
-        }
-        }
-
-        {
-        auto&& iter = state.find("enable_vproj");
-        if (iter != state.end()) {
-            opdef.enable_vproj = serialization<decltype(opdef.enable_vproj)>::load(iter->second);
-        }
-        }
-
-        {
-        auto&& iter = state.find("enable_oproj");
-        if (iter != state.end()) {
-            opdef.enable_oproj = serialization<decltype(opdef.enable_oproj)>::load(iter->second);
         }
         }
 
@@ -15190,9 +15432,9 @@ PyOpDefBegin(MultiHeadAttn) // {
 PyOpDefEnd(MultiHeadAttn)
 
 int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
-    static const char* kwlist[] = {"num_heads", "sm_scaler", "input_order", "reslink", "training", "bias", "attn_mask", "enable_qproj", "enable_kproj", "enable_vproj", "enable_oproj", "seed", "attn_prob", "out_prob", "handle", "scope", NULL};
-    PyObject *num_heads = NULL, *sm_scaler = NULL, *input_order = NULL, *reslink = NULL, *training = NULL, *bias = NULL, *attn_mask = NULL, *enable_qproj = NULL, *enable_kproj = NULL, *enable_vproj = NULL, *enable_oproj = NULL, *seed = NULL, *attn_prob = NULL, *out_prob = NULL, *handle = NULL, *scope = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOOOOOOO", const_cast<char**>(kwlist), &num_heads, &sm_scaler, &input_order, &reslink, &training, &bias, &attn_mask, &enable_qproj, &enable_kproj, &enable_vproj, &enable_oproj, &seed, &attn_prob, &out_prob, &handle, &scope))
+    static const char* kwlist[] = {"num_heads", "embeding_size", "k_size", "v_size", "qproj_size", "kproj_size", "vproj_size", "oproj_size", "qbias", "kbias", "vbias", "obias", "sm_scaler", "input_order", "attn_mask_type", "tensor_combination_type", "need_weights", "add_zero_attn", "reslink", "training", "seed", "attn_prob", "out_prob", "handle", "scope", NULL};
+    PyObject *num_heads = NULL, *embeding_size = NULL, *k_size = NULL, *v_size = NULL, *qproj_size = NULL, *kproj_size = NULL, *vproj_size = NULL, *oproj_size = NULL, *qbias = NULL, *kbias = NULL, *vbias = NULL, *obias = NULL, *sm_scaler = NULL, *input_order = NULL, *attn_mask_type = NULL, *tensor_combination_type = NULL, *need_weights = NULL, *add_zero_attn = NULL, *reslink = NULL, *training = NULL, *seed = NULL, *attn_prob = NULL, *out_prob = NULL, *handle = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOOOOOOOOOOOOOOOO", const_cast<char**>(kwlist), &num_heads, &embeding_size, &k_size, &v_size, &qproj_size, &kproj_size, &vproj_size, &oproj_size, &qbias, &kbias, &vbias, &obias, &sm_scaler, &input_order, &attn_mask_type, &tensor_combination_type, &need_weights, &add_zero_attn, &reslink, &training, &seed, &attn_prob, &out_prob, &handle, &scope))
     return -1;
 
     if (num_heads) {
@@ -15201,6 +15443,105 @@ int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds)
             py::detail::loader_life_support guard{};
             reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().num_heads =
                     py::cast<decltype(MultiHeadAttn::num_heads)>(py::handle(num_heads));
+        } CATCH_ALL(-1)
+    }
+
+    if (embeding_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().embeding_size =
+                    py::cast<decltype(MultiHeadAttn::embeding_size)>(py::handle(embeding_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (k_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().k_size =
+                    py::cast<decltype(MultiHeadAttn::k_size)>(py::handle(k_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (v_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().v_size =
+                    py::cast<decltype(MultiHeadAttn::v_size)>(py::handle(v_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (qproj_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().qproj_size =
+                    py::cast<decltype(MultiHeadAttn::qproj_size)>(py::handle(qproj_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (kproj_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().kproj_size =
+                    py::cast<decltype(MultiHeadAttn::kproj_size)>(py::handle(kproj_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (vproj_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().vproj_size =
+                    py::cast<decltype(MultiHeadAttn::vproj_size)>(py::handle(vproj_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (oproj_size) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().oproj_size =
+                    py::cast<decltype(MultiHeadAttn::oproj_size)>(py::handle(oproj_size));
+        } CATCH_ALL(-1)
+    }
+
+    if (qbias) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().qbias =
+                    py::cast<decltype(MultiHeadAttn::qbias)>(py::handle(qbias));
+        } CATCH_ALL(-1)
+    }
+
+    if (kbias) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().kbias =
+                    py::cast<decltype(MultiHeadAttn::kbias)>(py::handle(kbias));
+        } CATCH_ALL(-1)
+    }
+
+    if (vbias) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().vbias =
+                    py::cast<decltype(MultiHeadAttn::vbias)>(py::handle(vbias));
+        } CATCH_ALL(-1)
+    }
+
+    if (obias) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().obias =
+                    py::cast<decltype(MultiHeadAttn::obias)>(py::handle(obias));
         } CATCH_ALL(-1)
     }
 
@@ -15222,6 +15563,42 @@ int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds)
         } CATCH_ALL(-1)
     }
 
+    if (attn_mask_type) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().attn_mask_type =
+                    py::cast<decltype(MultiHeadAttn::attn_mask_type)>(py::handle(attn_mask_type));
+        } CATCH_ALL(-1)
+    }
+
+    if (tensor_combination_type) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().tensor_combination_type =
+                    py::cast<decltype(MultiHeadAttn::tensor_combination_type)>(py::handle(tensor_combination_type));
+        } CATCH_ALL(-1)
+    }
+
+    if (need_weights) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().need_weights =
+                    py::cast<decltype(MultiHeadAttn::need_weights)>(py::handle(need_weights));
+        } CATCH_ALL(-1)
+    }
+
+    if (add_zero_attn) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().add_zero_attn =
+                    py::cast<decltype(MultiHeadAttn::add_zero_attn)>(py::handle(add_zero_attn));
+        } CATCH_ALL(-1)
+    }
+
     if (reslink) {
         try {
             // TODO: remove this guard which is used for pybind11 implicit conversion
@@ -15237,60 +15614,6 @@ int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds)
             py::detail::loader_life_support guard{};
             reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().training =
                     py::cast<decltype(MultiHeadAttn::training)>(py::handle(training));
-        } CATCH_ALL(-1)
-    }
-
-    if (bias) {
-        try {
-            // TODO: remove this guard which is used for pybind11 implicit conversion
-            py::detail::loader_life_support guard{};
-            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().bias =
-                    py::cast<decltype(MultiHeadAttn::bias)>(py::handle(bias));
-        } CATCH_ALL(-1)
-    }
-
-    if (attn_mask) {
-        try {
-            // TODO: remove this guard which is used for pybind11 implicit conversion
-            py::detail::loader_life_support guard{};
-            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().attn_mask =
-                    py::cast<decltype(MultiHeadAttn::attn_mask)>(py::handle(attn_mask));
-        } CATCH_ALL(-1)
-    }
-
-    if (enable_qproj) {
-        try {
-            // TODO: remove this guard which is used for pybind11 implicit conversion
-            py::detail::loader_life_support guard{};
-            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_qproj =
-                    py::cast<decltype(MultiHeadAttn::enable_qproj)>(py::handle(enable_qproj));
-        } CATCH_ALL(-1)
-    }
-
-    if (enable_kproj) {
-        try {
-            // TODO: remove this guard which is used for pybind11 implicit conversion
-            py::detail::loader_life_support guard{};
-            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_kproj =
-                    py::cast<decltype(MultiHeadAttn::enable_kproj)>(py::handle(enable_kproj));
-        } CATCH_ALL(-1)
-    }
-
-    if (enable_vproj) {
-        try {
-            // TODO: remove this guard which is used for pybind11 implicit conversion
-            py::detail::loader_life_support guard{};
-            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_vproj =
-                    py::cast<decltype(MultiHeadAttn::enable_vproj)>(py::handle(enable_vproj));
-        } CATCH_ALL(-1)
-    }
-
-    if (enable_oproj) {
-        try {
-            // TODO: remove this guard which is used for pybind11 implicit conversion
-            py::detail::loader_life_support guard{};
-            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().enable_oproj =
-                    py::cast<decltype(MultiHeadAttn::enable_oproj)>(py::handle(enable_oproj));
         } CATCH_ALL(-1)
     }
 
@@ -15342,16 +15665,25 @@ int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds)
 
 PyGetSetDef PyOp(MultiHeadAttn)::py_getsetters[] = {
     {const_cast<char*>("num_heads"), py_get_generic(MultiHeadAttn, num_heads), py_set_generic(MultiHeadAttn, num_heads), const_cast<char*>("num_heads"), NULL},
+    {const_cast<char*>("embeding_size"), py_get_generic(MultiHeadAttn, embeding_size), py_set_generic(MultiHeadAttn, embeding_size), const_cast<char*>("embeding_size"), NULL},
+    {const_cast<char*>("k_size"), py_get_generic(MultiHeadAttn, k_size), py_set_generic(MultiHeadAttn, k_size), const_cast<char*>("k_size"), NULL},
+    {const_cast<char*>("v_size"), py_get_generic(MultiHeadAttn, v_size), py_set_generic(MultiHeadAttn, v_size), const_cast<char*>("v_size"), NULL},
+    {const_cast<char*>("qproj_size"), py_get_generic(MultiHeadAttn, qproj_size), py_set_generic(MultiHeadAttn, qproj_size), const_cast<char*>("qproj_size"), NULL},
+    {const_cast<char*>("kproj_size"), py_get_generic(MultiHeadAttn, kproj_size), py_set_generic(MultiHeadAttn, kproj_size), const_cast<char*>("kproj_size"), NULL},
+    {const_cast<char*>("vproj_size"), py_get_generic(MultiHeadAttn, vproj_size), py_set_generic(MultiHeadAttn, vproj_size), const_cast<char*>("vproj_size"), NULL},
+    {const_cast<char*>("oproj_size"), py_get_generic(MultiHeadAttn, oproj_size), py_set_generic(MultiHeadAttn, oproj_size), const_cast<char*>("oproj_size"), NULL},
+    {const_cast<char*>("qbias"), py_get_generic(MultiHeadAttn, qbias), py_set_generic(MultiHeadAttn, qbias), const_cast<char*>("qbias"), NULL},
+    {const_cast<char*>("kbias"), py_get_generic(MultiHeadAttn, kbias), py_set_generic(MultiHeadAttn, kbias), const_cast<char*>("kbias"), NULL},
+    {const_cast<char*>("vbias"), py_get_generic(MultiHeadAttn, vbias), py_set_generic(MultiHeadAttn, vbias), const_cast<char*>("vbias"), NULL},
+    {const_cast<char*>("obias"), py_get_generic(MultiHeadAttn, obias), py_set_generic(MultiHeadAttn, obias), const_cast<char*>("obias"), NULL},
     {const_cast<char*>("sm_scaler"), py_get_generic(MultiHeadAttn, sm_scaler), py_set_generic(MultiHeadAttn, sm_scaler), const_cast<char*>("sm_scaler"), NULL},
     {const_cast<char*>("input_order"), py_get_generic(MultiHeadAttn, input_order), py_set_generic(MultiHeadAttn, input_order), const_cast<char*>("input_order"), NULL},
+    {const_cast<char*>("attn_mask_type"), py_get_generic(MultiHeadAttn, attn_mask_type), py_set_generic(MultiHeadAttn, attn_mask_type), const_cast<char*>("attn_mask_type"), NULL},
+    {const_cast<char*>("tensor_combination_type"), py_get_generic(MultiHeadAttn, tensor_combination_type), py_set_generic(MultiHeadAttn, tensor_combination_type), const_cast<char*>("tensor_combination_type"), NULL},
+    {const_cast<char*>("need_weights"), py_get_generic(MultiHeadAttn, need_weights), py_set_generic(MultiHeadAttn, need_weights), const_cast<char*>("need_weights"), NULL},
+    {const_cast<char*>("add_zero_attn"), py_get_generic(MultiHeadAttn, add_zero_attn), py_set_generic(MultiHeadAttn, add_zero_attn), const_cast<char*>("add_zero_attn"), NULL},
     {const_cast<char*>("reslink"), py_get_generic(MultiHeadAttn, reslink), py_set_generic(MultiHeadAttn, reslink), const_cast<char*>("reslink"), NULL},
     {const_cast<char*>("training"), py_get_generic(MultiHeadAttn, training), py_set_generic(MultiHeadAttn, training), const_cast<char*>("training"), NULL},
-    {const_cast<char*>("bias"), py_get_generic(MultiHeadAttn, bias), py_set_generic(MultiHeadAttn, bias), const_cast<char*>("bias"), NULL},
-    {const_cast<char*>("attn_mask"), py_get_generic(MultiHeadAttn, attn_mask), py_set_generic(MultiHeadAttn, attn_mask), const_cast<char*>("attn_mask"), NULL},
-    {const_cast<char*>("enable_qproj"), py_get_generic(MultiHeadAttn, enable_qproj), py_set_generic(MultiHeadAttn, enable_qproj), const_cast<char*>("enable_qproj"), NULL},
-    {const_cast<char*>("enable_kproj"), py_get_generic(MultiHeadAttn, enable_kproj), py_set_generic(MultiHeadAttn, enable_kproj), const_cast<char*>("enable_kproj"), NULL},
-    {const_cast<char*>("enable_vproj"), py_get_generic(MultiHeadAttn, enable_vproj), py_set_generic(MultiHeadAttn, enable_vproj), const_cast<char*>("enable_vproj"), NULL},
-    {const_cast<char*>("enable_oproj"), py_get_generic(MultiHeadAttn, enable_oproj), py_set_generic(MultiHeadAttn, enable_oproj), const_cast<char*>("enable_oproj"), NULL},
     {const_cast<char*>("seed"), py_get_generic(MultiHeadAttn, seed), py_set_generic(MultiHeadAttn, seed), const_cast<char*>("seed"), NULL},
     {const_cast<char*>("attn_prob"), py_get_generic(MultiHeadAttn, attn_prob), py_set_generic(MultiHeadAttn, attn_prob), const_cast<char*>("attn_prob"), NULL},
     {const_cast<char*>("out_prob"), py_get_generic(MultiHeadAttn, out_prob), py_set_generic(MultiHeadAttn, out_prob), const_cast<char*>("out_prob"), NULL},
@@ -15376,7 +15708,7 @@ PyMethodDef PyOp(MultiHeadAttn)::py_init_methoddef = {
     "__init__",
     (PyCFunction)PyOp(MultiHeadAttn)::py_init_proxy,
     METH_VARARGS | METH_KEYWORDS,
-    "__init__(self, num_heads: int = ..., sm_scaler: float = ..., input_order: int = ..., reslink: bool = ..., training: bool = ..., bias: bool = ..., attn_mask: bool = ..., enable_qproj: bool = ..., enable_kproj: bool = ..., enable_vproj: bool = ..., enable_oproj: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
+    "__init__(self, num_heads: int = ..., embeding_size: int = ..., k_size: int = ..., v_size: int = ..., qproj_size: int = ..., kproj_size: int = ..., vproj_size: int = ..., oproj_size: int = ..., qbias: bool = ..., kbias: bool = ..., vbias: bool = ..., obias: bool = ..., sm_scaler: float = ..., input_order: int = ..., attn_mask_type: Union[str, ATTN_MASK_TYPE] = ..., tensor_combination_type: Union[str, TENSOR_COMBINATION_TYPE] = ..., need_weights: bool = ..., add_zero_attn: bool = ..., reslink: bool = ..., training: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
 };
 
 void _init_py_MultiHeadAttn(py::module m) {
@@ -15398,7 +15730,9 @@ void _init_py_MultiHeadAttn(py::module m) {
     PyObject* descr = PyDescr_NewMethod(&PyOpType(MultiHeadAttn), &PyOp(MultiHeadAttn)::py_init_methoddef);
     PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
     mgb_assert(PyType_Ready(&py_type) >= 0);
-    
+        _init_py_MultiHeadAttn_ATTN_MASK_TYPE(py_type);
+    _init_py_MultiHeadAttn_TENSOR_COMBINATION_TYPE(py_type);
+
     PyType_Modified(&py_type);
     m.add_object("MultiHeadAttn", reinterpret_cast<PyObject*>(&py_type));
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MultiHeadAttn::typeinfo(), &py_type).second);

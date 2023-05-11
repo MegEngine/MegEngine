@@ -4,6 +4,8 @@ from builtins import min as _builtins_min
 from functools import lru_cache
 from typing import NamedTuple, Optional, Sequence, Tuple, Union
 
+import numpy as np
+
 from ..core import _config
 from ..core._imperative_rt.core2 import (
     Const,
@@ -54,6 +56,7 @@ from .tensor import (
     squeeze,
     transpose,
     zeros,
+    zeros_like,
 )
 
 __all__ = [
@@ -2053,6 +2056,221 @@ def region_restricted_conv(
     return output
 
 
+def _mha_shape_check(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    key_padding_mask: Optional[Tensor],
+    attn_mask: Optional[Tensor],
+    num_heads: int,
+):
+    # Verifies the expected shape for `query, `key`, `value`, `key_padding_mask` and `attn_mask`
+    # and returns if the input is batched or not.
+    # Raises an error if `query` is not 2-D (unbatched) or 3-D (batched) tensor.
+    q_dim = query.ndim
+    k_dim = key.ndim
+    v_dim = value.ndim
+    kpm_dim = key_padding_mask.ndim if key_padding_mask is not None else 0
+    kpm_shape = key_padding_mask.shape if key_padding_mask is not None else None
+    am_dim = attn_mask.ndim if attn_mask is not None else 0
+    am_shape = attn_mask.shape if attn_mask is not None else None
+    # Shape check.
+    if q_dim == 3:
+        # Batched Inputs
+        is_batched = True
+        assert k_dim == 3 and v_dim == 3, (
+            "For batched (3-D) `query`, expected `key` and `value` to be 3-D"
+            f" but found {k_dim}-D and {v_dim}-D tensors respectively"
+        )
+        q_shape0, q_shape1, _ = query.shape
+        k_shape0, k_shape1, _ = key.shape
+        v_shape0, v_shape1, _ = value.shape
+        assert q_shape0 == k_shape0 and k_shape0 == v_shape0, (
+            "For batched (3-D) `query`, expected the batch sizes of `query`, `key` and `value` to be equal"
+            f" but found query batch size is {q_shape0}, key batch size is {k_shape0} and value batch size is {v_shape0} respectively"
+        )
+        assert k_shape1 == v_shape1, (
+            "For batched (3-D) `query`, expected the sequence length of `key` and `value` to be equal"
+            f" but found key seqlen is {k_shape1} and value seqlen is {v_shape1} respectively"
+        )
+        if key_padding_mask is not None:
+            assert kpm_dim == 2, (
+                "For batched (3-D) `query`, expected `key_padding_mask` to be `None` or 2-D"
+                f" but found {kpm_dim}-D tensor instead"
+            )
+            expected_shape0 = (k_shape0, k_shape1)  # norm style
+            expected_shape1 = (2, k_shape0)  # cudnn style
+            assert expected_shape0 == kpm_shape and expected_shape1 == kpm_shape, (
+                f"For batched (3-D) `query`, expected `key_padding_mask.shape` equal {expected_shape0} or {expected_shape1}"
+                f" but found {kpm_shape} instead"
+            )
+        if attn_mask is not None:
+            assert am_dim in (2, 3), (
+                "For batched (3-D) `query`, expected `attn_mask` to be `None`, 2-D or 3-D"
+                f" but found {am_dim}-D tensor instead"
+            )
+            if am_dim == 2:
+                expected_shape0 = (q_shape1, k_shape1)  # norm style
+                expected_shape1 = (2, q_shape1)  # cudnn style
+                assert (
+                    am_shape == expected_shape0 or am_shape == expected_shape1
+                ), f"Expected `attn_mask` shape to be {expected_shape0} or {expected_shape1} but got {am_shape}"
+            if am_dim == 3:
+                expected_shape = (q_shape0 * num_heads, q_shape1, k_shape1)
+                assert (
+                    am_shape == expected_shape
+                ), f"Expected `attn_mask` shape to be {expected_shape0} but got {am_shape}"
+    elif q_dim == 2:
+        # Unbatched Inputs
+        is_batched = False
+        assert k_dim == 2 and v_dim == 2, (
+            "For unbatched (2-D) `query`, expected `key` and `value` to be 2-D"
+            f" but found {k_dim}-D and {v_dim}-D tensors respectively"
+        )
+        q_shape0, q_shape1 = query.shape
+        k_shape0, k_shape1 = key.shape
+        v_shape0, v_shape1 = value.shape
+        assert k_shape0 == v_shape0, (
+            "For unbatched (3-D) `query`, expected the sequence length of `key` and `value` to be equal"
+            f" but found key seqlen is {k_shape0} and query seqlen is {v_shape0} respectively"
+        )
+        if key_padding_mask is not None:
+            assert kpm_dim in (1, 2), (
+                "For unbatched (2-D) `query`, expected `key_padding_mask` to be `None`, 1-D or 2-D"
+                f" but found {kpm_dim}-D tensor instead"
+            )
+            expected_shape0 = k_shape0  # norm style
+            expected_shape1 = (2, 1)  # cudnn style
+            assert expected_shape0 == kpm_shape or expected_shape1 == kpm_shape, (
+                f"For batched (3-D) `query`, expected `key_padding_mask.shape` equal {expected_shape0} or {expected_shape1}"
+                f" but found {kpm_shape} tensor instead"
+            )
+        if attn_mask is not None:
+            assert am_dim in (2, 3), (
+                "For unbatched (2-D) `query`, expected `attn_mask` to be `None`, 2-D or 3-D"
+                f" but found {am_dim}-D tensor instead"
+            )
+            if am_dim == 2:
+                expected_shape0 = (q_shape0, k_shape0)  # normal style mask
+                expected_shape1 = (2, q_shape0)  # cudnn style mask
+                assert (
+                    am_shape == expected_shape0 or am_shape == expected_shape1
+                ), f"Expected `attn_mask` shape to be {expected_shape0} or {expected_shape1} but got {am_shape}"
+            if am_dim == 3:
+                expected_shape = (num_heads, q_shape0, k_shape0)
+                assert (
+                    am_shape == expected_shape
+                ), f"Expected `attn_mask` shape to be {expected_shape} but got {am_shape}"
+    else:
+        raise AssertionError(
+            f"query should be unbatched 2D or batched 3D tensor but received {q_dim}-D query tensor"
+        )
+
+    return is_batched
+
+
+def _canonical_mask(
+    mask: Optional[Tensor],
+    mask_name: str,
+    other_type,
+    other_name: str,
+    target_type,
+    check_other: bool = True,
+) -> Optional[Tensor]:
+    if mask is not None:
+        _mask_dtype = mask.dtype
+        _mask_is_float = (
+            _mask_dtype == np.float16
+            or _mask_dtype == np.float32
+            or _mask_dtype == np.float64
+        )
+        assert (
+            _mask_dtype == bool or _mask_is_float
+        ), f"only bool and floating types of {mask_name} are supported"
+        if check_other and other_type is not None:
+            if _mask_dtype != other_type:
+                get_logger().warning(
+                    f"Support for mismatched {mask_name} and {other_name} "
+                    "is deprecated. Use same type for both instead."
+                )
+        if not _mask_is_float:
+            mask_ = zeros_like(mask).astype(target_type)
+            mask_[mask] = float("-inf")
+            return mask_
+    return mask
+
+
+def _merge_masks(
+    attn_mask: Tensor,
+    key_padding_mask: Tensor,
+    query: Tensor,
+    key: Tensor,
+    add_bias_kv: bool = False,
+    add_zero_attn: bool = False,
+    is_causal: bool = False,
+    maybe_cudnn_style_mask: bool = False,
+    num_heads: int = 0,
+):
+    r"""
+    Determine mask type and combine masks if necessary.
+    
+    Note: This function will continue to improve with the iteration of MHA.
+
+    Args:
+        attn_mask: MHA's attention mask tensor, the shape is :math:`(L, S)` or :math:`(N\cdot\text{num\_heads}, L, S)`
+        key_padding_mask: MHA's padding mask tensor, the shape is :math:`(N, S)`
+        query: MHA's query, the shape is :math:`(N, L, E_q)`
+        key: MHA's key, the shape is :math:`(N, S, E_k)`
+        add_bias_kv: used to determine whether pad is needed on the sequence dimension of attn_mask and key_padding_mask, from MHA's ``add_bias_kv``.
+        add_zero_attn: used to determine whether pad is needed on the sequence dimension of attn_mask and key_padding_mask, from MHA's ``add_zero_attn``.
+        is_causal: MHA's is_causal, is_causal provides a hint that attn_mask is the causal mask.
+        maybe_cudnn_style_mask: MHA's maybe_cudnn_style_mask, like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is the cudnn style mask. 
+        num_heads: MHA's head number.
+    Returns:
+        merged_mask: merged mask, may be None, the shape is :math:`(L, S)`, :math:`(2\cdotL + 2\cdotN)` or :math:`(N\cdot\text{num\_heads}, L, S)`
+        mask_type: merged mask type ``("no_mask", "default_mask", "cudnn_style_mask" or "user_defined_mask")``
+    """
+    mask_type = "no_mask"
+    merged_mask = None
+    seq_qlen = query.shape[1]
+    seq_klen = key.shape[1]
+    attn_mask_np = attn_mask.numpy() if attn_mask is not None else None
+
+    # is_causal is used to hint whether to use a causal mask, where the upper right triangle is all -inf,
+    # and the diagonal and lower left triangle are all 0. But if attn_mask is given, attn_mask is used first.
+    if is_causal and attn_mask is None and key_padding_mask is None:
+        # At this point, merged_mask = None
+        mask_type = "default_mask"
+    elif is_causal and attn_mask is not None and key_padding_mask is None:
+        # At this point, merged_mask = attn_mask
+        default_mask_np = np.triu(
+            -float("inf") * np.ones((seq_qlen, seq_klen)), k=1
+        ).astype("float32")
+        if (attn_mask_np == default_mask_np).all():
+            mask_type = "default_mask"
+        else:
+            mask_type = "user_defined_mask"
+        merged_mask = attn_mask
+    else:
+        if attn_mask is not None:
+            # At this point, merged_mask = attn_mask
+            default_mask_np = np.triu(
+                -float("inf") * np.ones((seq_qlen, seq_klen)), k=1
+            ).astype("float32")
+            if (
+                attn_mask_np == default_mask_np
+                and (attn_mask_np == default_mask_np).all()
+            ):
+                mask_type = "default_mask"
+                merged_mask = attn_mask
+            elif np.all(attn_mask_np == 0):
+                mask_type = "no_mask"
+            else:
+                mask_type = "user_defined_mask"
+                merged_mask = attn_mask
+    return merged_mask, mask_type
+
+
 def multi_head_attention(
     query: Tensor,
     key: Tensor,
@@ -2062,28 +2280,39 @@ def multi_head_attention(
     attn_drop: float,
     out_drop: float,
     io_weight_bias: Optional[Tensor],
-    bias: bool = False,
+    qproj_size: Optional[int] = None,
+    kproj_size: Optional[int] = None,
+    vproj_size: Optional[int] = None,
+    oproj_size: Optional[int] = None,
+    qbias: bool = False,
+    kbias: bool = False,
+    vbias: bool = False,
+    obias: bool = False,
+    bias_k: Optional[Tensor] = None,
+    bias_v: Optional[Tensor] = None,
+    add_zero_attn: bool = False,
+    key_padding_mask: Optional[Tensor] = None,
+    attn_mask: Optional[Tensor] = None,
+    need_weights: bool = False,
+    average_attn_weights: bool = False,
+    is_causal: bool = False,
+    maybe_cudnn_style_mask: bool = False,
     reslink: bool = False,
     training: bool = True,
-    attn_mask: bool = False,
-    enable_qproj: bool = True,
-    enable_kproj: bool = True,
-    enable_vproj: bool = True,
-    enable_oproj: bool = True,
 ):
     r"""Allows the model to jointly attend to information
     from different representation subspaces.
     See `Attention Is All You Need <https://arxiv.org/abs/1706.03762>`_.
 
     .. math::
-        \text{MultiHeadAttn}\big(q,K,V, W_Q, W_V, W_O\big) = \sum^{nHeads-1}_{i=0}W_{O,i}h_i
+        \text{MultiHeadAttn}\big(q, k, v, W_Q, W_K, W_V, W_O\big) = \sum^{nHeads-1}_{i=0}W_{O,i}h_i
 
-    where :math:`h_i=W_{V,i}V \text{Softmax}\Big( \text{smScaler} \cdot K^TW^T_{K,i}W_{Q,i}q \Big),\text{for }i\text{ = 0 ... nHeads-1}`.
+    where :math:`h_i=W_{V,i}v \text{Softmax}\Big( \text{smScaler} \cdot k^TW^T_{K,i}W_{Q,i}q \Big),\text{for }i\text{ = 0 ... nHeads-1}`.
 
     See :class:`~.module.MultiHeadAttn` for more details.
-    
+
     Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported, and if the cudnn version >=8.6.0, the calculation results are completely correct; If the cudnn version >=8.0.4 but <8.6.0, if there is a bias, only the dbias result calculated from the backward is incorrect. If there is no bias, the forward and backward calculations are correct; If the cudnn version is less than 8.0.4, this operator is not supported.
-    
+
     Args:
         query, key, value: map a query and a set of key-value pairs to an output.
             See "Attention Is All You Need" for more details.
@@ -2091,21 +2320,133 @@ def multi_head_attention(
         num_heads: parallel attention heads.
         attn_drop: probability of an element to be zeroed, used in attention matrix.
         out_drop: probability of an element to be zeroed, used in final output.
-        io_weight_bias: input/output projection weight/bias all in one, used for cudnn api.
-        bias: used to indicate a bias in io_weight_bias, used for cudnn api.
-        reslink: add input query to final output.
+        io_weight_bias: input/output projection weight/bias all in one. 
+            The order of arrangement is: query weight, key weight, value weight, out weight, query bias, key bias, value bias, out bias, the following parameters will be used to indicate whether these items exist: qproj_size, kproj_size, vproj_size, oproj_size, qbias, kbias, vbias, obias. 
+            Note: :math:`Y=X@W+B` is used here instead of :math:`Y=X@W^T+B` in pytorch.
+        qproj_size: indicates the projection size of query weight in io_weight_bias, 0 indicates disabled query projection and no query projection weight.
+        kproj_size: indicates the projection size of key weight in io_weight_bias, 0 indicates disabled key projection and no key projection weight.
+        vproj_size: indicates the projection size of value weight in io_weight_bias, 0 indicates disabled value projection and no value projection weight.
+        oproj_size: indicates the projection size of out weight in io_weight_bias, 0 indicates disabled output projection and no output projection weight.
+        qbias: indicates whether there is a query bias in io_weight_bias, this parameter is only valid when qproj_size > 0.
+        kbias: indicates whether there is a key bias in io_weight_bias, this parameter is only valid when kproj_size > 0.
+        vbias: indicates whether there is a value bias in io_weight_bias, this parameter is only valid when vproj_size > 0.
+        obias: indicates whether there is a out bias in io_weight_bias, this parameter is only valid when oproj_size > 0.
+        bias_k, bias_v: the bias of the key and value sequences to be added at sequence dim. distinguished from kbias and vbias, bias_kv here is not kbias and vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.
+            Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        add_zero_attn: if specified, adds a new batch of zeros to the key and value sequences at sequence dim. Default: ``False``.
+            Note: should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        key_padding_mask: if specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of 
+            attention (i.e. treat as "padding"). For unbatched `query`, shape should be :math:`(S)`. Binary and float masks are supported. For a binary mask, a ``True`` value indicates that the corresponding ``key`` value will be ignored for the purpose of attention. For a float mask, it will be directly added to the corresponding ``key`` value.
+            Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        attn_mask: 2D or 3D mask that prevents attention to certain positions. A 2D mask will be broadcasted for all
+            the batches while a 3D mask allows to specify a different mask for the entries of each batch.
+            Note: User-defined mask not supported now, only support no mask or default mask, where the upper right triangle is all -inf, and the diagonal and lower left triangle are all 0. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        need_weights: indicates whether to return the attention weight, which is the output result of softmax. Default: `True`
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        average_attn_weights: if true, indicates that the returned ``attn_weights`` should be averaged across
+            heads. Otherwise, ``attn_weights`` are provided separately per head. Note that this flag only has an
+            effect when ``need_weights=True``. Default: ``True`` (i.e. average weights across heads)
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        is_causal: if specified, applies a causal mask as attention mask. Default: ``False``
+            Warning: ``is_causal`` provides a hint that ``attn_mask`` is the causal mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility.
+        maybe_cudnn_style_mask: if specified, applies a cudnn style mask as attention mask. Default: ``False``
+            Note: In the cudnn style, the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
+            Warning: like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is a cudnn style mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility. In addition, if the ``_merge_masks`` function returns ``merge_type=cudnn_style_mask``, please ensure that other conditions are correct so that it can run the implementation of cudnn, otherwise an error will be reported.
+            Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that the underlying implementation only accepts two types of mask type, namely "no_mask" and "default_mask", and we may try to loosen this option after submitting the commit that users can pass in custom attention mask tensors.
+        reslink: add input query to final output. 
+            Note: It is only valid if the input query is the same as the shape of the output.
         training: will apply dropout if is ``True``.
-        attn_mask: used to indicate whether to add a mask to the attention matrix. 
-            By default, the upper right triangle of the mask is -inf, and the diagonal and lower left triangle are all 0.
-            Default: `True`
-        enable_qproj: enable query weight projection. Default: ``True``.
-        enable_kproj: enable key weight projection. Default: ``True``.
-        enable_vproj: enable value weight projection. Default: ``True``.
-        enable_oproj: enable output weight projection. Default: ``True``.
     """
-
-    head_dim = embed_dim // num_heads
+    qproj_size = embed_dim if qproj_size is None else qproj_size
+    kproj_size = embed_dim if kproj_size is None else kproj_size
+    vproj_size = embed_dim if vproj_size is None else vproj_size
+    oproj_size = embed_dim if oproj_size is None else oproj_size
+    if qbias:
+        assert (
+            qproj_size is not None and qproj_size > 0
+        ), "when query projection bias is true, query projection weight must be given."
+    if kbias:
+        assert (
+            kproj_size is not None and kproj_size > 0
+        ), "when key projection bias is true, key projection weight must be given"
+    if vbias:
+        assert (
+            vproj_size is not None and vproj_size > 0
+        ), "when value projection bias is true, value projection weight must be given"
+    if obias:
+        assert (
+            oproj_size is not None and oproj_size > 0
+        ), "when output projection bias is true, output projection weight must be given"
+    unsupport_reason = " The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation."
+    assert add_zero_attn is False, (
+        "add_zero_attn should be False, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    assert key_padding_mask is None, (
+        "key_padding_mask should be None, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    assert need_weights == False, (
+        "need_weights should be set to False, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    assert average_attn_weights == False, (
+        "average_attn_weights should be set to False, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    assert maybe_cudnn_style_mask == False, (
+        "maybe_cudnn_style_mask should be set to False, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    assert bias_k is None, (
+        "bias_k should be None, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    assert bias_v is None, (
+        "bias_v should be None, and configuration of this parameter is not supported now."
+        + unsupport_reason
+    )
+    head_dim = (qproj_size if qproj_size != 0 else embed_dim) // num_heads
     smScaler = head_dim ** -0.5
+    k_size = key.shape[2]
+    v_size = value.shape[2]
+
+    is_batched = _mha_shape_check(
+        query, key, value, key_padding_mask, attn_mask, num_heads
+    )
+    if not is_batched:
+        query = expand_dims(query, 0)
+        key = expand_dims(key, 0)
+        value = expand_dims(value, 0)
+        if key_padding_mask is not None:
+            key_padding_mask = expand_dims(key_padding_mask, 0)
+
+    key_padding_mask = _canonical_mask(
+        mask=key_padding_mask,
+        mask_name="key_padding_mask",
+        other_type=attn_mask,
+        other_name="attn_mask",
+        target_type=query.dtype,
+    )
+    attn_mask = _canonical_mask(
+        mask=attn_mask,
+        mask_name="attn_mask",
+        other_type=None,
+        other_name="",
+        target_type=query.dtype,
+        check_other=False,
+    )
+    attn_mask_tensor, attn_mask_type = _merge_masks(
+        attn_mask=attn_mask,
+        key_padding_mask=key_padding_mask,
+        query=query,
+        key=key,
+        add_bias_kv=bias_k is not None and bias_v is not None,
+        add_zero_attn=add_zero_attn,
+        is_causal=is_causal,
+        maybe_cudnn_style_mask=maybe_cudnn_style_mask,
+        num_heads=num_heads,
+    )
 
     op = builtin.MultiHeadAttn(
         num_heads=num_heads,
@@ -2116,16 +2457,25 @@ def multi_head_attention(
         training=training,
         input_order=0,
         seed=_get_global_rng_seed(),
-        bias=bias,
-        attn_mask=attn_mask,
-        enable_qproj=enable_qproj,
-        enable_kproj=enable_kproj,
-        enable_vproj=enable_vproj,
-        enable_oproj=enable_oproj,
+        attn_mask_type=attn_mask_type,
+        add_zero_attn=add_zero_attn,
+        embeding_size=embed_dim,
+        k_size=k_size,
+        v_size=v_size,
+        qproj_size=qproj_size,
+        kproj_size=kproj_size,
+        vproj_size=vproj_size,
+        oproj_size=oproj_size,
+        qbias=qbias,
+        kbias=kbias,
+        vbias=vbias,
+        obias=obias,
+        need_weights=need_weights,
+        tensor_combination_type="none",
     )
 
     out, reserveSpace = apply(op, query, key, value, io_weight_bias)
-    return out
+    return out, None
 
 
 from .loss import *  # isort:skip

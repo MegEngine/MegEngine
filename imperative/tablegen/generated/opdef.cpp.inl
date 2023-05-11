@@ -5200,28 +5200,54 @@ size_t MultiHeadAttn_hash_impl(const OpDef& def_) {
         mgb::hash_pair_combine(
           mgb::hash(op_.num_heads),
           mgb::hash_pair_combine(
-            mgb::hash(op_.sm_scaler),
+            mgb::hash(op_.embeding_size),
             mgb::hash_pair_combine(
-              mgb::hash(op_.input_order),
+              mgb::hash(op_.k_size),
               mgb::hash_pair_combine(
-                mgb::hash(op_.reslink),
+                mgb::hash(op_.v_size),
                 mgb::hash_pair_combine(
-                  mgb::hash(op_.training),
+                  mgb::hash(op_.qproj_size),
                   mgb::hash_pair_combine(
-                    mgb::hash(op_.bias),
+                    mgb::hash(op_.kproj_size),
                     mgb::hash_pair_combine(
-                      mgb::hash(op_.attn_mask),
+                      mgb::hash(op_.vproj_size),
                       mgb::hash_pair_combine(
-                        mgb::hash(op_.enable_qproj),
+                        mgb::hash(op_.oproj_size),
                         mgb::hash_pair_combine(
-                          mgb::hash(op_.enable_kproj),
+                          mgb::hash(op_.qbias),
                           mgb::hash_pair_combine(
-                            mgb::hash(op_.enable_vproj),
+                            mgb::hash(op_.kbias),
                             mgb::hash_pair_combine(
-                              mgb::hash(op_.enable_oproj),
+                              mgb::hash(op_.vbias),
                               mgb::hash_pair_combine(
-                                mgb::hash(op_.attn_prob),
-                                mgb::hash(op_.out_prob)
+                                mgb::hash(op_.obias),
+                                mgb::hash_pair_combine(
+                                  mgb::hash(op_.sm_scaler),
+                                  mgb::hash_pair_combine(
+                                    mgb::hash(op_.input_order),
+                                    mgb::hash_pair_combine(
+                                      mgb::hash(op_.attn_mask_type),
+                                      mgb::hash_pair_combine(
+                                        mgb::hash(op_.tensor_combination_type),
+                                        mgb::hash_pair_combine(
+                                          mgb::hash(op_.add_zero_attn),
+                                          mgb::hash_pair_combine(
+                                            mgb::hash(op_.need_weights),
+                                            mgb::hash_pair_combine(
+                                              mgb::hash(op_.reslink),
+                                              mgb::hash_pair_combine(
+                                                mgb::hash(op_.training),
+                                                mgb::hash_pair_combine(
+                                                  mgb::hash(op_.attn_prob),
+                                                  mgb::hash(op_.out_prob))
+                                                )
+                                              )
+                                            )
+                                          )
+                                        )
+                                      )
+                                    )
+                                  )
                                 )
                               )
                             )
@@ -5242,22 +5268,63 @@ bool MultiHeadAttn_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
          &&b_ = rhs_.cast_final_safe<MultiHeadAttn>();
     static_cast<void>(a_);
     static_cast<void>(b_);
-return a_.handle == b_.handle && a_.num_heads == b_.num_heads && a_.sm_scaler == b_.sm_scaler && a_.input_order == b_.input_order && a_.reslink == b_.reslink && a_.training == b_.training && a_.bias == b_.bias && a_.attn_mask == b_.attn_mask && a_.enable_qproj == b_.enable_qproj && a_.enable_kproj == b_.enable_kproj && a_.enable_vproj == b_.enable_vproj && a_.enable_oproj == b_.enable_oproj && a_.attn_prob == b_.attn_prob && a_.out_prob == b_.out_prob;}
+return a_.handle == b_.handle && a_.num_heads == b_.num_heads && a_.embeding_size == b_.embeding_size && a_.k_size == b_.k_size && a_.v_size == b_.v_size && a_.qproj_size == b_.qproj_size && a_.kproj_size == b_.kproj_size && a_.vproj_size == b_.vproj_size && a_.oproj_size == b_.oproj_size && a_.qbias == b_.qbias && a_.kbias == b_.kbias && a_.vbias == b_.vbias && a_.obias == b_.obias && a_.sm_scaler == b_.sm_scaler && a_.input_order == b_.input_order && a_.reslink == b_.reslink && a_.training == b_.training && a_.need_weights == b_.need_weights && a_.attn_mask_type == b_.attn_mask_type && a_.add_zero_attn == b_.add_zero_attn && a_.tensor_combination_type == b_.tensor_combination_type && a_.attn_prob == b_.attn_prob && a_.out_prob == b_.out_prob;}
 std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const OpDef& def_) {
     auto&& op_ = def_.cast_final_safe<MultiHeadAttn>();
     static_cast<void>(op_);
     std::vector<std::pair<const char*, std::string>> props_;
     props_.emplace_back("num_heads", std::to_string(op_.num_heads));
+    props_.emplace_back("embeding_size", std::to_string(op_.embeding_size));
+    props_.emplace_back("k_size", std::to_string(op_.k_size));
+    props_.emplace_back("v_size", std::to_string(op_.v_size));
+    props_.emplace_back("qproj_size", std::to_string(op_.qproj_size));
+    props_.emplace_back("kproj_size", std::to_string(op_.kproj_size));
+    props_.emplace_back("vproj_size", std::to_string(op_.vproj_size));
+    props_.emplace_back("oproj_size", std::to_string(op_.oproj_size));
+    props_.emplace_back("qbias", std::to_string(op_.qbias));
+    props_.emplace_back("kbias", std::to_string(op_.kbias));
+    props_.emplace_back("vbias", std::to_string(op_.vbias));
+    props_.emplace_back("obias", std::to_string(op_.obias));
     props_.emplace_back("sm_scaler", std::to_string(op_.sm_scaler));
     props_.emplace_back("input_order", std::to_string(op_.input_order));
+    switch (op_.attn_mask_type){
+    case MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK:
+        props_.emplace_back("attn_mask_type", "NO_MASK");
+        break;
+    case MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK:
+        props_.emplace_back("attn_mask_type", "DEFAULT_MASK");
+        break;
+    case MultiHeadAttn::ATTN_MASK_TYPE::CUDNN_STYLE_MASK:
+        props_.emplace_back("attn_mask_type", "CUDNN_STYLE_MASK");
+        break;
+    case MultiHeadAttn::ATTN_MASK_TYPE::USER_DEFINED_MASK:
+        props_.emplace_back("attn_mask_type", "USER_DEFINED_MASK");
+        break;
+    default:
+        props_.emplace_back("attn_mask_type", "INVALID");
+        break;
+    }
+    switch (op_.tensor_combination_type){
+    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE:
+        props_.emplace_back("tensor_combination_type", "NONE");
+        break;
+    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_MASK:
+        props_.emplace_back("tensor_combination_type", "ONLY_MASK");
+        break;
+    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::ONLY_BIASKV:
+        props_.emplace_back("tensor_combination_type", "ONLY_BIASKV");
+        break;
+    case MultiHeadAttn::TENSOR_COMBINATION_TYPE::ALL:
+        props_.emplace_back("tensor_combination_type", "ALL");
+        break;
+    default:
+        props_.emplace_back("tensor_combination_type", "INVALID");
+        break;
+    }
+    props_.emplace_back("need_weights", std::to_string(op_.need_weights));
+    props_.emplace_back("add_zero_attn", std::to_string(op_.add_zero_attn));
     props_.emplace_back("reslink", std::to_string(op_.reslink));
     props_.emplace_back("training", std::to_string(op_.training));
-    props_.emplace_back("bias", std::to_string(op_.bias));
-    props_.emplace_back("attn_mask", std::to_string(op_.attn_mask));
-    props_.emplace_back("enable_qproj", std::to_string(op_.enable_qproj));
-    props_.emplace_back("enable_kproj", std::to_string(op_.enable_kproj));
-    props_.emplace_back("enable_vproj", std::to_string(op_.enable_vproj));
-    props_.emplace_back("enable_oproj", std::to_string(op_.enable_oproj));
     props_.emplace_back("seed", std::to_string(op_.seed));
     props_.emplace_back("attn_prob", std::to_string(op_.attn_prob));
     props_.emplace_back("out_prob", std::to_string(op_.out_prob));

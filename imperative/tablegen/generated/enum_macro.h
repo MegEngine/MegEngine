@@ -20,6 +20,8 @@
     cb(::megdnn::param::CvtColor::Mode); \
     cb(::megdnn::param::Elemwise::Mode); \
     cb(::megdnn::param::ElemwiseMultiType::Mode); \
+    cb(::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE); \
+    cb(::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE); \
     cb(::megdnn::param::Padding::PaddingMode); \
     cb(::megdnn::param::RNNCell::NonlineMode); \
     cb(::megdnn::param::ROIAlignV0::Mode); \

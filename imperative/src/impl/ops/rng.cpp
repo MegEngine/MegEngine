@@ -296,11 +296,19 @@ struct OpMeth<MultiHeadAttn> {
                 handle_seed == opdef.seed,
                 "inconsistent multiheadattn seed: dropout op: %lu handle: %lu",
                 handle_seed, opdef.seed);
-        return {opdef.num_heads,    opdef.sm_scaler,    opdef.input_order,
-                opdef.reslink,      opdef.training,     opdef.bias,
-                opdef.attn_mask,    opdef.enable_qproj, opdef.enable_kproj,
-                opdef.enable_vproj, opdef.enable_oproj, handle_seed,
-                opdef.attn_prob,    opdef.out_prob};
+
+        return {opdef.num_heads,      opdef.embeding_size,
+                opdef.k_size,         opdef.v_size,
+                opdef.qproj_size,     opdef.kproj_size,
+                opdef.vproj_size,     opdef.oproj_size,
+                opdef.qbias,          opdef.kbias,
+                opdef.vbias,          opdef.obias,
+                opdef.sm_scaler,      opdef.input_order,
+                opdef.attn_mask_type, opdef.tensor_combination_type,
+                opdef.add_zero_attn,  opdef.need_weights,
+                opdef.reslink,        opdef.training,
+                handle_seed,          opdef.attn_prob,
+                opdef.out_prob};
     }
 };
 

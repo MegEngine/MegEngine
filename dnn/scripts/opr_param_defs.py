@@ -1333,16 +1333,34 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
 
 (pdef('MultiHeadAttn')
  .add_fields('uint32', Doc('num_heads', 'Number of parallel attention heads.'), '1')
+ .add_fields('uint32', Doc('embeding_size', 'Total dimension of the model.'), '0')
+ .add_fields('uint32', Doc('k_size', 'Total number of features for keys.'), '0')
+ .add_fields('uint32', Doc('v_size', 'Total number of features for values.'), '0')
+ .add_fields('uint32', Doc('qproj_size', 'query weight projection.'), '0')
+ .add_fields('uint32', Doc('kproj_size', 'key weight projection.'), '0')
+ .add_fields('uint32', Doc('vproj_size', 'value weight projection.'), '0')
+ .add_fields('uint32', Doc('oproj_size', 'output weight projection.'), '0')
+ .add_fields('bool', Doc('qbias', 'Whether to add query bias.'), 'false')
+ .add_fields('bool', Doc('kbias', 'Whether to add key bias.'), 'false')
+ .add_fields('bool', Doc('vbias', 'Whether to add value bias.'), 'false')
+ .add_fields('bool', Doc('obias', 'Whether to add out bias.'), 'false')
  .add_fields('float32', Doc('sm_scaler', 'Softmax smoothing (1.0 >= smScaler >= 0.0) or sharpening (smScaler > 1.0) coefficient.'), '1.f')
  .add_fields('uint32', Doc('input_order', 'The sequence data layout, allows the user to select 3! = 6 different data layouts or permutations of BEAM, BATCH and TIME dimensions.'), '0')
+ .add_enum('ATTN_MASK_TYPE',
+           Doc('NO_MASK = 0', 'Indicates that there is no mask.'),
+           Doc('DEFAULT_MASK = 1', 'Use the default mask which the upper right triangle of the mask is -inf, and the diagonal and lower left triangle are all 0.'),
+           Doc('CUDNN_STYLE_MASK = 2', 'Indicates the use of a cudnn style mask.'),
+           Doc('USER_DEFINED_MASK = 3', 'Use the user-defined mask.'), name_field="attn_mask_type")
+ .add_enum(Doc('TENSOR_COMBINATION_TYPE', 'Used to determine whether mask tensor and bias_kv tensor exist in the input. Note that bias_kv here is not kbias and vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.'),
+           Doc('NONE = 0', 'Indicates that there are no mask tensor and bias_kv tensor in the input.'),
+           Doc('ONLY_MASK = 1',
+               'Indicates that there is only mask tensor in input.'),
+           Doc('ONLY_BIASKV = 2', 'Indicates that there is only bias_kv tensor in input.'),
+           Doc('ALL = 3', 'Indicates that there are mask tensor and bias_kv tensor in the input.'), name_field="tensor_combination_type")
+ .add_fields('bool', Doc('add_zero_attn', 'Whether to add a new batch of zeros to the key and value sequences.'), 'false')
+ .add_fields('bool', Doc('need_weights', 'Whether to return the attention matrix, which is the output result of softmax.'), 'false')
  .add_fields('bool', Doc('reslink', 'Whether to add input query to final output.'), 'false')
  .add_fields('bool', Doc('training', 'Whether it is in training mode.'), 'true')
- .add_fields('bool', Doc('bias', 'Whether to add linear bias.'), 'false')
- .add_fields('bool', Doc('attn_mask', 'Whether to add attn_mask.'), 'false')
- .add_fields('bool', Doc('enable_qproj', 'enable query weight projection.'), 'true')
- .add_fields('bool', Doc('enable_kproj', 'enable key weight projection.'), 'true')
- .add_fields('bool', Doc('enable_vproj', 'enable value weight projection.'), 'true')
- .add_fields('bool', Doc('enable_oproj', 'enable output weight projection.'), 'true')
  .add_fields('uint64', Doc('seed', 'Random number seed for drop'), '0')
  .add_fields('float32', Doc('attn_prob', 'Dropout probability on attention, is applied directly to the softmax output'), '0.f')
  .add_fields('float32', Doc('out_prob', 'Dropout probability on output, alters the multi-head attention output'), '0.f')

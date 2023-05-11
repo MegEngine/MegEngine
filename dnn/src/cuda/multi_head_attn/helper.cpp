@@ -109,14 +109,14 @@ void MultiHeadAttnStatus::set(
     kSize = k.shape[2];
     vSize = v.shape[2];
     numHeads = p.num_heads;
-    qProjSize = p.enable_qproj ? qSize / numHeads : 0;
-    kProjSize = p.enable_kproj ? kSize / numHeads : 0;
-    vProjSize = p.enable_vproj ? vSize / numHeads : 0;
-    oProjSize = p.enable_oproj ? qSize : 0;
-    attnMask = p.attn_mask;
+    qProjSize = p.qproj_size ? qSize / numHeads : 0;
+    kProjSize = p.kproj_size ? kSize / numHeads : 0;
+    vProjSize = p.vproj_size ? vSize / numHeads : 0;
+    oProjSize = p.oproj_size ? qSize : 0;
+    attnMask = p.attn_mask_type >= param::MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK;
     cudnnDataType_t cudnn_dtype = to_cudnn_dtype(q.dtype);
     auto flag = CUDNN_ATTN_QUERYMAP_ONE_TO_ONE;
-    if (p.bias)
+    if (p.qbias or p.kbias or p.vbias or p.obias)
         flag = flag | CUDNN_ATTN_ENABLE_PROJ_BIASES;
 #if CUDNN_VERSION < 8600
     // TODO: CUDNN_VERSION < 8600 and out dropout > 0.0, we need to go to the proxy cuda
@@ -134,7 +134,9 @@ void MultiHeadAttnStatus::set(
             vProjSize, oProjSize, seqLenQ, seqLenK, batchSize, 1));
 #endif
 
-    auxArray.set(batchSize, seqLenQ, seqLenK, p.attn_mask);
+    auxArray.set(
+            batchSize, seqLenQ, seqLenK,
+            p.attn_mask_type >= param::MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK);
 
     if (p.training)
         cudnnGetMultiHeadAttnBuffers(
@@ -157,16 +159,18 @@ bool MultiHeadAttnStatus::is_initialized(
         return false;
     if (q.shape[0] != batchSize or q.shape[1] != seqLenQ or k.shape[1] != seqLenK or
         q.shape[2] != qSize or k.shape[2] != kSize or v.shape[2] != vSize or
-        attnMask != p.attn_mask or numHeads != p.num_heads) {
+        attnMask != (p.attn_mask_type >=
+                     param::MultiHeadAttn::ATTN_MASK_TYPE::DEFAULT_MASK) or
+        numHeads != p.num_heads) {
         return false;
     }
-    if ((p.enable_qproj && (qProjSize == 0 or qProjSize != qSize / p.num_heads)) or
-        (p.enable_kproj && (kProjSize == 0 or kProjSize != kSize / p.num_heads)) or
-        (p.enable_vproj && (vProjSize == 0 or vProjSize != vSize / p.num_heads)) or
-        (p.enable_oproj && (oProjSize == 0 or oProjSize != q.shape[2])))
+    if ((p.qproj_size && (qProjSize == 0 or qProjSize != qSize / p.num_heads)) or
+        (p.kproj_size && (kProjSize == 0 or kProjSize != kSize / p.num_heads)) or
+        (p.vproj_size && (vProjSize == 0 or vProjSize != vSize / p.num_heads)) or
+        (p.oproj_size && (oProjSize == 0 or oProjSize != q.shape[2])))
         return false;
-    if ((!p.enable_qproj && qProjSize != 0) or (!p.enable_kproj && kProjSize != 0) or
-        (!p.enable_vproj && vProjSize != 0) or (!p.enable_oproj && oProjSize != 0))
+    if ((!p.qproj_size && qProjSize != 0) or (!p.kproj_size && kProjSize != 0) or
+        (!p.vproj_size && vProjSize != 0) or (!p.oproj_size && oProjSize != 0))
         return false;
     if (!auxArray.is_initialized(batchSize, seqLenQ, seqLenK, attnMask))
         return false;
