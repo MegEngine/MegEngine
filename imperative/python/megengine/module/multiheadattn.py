@@ -23,7 +23,7 @@ class MultiHeadAttention(Module):
 
     where :math:`h_i=W_{V,i}V \text{Softmax}\Big( \text{smScaler} \cdot K^TW^T_{K,i}W_{Q,i}q \Big),\text{for }i\text{ = 0 ... nHeads-1}`.
 
-    Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported.
+    Note: This API is experimental, and there is a possibility of subsequent changes.
 
     The implementation of cudnn can be run if the following conditions are met:
 

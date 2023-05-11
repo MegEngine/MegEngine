@@ -1,5 +1,4 @@
 #include "src/cuda/multi_head_attn/cudnn_fwbw.h"
-#include <vector>
 #include "megdnn/handle.h"
 #include "src/cuda/utils.h"
 #if CUDNN_VERSION >= 8004
@@ -336,7 +335,6 @@ size_t MHAForwardCudnnOpr::get_othr_reservespace_in_bytes(
     if (!desc_status.is_initialized(param, queries, keys, values)) {
         desc_status.set(handle, param, queries, keys, values);
     }
-
     return desc_status.sizeReserve;
 }
 

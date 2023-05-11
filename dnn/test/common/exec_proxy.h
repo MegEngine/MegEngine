@@ -33,6 +33,25 @@ struct ExecProxy<Opr, 13, true> {
 };
 
 template <typename Opr>
+struct ExecProxy<Opr, 11, true> {
+    WorkspaceWrapper W;
+    void exec(Opr* opr, const TensorNDArray& tensors) {
+        if (!W.valid()) {
+            W = WorkspaceWrapper(opr->handle(), 0);
+        }
+        W.update(opr->get_workspace_in_bytes(
+                tensors[0].layout, tensors[1].layout, tensors[2].layout,
+                tensors[3].layout, tensors[4].layout, tensors[5].layout,
+                tensors[6].layout, tensors[7].layout, tensors[8].layout,
+                tensors[9].layout, tensors[10].layout));
+        opr->exec(
+                tensors[0], tensors[1], tensors[2], tensors[3], tensors[4], tensors[5],
+                tensors[6], tensors[7], tensors[8], tensors[9], tensors[10],
+                W.workspace());
+    }
+};
+
+template <typename Opr>
 struct ExecProxy<Opr, 10, true> {
     WorkspaceWrapper W;
     void exec(Opr* opr, const TensorNDArray& tensors) {

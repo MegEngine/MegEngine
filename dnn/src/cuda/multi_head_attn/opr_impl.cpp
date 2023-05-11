@@ -1,4 +1,5 @@
 #include "src/cuda/multi_head_attn/opr_impl.h"
+#include "src/common/multi_head_attn/helper.h"
 #include "src/common/utils.cuh"
 #include "src/cuda/utils.cuh"
 #include "src/cuda/utils.h"
@@ -53,18 +54,12 @@ bool can_use_mha_cudnn(const Param& param) {
 void MultiHeadAttnForwardImpl::deduce_layout(MHA_FORWARD_LAYOUT_PARAM) {
     Param p = param();
 #if CUDNN_VERSION < 8004
-    proxy_opr.deduce_layout(
-            this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-            bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+    proxy_opr.deduce_layout(this->handle(), p, MHA_FORWARD_CALL);
 #else
     if (can_use_mha_cudnn(p)) {
-        cudnn_opr.deduce_layout(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+        cudnn_opr.deduce_layout(this->handle(), p, MHA_FORWARD_CALL);
     } else {
-        proxy_opr.deduce_layout(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+        proxy_opr.deduce_layout(this->handle(), p, MHA_FORWARD_CALL);
     }
 #endif
 }
@@ -73,18 +68,12 @@ size_t MultiHeadAttnForwardImpl::get_workspace_in_bytes(
         MHA_FORWARD_LAYOUT_CONST_PARAM) {
     Param p = param();
 #if CUDNN_VERSION < 8004
-    return proxy_opr.get_workspace_in_bytes(
-            this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-            bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+    return proxy_opr.get_workspace_in_bytes(this->handle(), p, MHA_FORWARD_CALL);
 #else
     if (can_use_mha_cudnn(p)) {
-        return cudnn_opr.get_workspace_in_bytes(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+        return cudnn_opr.get_workspace_in_bytes(this->handle(), p, MHA_FORWARD_CALL);
     } else {
-        return proxy_opr.get_workspace_in_bytes(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+        return proxy_opr.get_workspace_in_bytes(this->handle(), p, MHA_FORWARD_CALL);
     }
 #endif
 }
@@ -94,17 +83,14 @@ size_t MultiHeadAttnForwardImpl::get_mask_reservespace_in_bytes(
     Param p = param();
 #if CUDNN_VERSION < 8004
     return proxy_opr.get_mask_reservespace_in_bytes(
-            this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-            bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+            this->handle(), p, MHA_FORWARD_CALL);
 #else
     if (can_use_mha_cudnn(p)) {
         return cudnn_opr.get_mask_reservespace_in_bytes(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+                this->handle(), p, MHA_FORWARD_CALL);
     } else {
         return proxy_opr.get_mask_reservespace_in_bytes(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+                this->handle(), p, MHA_FORWARD_CALL);
     }
 #endif
 }
@@ -114,72 +100,42 @@ size_t MultiHeadAttnForwardImpl::get_othr_reservespace_in_bytes(
     Param p = param();
 #if CUDNN_VERSION < 8004
     return proxy_opr.get_othr_reservespace_in_bytes(
-            this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-            bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+            this->handle(), p, MHA_FORWARD_CALL);
 #else
     if (can_use_mha_cudnn(p)) {
         return cudnn_opr.get_othr_reservespace_in_bytes(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+                this->handle(), p, MHA_FORWARD_CALL);
     } else {
         return proxy_opr.get_othr_reservespace_in_bytes(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace);
+                this->handle(), p, MHA_FORWARD_CALL);
     }
 #endif
 }
 
 void MultiHeadAttnForwardImpl::exec(MHA_FORWARD_EXEC_PARAM) {
-    check_exec(
-            queries.layout, keys.layout, values.layout, qkvo_weight_bias.layout,
-            attn_mask.layout, bias_k.layout, bias_v.layout, out.layout,
-            attn_weight.layout, mask_reservespace.layout, othr_reservespace.layout,
-            workspace.size);
+    check_exec(MHA_FORWARD_TENSOR_TO_LAYOUT_CALL, workspace.size);
     Param p = param();
 #if CUDNN_VERSION < 8004
-    proxy_opr.exec(
-            this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-            bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace,
-            workspace);
+    proxy_opr.exec(this->handle(), p, MHA_FORWARD_CALL, workspace);
 #else
     if (can_use_mha_cudnn(p)) {
-        cudnn_opr.exec(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace,
-                workspace);
+        cudnn_opr.exec(this->handle(), p, MHA_FORWARD_CALL, workspace);
     } else {
-        proxy_opr.exec(
-                this->handle(), p, queries, keys, values, qkvo_weight_bias, attn_mask,
-                bias_k, bias_v, out, attn_weight, mask_reservespace, othr_reservespace,
-                workspace);
+        proxy_opr.exec(this->handle(), p, MHA_FORWARD_CALL, workspace);
     }
 #endif
 }
 
 void MultiHeadAttnBackwardImpl::exec(MHA_BACKWARD_EXEC_PARAM) {
-    check_exec(
-            diff.layout, queries.layout, keys.layout, values.layout,
-            qkvo_weight_bias.layout, attn_mask.layout, attn_weight.layout,
-            mask_reservespace.layout, othr_reservespace.layout, dqueries.layout,
-            dkeys.layout, dvalues.layout, dqkvo_weight_bias.layout, dbias_k.layout,
-            dbias_v.layout, workspace.size);
+    check_exec(MHA_BACKWARD_TENSOR_TO_LAYOUT_CALL, workspace.size);
     Param p = param();
 #if CUDNN_VERSION < 8004
-    proxy_opr.exec(
-            this->handle(), p, diff, queries, keys, values, qkvo_weight_bias, attn_mask,
-            attn_weight, mask_reservespace, othr_reservespace, dqueries, dkeys, dvalues,
-            dqkvo_weight_bias, dbias_k, dbias_v, workspace);
+    proxy_opr.exec(this->handle(), p, MHA_BACKWARD_CALL, workspace);
 #else
     if (can_use_mha_cudnn(p)) {
-        cudnn_opr.exec(
-                this->handle(), p, diff, queries, keys, values, qkvo_weight_bias,
-                attn_mask, attn_weight, mask_reservespace, othr_reservespace, dqueries,
-                dkeys, dvalues, dqkvo_weight_bias, dbias_k, dbias_v, workspace);
+        cudnn_opr.exec(this->handle(), p, MHA_BACKWARD_CALL, workspace);
     } else {
-        proxy_opr.exec(
-                this->handle(), p, diff, queries, keys, values, qkvo_weight_bias,
-                attn_mask, attn_weight, mask_reservespace, othr_reservespace, dqueries,
-                dkeys, dvalues, dqkvo_weight_bias, dbias_k, dbias_v, workspace);
+        proxy_opr.exec(this->handle(), p, MHA_BACKWARD_CALL, workspace);
     }
 #endif
 }
@@ -190,10 +146,7 @@ size_t MultiHeadAttnBackwardImpl::get_workspace_in_bytes(
     if (can_use_mha_cudnn(p)) {
         return 0;
     } else {
-        return proxy_opr.get_workspace_in_bytes(
-                this->handle(), p, diff, queries, keys, values, qkvo_weight_bias,
-                attn_mask, attn_weight, mask_reservespace, othr_reservespace, dqueries,
-                dkeys, dvalues, dqkvo_weight_bias, dbias_k, dbias_v);
+        return proxy_opr.get_workspace_in_bytes(this->handle(), p, MHA_BACKWARD_CALL);
     }
 }
 }  // namespace cuda

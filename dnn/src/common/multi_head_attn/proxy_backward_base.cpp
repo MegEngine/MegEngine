@@ -91,7 +91,6 @@ void MHABackwardProxyBase::layout_refill(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM) 
     m_matmul_opr->param().format = param::MatrixMul::Format::DEFAULT;
     m_bmatmul_opr->param().format = param::MatrixMul::Format::DEFAULT;
     m_dropoutbw_opr->param().seed = param.seed;
-    m_dropoutbw_opr->param().seed = param.seed;
     m_dropout_opr->param().seed = param.seed;
     m_reduce_opr->param().mode = param::Reduce::Mode::SUM;
     m_reduce_opr->param().data_type = param::Reduce::DataType::DEFAULT;

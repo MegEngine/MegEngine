@@ -394,6 +394,7 @@ I(3, 3);
 I(4, 1);
 I(5, 1);
 I(6, 1);
+I(7, 4);
 
 #undef I
 }  // namespace mgb

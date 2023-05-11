@@ -2366,7 +2366,7 @@ def multi_head_attention(
 
     See :class:`~.module.MultiHeadAttn` for more details.
 
-    Note: This API is experimental, and there is a possibility of subsequent changes. Currently, only the cuda platform is supported.
+    Note: This API is experimental, and there is a possibility of subsequent changes.
 
     Args:
         query, key, value: map a query and a set of key-value pairs to an output.

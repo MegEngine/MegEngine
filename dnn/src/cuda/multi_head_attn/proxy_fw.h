@@ -14,12 +14,6 @@
 namespace megdnn {
 namespace cuda {
 
-using Param = megdnn::MultiHeadAttn::Param;
-using MaskType = Param::AttnMaskType;
-using InputType = Param::TensorCombinationType;
-using multi_head_attn::matmul_deduce_layout;
-using multi_head_attn::matmul_exec;
-
 class MHAForwardProxyOpr final : public multi_head_attn::MHAForwardProxyBase {
 public:
     MHAForwardProxyOpr() : MHAForwardProxyBase() {}
@@ -30,6 +24,7 @@ public:
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
 };
+
 }  // namespace cuda
 }  // namespace megdnn
    // vim: syntax=cpp.doxygen
