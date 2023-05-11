@@ -1510,7 +1510,7 @@ py::enum_<MultiHeadAttn::TENSOR_COMBINATION_TYPE>(MultiHeadAttnInst, "TENSOR_COM
 py::implicitly_convertible<std::string, MultiHeadAttn::TENSOR_COMBINATION_TYPE>();
 
 MultiHeadAttnInst
-    .def(py::init<uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, bool, bool, bool, bool, float, uint32_t, ::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE, ::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE, bool, bool, bool, bool, uint64_t, float, float, size_t, std::string>(), py::arg("num_heads") = 1, py::arg("embeding_size") = 0, py::arg("k_size") = 0, py::arg("v_size") = 0, py::arg("qproj_size") = 0, py::arg("kproj_size") = 0, py::arg("vproj_size") = 0, py::arg("oproj_size") = 0, py::arg("qbias") = false, py::arg("kbias") = false, py::arg("vbias") = false, py::arg("obias") = false, py::arg("sm_scaler") = 1.f, py::arg("input_order") = 0, py::arg("attn_mask_type") = ::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK, py::arg("tensor_combination_type") = ::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE, py::arg("need_weights") = false, py::arg("add_zero_attn") = false, py::arg("reslink") = false, py::arg("training") = true, py::arg("seed") = 0, py::arg("attn_prob") = 0.f, py::arg("out_prob") = 0.f, py::arg("handle"), py::arg("scope") = {})
+    .def(py::init<uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, bool, bool, bool, bool, float, uint32_t, ::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE, ::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE, bool, bool, bool, bool, uint64_t, float, float, size_t, std::string>(), py::arg("num_heads") = 1, py::arg("embeding_size") = 0, py::arg("k_size") = 0, py::arg("v_size") = 0, py::arg("qproj_size") = 0, py::arg("kproj_size") = 0, py::arg("vproj_size") = 0, py::arg("oproj_size") = 0, py::arg("qbias") = false, py::arg("kbias") = false, py::arg("vbias") = false, py::arg("obias") = false, py::arg("sm_scaler") = 1.f, py::arg("input_order") = 0, py::arg("attn_mask_type") = ::megdnn::param::MultiHeadAttn::ATTN_MASK_TYPE::NO_MASK, py::arg("tensor_combination_type") = ::megdnn::param::MultiHeadAttn::TENSOR_COMBINATION_TYPE::NONE, py::arg("add_zero_attn") = false, py::arg("need_weights") = false, py::arg("reslink") = false, py::arg("training") = true, py::arg("seed") = 0, py::arg("attn_prob") = 0.f, py::arg("out_prob") = 0.f, py::arg("handle"), py::arg("scope") = {})
     .def(py::init<>())
     .def_readwrite("num_heads", &MultiHeadAttn::num_heads)
     .def_readwrite("embeding_size", &MultiHeadAttn::embeding_size)
@@ -1528,8 +1528,8 @@ MultiHeadAttnInst
     .def_readwrite("input_order", &MultiHeadAttn::input_order)
     .def_readwrite("attn_mask_type", &MultiHeadAttn::attn_mask_type)
     .def_readwrite("tensor_combination_type", &MultiHeadAttn::tensor_combination_type)
-    .def_readwrite("need_weights", &MultiHeadAttn::need_weights)
     .def_readwrite("add_zero_attn", &MultiHeadAttn::add_zero_attn)
+    .def_readwrite("need_weights", &MultiHeadAttn::need_weights)
     .def_readwrite("reslink", &MultiHeadAttn::reslink)
     .def_readwrite("training", &MultiHeadAttn::training)
     .def_readwrite("seed", &MultiHeadAttn::seed)

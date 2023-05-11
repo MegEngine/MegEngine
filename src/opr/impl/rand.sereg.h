@@ -33,13 +33,35 @@ struct OprMaker<opr::DropoutForward, 1> {
 template <>
 struct OprMaker<opr::MultiHeadAttn, 0> {
     using Param = opr::MultiHeadAttn::Param;
+    using INPUT_TYPE = Param::TENSOR_COMBINATION_TYPE;
     static cg::OperatorNodeBase* make(
             const Param& param, const cg::VarNodeArray& i, ComputingGraph& graph,
             const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
-        return opr::MultiHeadAttn::make(i[0], i[1], i[2], i[3], param, config)[0]
-                .node()
-                ->owner_opr();
+        if (i.size() == 7) {
+            mgb_assert(INPUT_TYPE::ALL == param.tensor_combination_type);
+            return opr::MultiHeadAttn::make(
+                           i[0], i[1], i[2], i[3], i[4], i[5], i[6], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else if (i.size() == 6) {
+            mgb_assert(INPUT_TYPE::ONLY_BIASKV == param.tensor_combination_type);
+            return opr::MultiHeadAttn::make(
+                           i[0], i[1], i[2], i[3], i[4], i[5], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else if (i.size() == 5) {
+            mgb_assert(INPUT_TYPE::ONLY_MASK == param.tensor_combination_type);
+            return opr::MultiHeadAttn::make(
+                           i[0], i[1], i[2], i[3], i[4], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        } else {
+            mgb_assert(INPUT_TYPE::NONE == param.tensor_combination_type);
+            return opr::MultiHeadAttn::make(i[0], i[1], i[2], i[3], param, config)[0]
+                    .node()
+                    ->owner_opr();
+        }
     }
 };
 
@@ -52,10 +74,18 @@ struct OprMaker<opr::MultiHeadAttnBackward, 0> {
             const OperatorNodeConfig& config) {
         MGB_MARK_USED_VAR(graph);
 
-        return opr::MultiHeadAttnBackward::make(
-                       i[0], i[1], i[2], i[3], i[4], i[5], param, config)[0]
-                .node()
-                ->owner_opr();
+        if (i.size() == 8)
+            return opr::MultiHeadAttnBackward::make(
+                           i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], param,
+                           config)[0]
+                    .node()
+                    ->owner_opr();
+        else
+            return opr::MultiHeadAttnBackward::make(
+                           i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], param,
+                           config)[0]
+                    .node()
+                    ->owner_opr();
     }
 };
 

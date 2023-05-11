@@ -436,6 +436,28 @@ _INST_RNG_MAKER(4)
 #undef _FOR_EACH_OUT
 #undef _FOR_EACH_IN
 
+#define _FOR_EACH_IN(subfix)                                                \
+    inputs[0] subfix, inputs[1] subfix, inputs[2] subfix, inputs[3] subfix, \
+            inputs[4] subfix,
+_INST_RNG_MAKER(5)
+#undef _FOR_EACH_IN
+
+#define _FOR_EACH_IN(subfix)                                                \
+    inputs[0] subfix, inputs[1] subfix, inputs[2] subfix, inputs[3] subfix, \
+            inputs[4] subfix, inputs[5] subfix,
+_INST_RNG_MAKER(6)
+#undef _FOR_EACH_IN
+
+#define _FOR_EACH_IN(subfix)                                                \
+    inputs[0] subfix, inputs[1] subfix, inputs[2] subfix, inputs[3] subfix, \
+            inputs[4] subfix, inputs[5] subfix, inputs[6] subfix,
+#define _FOR_EACH_OUT(subfix) \
+    outputs[0] subfix, outputs[1] subfix, outputs[2] subfix, outputs[3] subfix
+_INST_RNG_INVOLKER(7, 4)
+_INST_RNG_MAKER(7)
+#undef _FOR_EACH_OUT
+#undef _FOR_EACH_IN
+
 #undef _INST_RNG_INVOLKER
 #undef _INST_RNG_MAKER
 
@@ -541,37 +563,90 @@ SmallVector<LogicalTensorDesc> infer_output_attrs<Dropout>(
     return dests;
 }
 
+template <typename Op>
+std::tuple<SmallVector<LogicalTensorDesc>, bool> _infer_output_attrs(
+        const OpDef& op, const SmallVector<TensorLayout>& inputs, const CompNode cn){};
+
+template <>
+std::tuple<SmallVector<LogicalTensorDesc>, bool> _infer_output_attrs<MultiHeadAttn>(
+        const OpDef& op, const SmallVector<TensorLayout>& inputs, const CompNode cn) {
+    bool success = inputs[0].ndim != 0;
+
+    SmallVector<LogicalTensorDesc> dests(4);
+
+    // retrieve dnn_op from glob cache
+    auto&& rng = op.cast_final_safe<MultiHeadAttn>();
+    auto handle = rng.handle;
+    if (!handle) {
+        handle = RNGDnnOpManager::get_default_handle(cn);
+    }
+    auto dnn_op_thread_safe = RNGDnnOpManager::inst().get_dnn_op<megdnn::MultiHeadAttn>(
+            handle, reinterpret_cast<size_t>(op.dyn_typeinfo()), cn);
+    auto dnn_op = std::get<1>(dnn_op_thread_safe);
+    dnn_op->param() = OpMeth<MultiHeadAttn>::make_param(rng);
+
+    TensorLayout out, attn_weight, mask_layout, othr_layout;
+    dnn_op->deduce_layout(
+            inputs[0], inputs[1], inputs[2], inputs[3], inputs[4], inputs[5], inputs[6],
+            out, attn_weight, mask_layout, othr_layout);
+
+    dests[0].comp_node = cn;
+    dests[0].layout = out;
+    dests[0].layout.dtype = inputs[0].dtype;
+    dests[1].comp_node = cn;
+    dests[1].layout = attn_weight;
+    if (success) {
+        dests[2].comp_node = cn;
+        dests[2].layout = mask_layout;
+        dests[3].comp_node = cn;
+        dests[3].layout = othr_layout;
+    } else {
+        dests[2].comp_node = cn;
+        dests[2].layout = TensorLayout(dtype::Byte());
+        dests[3].comp_node = cn;
+        dests[3].layout = TensorLayout(inputs[0].dtype);
+    }
+
+    return {dests, success};
+}
+
 template <>
 SmallVector<LogicalTensorDesc> infer_output_attrs<MultiHeadAttn>(
         const OpDef& op, const SmallVector<TensorPtr>& inputs) {
-    SmallVector<LogicalTensorDesc> dests(2);
+    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
     auto&& cn = inputs[0]->comp_node();
+    auto input_type = op.cast_final_safe<MultiHeadAttn>().tensor_combination_type;
 
-    dests[0].comp_node = cn;
-    dests[0].layout = TensorLayout(inputs[0]->layout());
-    dests[0].layout.dtype = inputs[0]->layout().dtype;
+    std::tuple<SmallVector<LogicalTensorDesc>, bool> ret;
+    TensorLayout empty_layout;
+    if (input_type == INPUT_TYPE::NONE)
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                 inputs[3]->layout(), empty_layout, empty_layout, empty_layout},
+                cn);
+    else if (input_type == INPUT_TYPE::ONLY_MASK)
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                 inputs[3]->layout(), inputs[4]->layout(), empty_layout, empty_layout},
+                cn);
+    else if (input_type == INPUT_TYPE::ONLY_BIASKV)
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                 inputs[3]->layout(), empty_layout, inputs[4]->layout(),
+                 inputs[5]->layout()},
+                cn);
+    else
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                 inputs[3]->layout(), inputs[4]->layout(), inputs[5]->layout(),
+                 inputs[6]->layout()},
+                cn);
 
-    auto get_reservespace_in_bytes = [&]() -> size_t {
-        // retrieve dnn_op from glob cache
-        auto&& rng = op.cast_final_safe<MultiHeadAttn>();
-        auto handle = rng.handle;
-        if (!handle) {
-            handle = RNGDnnOpManager::get_default_handle(cn);
-        }
-        auto dnn_op_thread_safe =
-                RNGDnnOpManager::inst().get_dnn_op<megdnn::MultiHeadAttn>(
-                        handle, reinterpret_cast<size_t>(op.dyn_typeinfo()), cn);
-        auto dnn_op = std::get<1>(dnn_op_thread_safe);
-        dnn_op->param() = OpMeth<MultiHeadAttn>::make_param(rng);
-
-        return dnn_op->get_reservespace_in_bytes(
-                inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
-                inputs[3]->layout(), {}, {});
-    };
-    dests[1].comp_node = cn;
-    dests[1].layout =
-            TensorLayout(TensorShape({get_reservespace_in_bytes()}), dtype::Byte());
-    return dests;
+    return std::get<0>(ret);
 }
 
 template <typename Op>
@@ -587,6 +662,127 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
     return outputs;
 }
 
+template <>
+SmallVector<TensorPtr> apply_on_physical_tensor<MultiHeadAttn>(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    SmallVector<TensorPtr> outputs;
+    SmallVector<LogicalTensorDesc> desc =
+            infer_output_attrs<MultiHeadAttn>(def, inputs);
+    for (auto&& i : desc) {
+        outputs.push_back(Tensor::make(i.layout, i.comp_node));
+    }
+
+    auto&& rng = def.cast_final_safe<MultiHeadAttn>();
+    auto dest = outputs[0];
+    if (dest->layout().is_empty())
+        return outputs;
+    auto cn = dest->comp_node();
+    auto handle = rng.handle;
+    if (!handle) {
+        handle = RNGDnnOpManager::get_default_handle(cn);
+    }
+
+    // retrieve dnn_op from glob cache
+    auto dnn_op_thread_safe =
+            RNGDnnOpManager::inst().get_dnn_op<typename OpMeth<MultiHeadAttn>::DnnOp>(
+                    handle, reinterpret_cast<size_t>(def.dyn_typeinfo()), cn);
+    auto initialized = std::get<0>(dnn_op_thread_safe);
+    auto dnn_op = std::get<1>(dnn_op_thread_safe);
+    if (initialized) {
+        auto handle_seed = RNGDnnOpManager::get_seed(handle);
+        mgb_assert(
+                dnn_op->param().seed == handle_seed,
+                "inconsistent rng seed: handle: %lu, dnn_op: %lu", handle_seed,
+                dnn_op->param().seed);
+    }
+    dnn_op->param() = OpMeth<MultiHeadAttn>::make_param(rng);
+
+    auto input_type = rng.tensor_combination_type;
+    std::shared_ptr<Tensor> empty_dnn(nullptr);
+    size_t wk_size = 0;
+    TensorLayout empty_layout;
+    megdnn::TensorND empty_tensor;
+
+    if (input_type == INPUT_TYPE::ALL) {
+        wk_size = dnn_op->get_workspace_in_bytes(
+                inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                inputs[3]->layout(), inputs[4]->layout(), inputs[5]->layout(),
+                inputs[6]->layout(), outputs[0]->layout(), outputs[1]->layout(),
+                outputs[2]->layout(), outputs[3]->layout());
+        auto workspace = Blob::make(outputs[0]->comp_node(), wk_size);
+        megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);
+        dnn_op->exec(
+                inputs[0]->dev_tensor().as_megdnn(),
+                inputs[1]->dev_tensor().as_megdnn(),
+                inputs[2]->dev_tensor().as_megdnn(),
+                inputs[3]->dev_tensor().as_megdnn(),
+                inputs[4]->dev_tensor().as_megdnn(),
+                inputs[5]->dev_tensor().as_megdnn(),
+                inputs[6]->dev_tensor().as_megdnn(),
+                outputs[0]->dev_tensor().as_megdnn(),
+                outputs[1]->dev_tensor().as_megdnn(),
+                outputs[2]->dev_tensor().as_megdnn(),
+                outputs[3]->dev_tensor().as_megdnn(), dnn_wk);
+    } else if (input_type == INPUT_TYPE::ONLY_MASK) {
+        wk_size = dnn_op->get_workspace_in_bytes(
+                inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                inputs[3]->layout(), inputs[4]->layout(), empty_layout, empty_layout,
+                outputs[0]->layout(), outputs[1]->layout(), outputs[2]->layout(),
+                outputs[3]->layout());
+        auto workspace = Blob::make(outputs[0]->comp_node(), wk_size);
+        megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);
+        dnn_op->exec(
+                inputs[0]->dev_tensor().as_megdnn(),
+                inputs[1]->dev_tensor().as_megdnn(),
+                inputs[2]->dev_tensor().as_megdnn(),
+                inputs[3]->dev_tensor().as_megdnn(),
+                inputs[4]->dev_tensor().as_megdnn(), empty_tensor, empty_tensor,
+                outputs[0]->dev_tensor().as_megdnn(),
+                outputs[1]->dev_tensor().as_megdnn(),
+                outputs[2]->dev_tensor().as_megdnn(),
+                outputs[3]->dev_tensor().as_megdnn(), dnn_wk);
+    } else if (input_type == INPUT_TYPE::ONLY_BIASKV) {
+        wk_size = dnn_op->get_workspace_in_bytes(
+                inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                inputs[3]->layout(), empty_layout, inputs[4]->layout(),
+                inputs[5]->layout(), outputs[0]->layout(), outputs[1]->layout(),
+                outputs[2]->layout(), outputs[3]->layout());
+        auto workspace = Blob::make(outputs[0]->comp_node(), wk_size);
+        megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);
+        dnn_op->exec(
+                inputs[0]->dev_tensor().as_megdnn(),
+                inputs[1]->dev_tensor().as_megdnn(),
+                inputs[2]->dev_tensor().as_megdnn(),
+                inputs[3]->dev_tensor().as_megdnn(), empty_tensor,
+                inputs[5]->dev_tensor().as_megdnn(),
+                inputs[6]->dev_tensor().as_megdnn(),
+                outputs[0]->dev_tensor().as_megdnn(),
+                outputs[1]->dev_tensor().as_megdnn(),
+                outputs[2]->dev_tensor().as_megdnn(),
+                outputs[3]->dev_tensor().as_megdnn(), dnn_wk);
+    } else {
+        wk_size = dnn_op->get_workspace_in_bytes(
+                inputs[0]->layout(), inputs[1]->layout(), inputs[2]->layout(),
+                inputs[3]->layout(), empty_layout, empty_layout, empty_layout,
+                outputs[0]->layout(), outputs[1]->layout(), outputs[2]->layout(),
+                outputs[3]->layout());
+        auto workspace = Blob::make(outputs[0]->comp_node(), wk_size);
+        megdnn::Workspace dnn_wk(workspace->storage().get(), wk_size);
+        dnn_op->exec(
+                inputs[0]->dev_tensor().as_megdnn(),
+                inputs[1]->dev_tensor().as_megdnn(),
+                inputs[2]->dev_tensor().as_megdnn(),
+                inputs[3]->dev_tensor().as_megdnn(), empty_tensor, empty_tensor,
+                empty_tensor, outputs[0]->dev_tensor().as_megdnn(),
+                outputs[1]->dev_tensor().as_megdnn(),
+                outputs[2]->dev_tensor().as_megdnn(),
+                outputs[3]->dev_tensor().as_megdnn(), dnn_wk);
+    }
+    return outputs;
+}
+
 template <typename Op, typename Output>
 Output apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     size_t nr_inp = inputs.size();
@@ -599,6 +795,23 @@ Output apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     }
     constexpr size_t mgb_nr_inp = dnn_nr_inp + !dnn_nr_inp;
     return _RNGOprMaker<mgb_nr_inp>::make(inputs, rng);
+}
+
+template <>
+SymbolVarArray apply_on_var_node<MultiHeadAttn, SymbolVarArray>(
+        const OpDef& def, const VarNodeArray& inputs) {
+    auto&& rng = def.cast_final_safe<MultiHeadAttn>();
+    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    auto input_type = rng.tensor_combination_type;
+    if (input_type == INPUT_TYPE::ALL) {
+        return _RNGOprMaker<7>::make(inputs, rng);
+    } else if (input_type == INPUT_TYPE::ONLY_BIASKV) {
+        return _RNGOprMaker<6>::make(inputs, rng);
+    } else if (input_type == INPUT_TYPE::ONLY_MASK) {
+        return _RNGOprMaker<5>::make(inputs, rng);
+    } else {
+        return _RNGOprMaker<4>::make(inputs, rng);
+    }
 }
 
 template <typename Op>
@@ -671,39 +884,38 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<Dro
 template <>
 std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<
         MultiHeadAttn>(const OpDef& op, const SmallVector<LogicalTensorDesc>& inputs) {
-    bool success = inputs[0].layout.ndim != 0;
+    using INPUT_TYPE = opr::MultiHeadAttn::Param::TENSOR_COMBINATION_TYPE;
+    auto&& cn = inputs[0].comp_node;
+    auto input_type = op.cast_final_safe<MultiHeadAttn>().tensor_combination_type;
 
-    SmallVector<LogicalTensorDesc> dests(2);
-    auto cn = inputs[0].comp_node;
-    dests[0].comp_node = cn;
-    dests[0].layout = TensorLayout(inputs[0].layout);
-    dests[0].layout.dtype = inputs[0].layout.dtype;
+    std::tuple<SmallVector<LogicalTensorDesc>, bool> ret;
+    TensorLayout empty_layout;
+    if (input_type == INPUT_TYPE::NONE)
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
+                 empty_layout, empty_layout, empty_layout},
+                cn);
+    else if (input_type == INPUT_TYPE::ONLY_MASK)
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
+                 inputs[4].layout, empty_layout, empty_layout},
+                cn);
+    else if (input_type == INPUT_TYPE::ONLY_BIASKV)
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
+                 empty_layout, inputs[4].layout, inputs[5].layout},
+                cn);
+    else
+        ret = _infer_output_attrs<MultiHeadAttn>(
+                op,
+                {inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
+                 inputs[4].layout, inputs[5].layout, inputs[6].layout},
+                cn);
 
-    auto get_reservespace_in_bytes = [&]() -> size_t {
-        auto&& rng = op.cast_final_safe<MultiHeadAttn>();
-        auto handle = rng.handle;
-        if (!handle) {
-            handle = RNGDnnOpManager::get_default_handle(cn);
-        }
-        auto dnn_op_thread_safe =
-                RNGDnnOpManager::inst().get_dnn_op<megdnn::MultiHeadAttn>(
-                        handle, reinterpret_cast<size_t>(op.dyn_typeinfo()), cn);
-        auto dnn_op = std::get<1>(dnn_op_thread_safe);
-        dnn_op->param() = OpMeth<MultiHeadAttn>::make_param(rng);
-
-        return dnn_op->get_reservespace_in_bytes(
-                inputs[0].layout, inputs[1].layout, inputs[2].layout, inputs[3].layout,
-                {}, {});
-    };
-    dests[1].comp_node = cn;
-    if (success) {
-        dests[1].layout =
-                TensorLayout(TensorShape({get_reservespace_in_bytes()}), dtype::Byte());
-    } else {
-        dests[1].layout = TensorLayout(dtype::Byte());
-    }
-
-    return {dests, success};
+    return ret;
 }
 
 template <typename Op>

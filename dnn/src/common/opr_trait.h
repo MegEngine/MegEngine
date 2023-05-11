@@ -148,8 +148,8 @@ DEF(RegionRestrictedConvolutionBackwardFilter, 5, true, false);
 DEF(GroupNormForward, 6, true, true);
 DEF(GroupNormBackward, 8, true, true);
 DEF(MaskedFill, 3, false, true);
-DEF(MultiHeadAttnForward, 6, true, true);
-DEF(MultiHeadAttnBackward, 10, true, true);
+DEF(MultiHeadAttnForward, 11, true, true);
+DEF(MultiHeadAttnBackward, 15, true, true);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

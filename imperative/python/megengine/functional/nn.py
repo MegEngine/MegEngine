@@ -899,24 +899,24 @@ def gelu(x):
 def softplus(inp: Tensor) -> Tensor:
     r"""Applies the element-wise function:
 
-    .. math::
-        \text{softplus}(x) = \log(1 + \exp(x))
+     .. math::
+         \text{softplus}(x) = \log(1 + \exp(x))
 
-    softplus is a smooth approximation to the ReLU function and can be used
-    to constrain the output to be always positive.
-    For numerical stability the implementation follows this transformation:
+     softplus is a smooth approximation to the ReLU function and can be used
+     to constrain the output to be always positive.
+     For numerical stability the implementation follows this transformation:
 
-    .. math::
-        \text{softplus}(x) = \log(1 + \exp(x))
-                           = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0)
-                           = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
+     .. math::
+         \text{softplus}(x) = \log(1 + \exp(x))
+                            = \log(1 + \exp(-\text{abs}(x))) + \max(x, 0)
+                            = \log1p(\exp(-\text{abs}(x))) + \text{relu}(x)
 
-   Examples:
-        >>> import numpy as np
-        >>> x = Tensor(np.arange(-3, 3, dtype=np.float32))
-        >>> y = F.softplus(x)
-        >>> y.numpy().round(decimals=4)
-        array([0.0486, 0.1269, 0.3133, 0.6931, 1.3133, 2.1269], dtype=float32)
+    Examples:
+         >>> import numpy as np
+         >>> x = Tensor(np.arange(-3, 3, dtype=np.float32))
+         >>> y = F.softplus(x)
+         >>> y.numpy().round(decimals=4)
+         array([0.0486, 0.1269, 0.3133, 0.6931, 1.3133, 2.1269], dtype=float32)
     """
     return _elwise(inp, mode=Elemwise.Mode.SOFTPLUS)
 
@@ -2213,7 +2213,7 @@ def _merge_masks(
 ):
     r"""
     Determine mask type and combine masks if necessary.
-    
+
     Note: This function will continue to improve with the iteration of MHA.
 
     Args:
@@ -2224,7 +2224,7 @@ def _merge_masks(
         add_bias_kv: used to determine whether pad is needed on the sequence dimension of attn_mask and key_padding_mask, from MHA's ``add_bias_kv``.
         add_zero_attn: used to determine whether pad is needed on the sequence dimension of attn_mask and key_padding_mask, from MHA's ``add_zero_attn``.
         is_causal: MHA's is_causal, is_causal provides a hint that attn_mask is the causal mask.
-        maybe_cudnn_style_mask: MHA's maybe_cudnn_style_mask, like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is the cudnn style mask. 
+        maybe_cudnn_style_mask: MHA's maybe_cudnn_style_mask, like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is the cudnn style mask.
         num_heads: MHA's head number.
     Returns:
         merged_mask: merged mask, may be None, the shape is :math:`(L, S)`, :math:`(2\cdotL + 2\cdotN)` or :math:`(N\cdot\text{num\_heads}, L, S)`
@@ -2320,8 +2320,8 @@ def multi_head_attention(
         num_heads: parallel attention heads.
         attn_drop: probability of an element to be zeroed, used in attention matrix.
         out_drop: probability of an element to be zeroed, used in final output.
-        io_weight_bias: input/output projection weight/bias all in one. 
-            The order of arrangement is: query weight, key weight, value weight, out weight, query bias, key bias, value bias, out bias, the following parameters will be used to indicate whether these items exist: qproj_size, kproj_size, vproj_size, oproj_size, qbias, kbias, vbias, obias. 
+        io_weight_bias: input/output projection weight/bias all in one.
+            The order of arrangement is: query weight, key weight, value weight, out weight, query bias, key bias, value bias, out bias, the following parameters will be used to indicate whether these items exist: qproj_size, kproj_size, vproj_size, oproj_size, qbias, kbias, vbias, obias.
             Note: :math:`Y=X@W+B` is used here instead of :math:`Y=X@W^T+B` in pytorch.
         qproj_size: indicates the projection size of query weight in io_weight_bias, 0 indicates disabled query projection and no query projection weight.
         kproj_size: indicates the projection size of key weight in io_weight_bias, 0 indicates disabled key projection and no key projection weight.
@@ -2335,7 +2335,7 @@ def multi_head_attention(
             Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         add_zero_attn: if specified, adds a new batch of zeros to the key and value sequences at sequence dim. Default: ``False``.
             Note: should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
-        key_padding_mask: if specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of 
+        key_padding_mask: if specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of
             attention (i.e. treat as "padding"). For unbatched `query`, shape should be :math:`(S)`. Binary and float masks are supported. For a binary mask, a ``True`` value indicates that the corresponding ``key`` value will be ignored for the purpose of attention. For a float mask, it will be directly added to the corresponding ``key`` value.
             Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         attn_mask: 2D or 3D mask that prevents attention to certain positions. A 2D mask will be broadcasted for all
@@ -2353,9 +2353,22 @@ def multi_head_attention(
             Note: In the cudnn style, the shape of the attn_mask is :math:`(2, L)`, and the shape of the key_padding_mask is :math:`(2, N)`.
             Warning: like is_causal, maybe_cudnn_style_mask provides a hint that attn_mask and key_padding_mask is a cudnn style mask. Providing incorrect hints can result in incorrect execution, including forward and backward compatibility. In addition, if the ``_merge_masks`` function returns ``merge_type=cudnn_style_mask``, please ensure that other conditions are correct so that it can run the implementation of cudnn, otherwise an error will be reported.
             Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that the underlying implementation only accepts two types of mask type, namely "no_mask" and "default_mask", and we may try to loosen this option after submitting the commit that users can pass in custom attention mask tensors.
-        reslink: add input query to final output. 
+        reslink: add input query to final output.
             Note: It is only valid if the input query is the same as the shape of the output.
         training: will apply dropout if is ``True``.
+
+    Outputs:
+        - **out[0]=attn_output** - Attention outputs of shape :math:`(N, L, E)`,
+          where :math:`L` is the target sequence length, :math:`N` is
+          the batch size, and :math:`E` is the embedding dimension ``embed_dim``.
+        - **out[1]=attn_output_weights** - Only returned when ``need_weights=True``. If ``average_attn_weights=True``,
+          returns attention weights averaged across heads of shape :math:`(L, S)` when input is unbatched or
+          :math:`(N, L, S)`, where :math:`N` is the batch size, :math:`L` is the target sequence length, and
+          :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per
+          head of shape :math:`(\text{num\_heads}, L, S)` when input is unbatched or :math:`(N * \text{num\_heads}, L, S)`.
+          Note: Now only None will be returned. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        - **out[2]=mask_reversespace** - Used to save the dropout mask needed for backward propagation.`,
+        - **out[3]=othr_reversespace** - Used to save the intermediate results that need to be used in backward propagation.`,
     """
     qproj_size = embed_dim if qproj_size is None else qproj_size
     kproj_size = embed_dim if kproj_size is None else kproj_size
@@ -2448,6 +2461,21 @@ def multi_head_attention(
         num_heads=num_heads,
     )
 
+    def get_tensor_combination_type(attn_mask_tensor, bias_k, bias_v):
+        bias_kv = bias_k is not None and bias_v is not None
+        if not bias_kv and attn_mask_tensor is None:
+            return "none"
+        elif not bias_kv and attn_mask_tensor is not None:
+            return "only_mask"
+        elif bias_kv and attn_mask_tensor is None:
+            return "only_biaskv"
+        else:
+            return "all"
+
+    tensor_combination_type = get_tensor_combination_type(
+        attn_mask_tensor, bias_k, bias_v
+    )
+
     op = builtin.MultiHeadAttn(
         num_heads=num_heads,
         sm_scaler=smScaler,
@@ -2471,11 +2499,20 @@ def multi_head_attention(
         vbias=vbias,
         obias=obias,
         need_weights=need_weights,
-        tensor_combination_type="none",
+        tensor_combination_type=tensor_combination_type,
     )
+    if tensor_combination_type == "none":
+        out = apply(op, query, key, value, io_weight_bias)
+    elif tensor_combination_type == "only_mask":
+        out = apply(op, query, key, value, io_weight_bias, attn_mask_tensor)
+    elif tensor_combination_type == "only_biaskv":
+        out = apply(op, query, key, value, io_weight_bias, bias_k, bias_v)
+    else:
+        out = apply(
+            op, query, key, value, io_weight_bias, attn_mask_tensor, bias_k, bias_v
+        )
 
-    out, reserveSpace = apply(op, query, key, value, io_weight_bias)
-    return out, None
+    return out[0], out[1]
 
 
 from .loss import *  # isort:skip

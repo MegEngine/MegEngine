@@ -2580,66 +2580,139 @@ class MultiHeadAttnBase : public OperatorBase {
 };
 
 class MultiHeadAttnForward : public MultiHeadAttnBase {
-    DEF_OPR_IMPL(MultiHeadAttnForward, MultiHeadAttnBase, 4, 2);
+    DEF_OPR_IMPL(MultiHeadAttnForward, MultiHeadAttnBase, 7, 4);
 
 public:
+    /**
+     * \param[in] queries (N, L, E_q), where N is the batch size, L is the target
+     * sequence length, and E_q is the query embedding dimension embed_dim.
+     * \param[in] keys (N, S, E_k), where N is the batch size, S is the source
+     * sequence length, and E_k is the key embedding dimension k_dim.
+     * \param[in] values (N, S, E_v), where N is the batch size, S is the source
+     * sequence length, and E_v is the value embedding dimension v_dim.
+     * \param[in] qkvo_weight_bias, input/output projection weight/bias all in one.
+     * The order of arrangement is: query weight, key weight, value weight,
+     * out weight, query bias, key bias, value bias, out bias, the following parameters
+     * in param will be used to indicate whether these items exist: qproj_size,
+     * kproj_size, vproj_size, oproj_size, qbias, kbias, vbias, obias.
+     * Note: Y=X@W+B is used here instead of Y=X@W^T+B in pytorch.
+     * \param[in] attn_mask, (N*num_heads, L, S) or (L, S), where N is the batch size,
+     * num_heads is the number of parallel attention heads, L is the target sequence
+     * length, and S is the source sequence length. attention mask is obtained by
+     * combining attn_mask, key_padding_mask, is_causal and maybe_cudnn_style_mask by
+     * mge.functional._merge_masks.
+     * \param[in] bias_k, (1, 1, kproj_size), where kproj_size is the projected
+     * dimension of key weight, if kproj_size == 0, will be the key embedding dimension
+     * k_dim.
+     * Note: bias_k and bias_v are the bias of the K and V sequences to be added at
+     * sequence dim, distinguished from kbias and vbias, bias_kv here is not kbias and
+     * vbias in the linear layer, and bias_kv here will be added to the K and V at
+     * sequence dimensions, where K and V are the matrices of key and value after
+     * projection, and K and V will be used to calculate the attention matrix.
+     * \param[in] bias_v, (1, 1, vproj_size), where vproj_size is the projected
+     * dimension of value weight, if vproj_size == 0, will be the value embedding
+     * dimension v_dim.
+     * Note: see bias_k.
+     * \param[out] out, (N, S, oproj_size), where N is
+     * the batch size, S is the source sequence length, and oproj_size is the projected
+     * dimension of output weight, if oproj_size == 0, will be the projected
+     * dimension of value weight vproj_size, but if vproj_size == 0, will be the value
+     * embedding dimension v_dim.
+     * \param[out] attn_weight, (N * num_heads, L, S), where N is the batch size,
+     * num_heads is the number of parallel attention heads, L is the target sequence
+     * length, and S is the source sequence length.
+     * Note: attn_weight is the output of softmax.
+     * \param[out] mask_reservespace, when param.training=true, we need this output to
+     * save the mask of attention dropout and output dropout.
+     * \param[out] othr_reservespace, when param.training=true, we need this output to
+     * save the intermediate calculation results.
+     */
     virtual void exec(
             _megdnn_tensor_in queries, _megdnn_tensor_in keys, _megdnn_tensor_in values,
-            _megdnn_tensor_in wqkv, _megdnn_tensor_out out,
-            _megdnn_tensor_out reserveSpace, _megdnn_workspace workspace) = 0;
-    MGE_WIN_DECLSPEC_FUC void deduce_layout(
+            _megdnn_tensor_in qkvo_weight_bias, _megdnn_tensor_in attn_mask,
+            _megdnn_tensor_in bias_k, _megdnn_tensor_in bias_v, _megdnn_tensor_out out,
+            _megdnn_tensor_out attn_weight, _megdnn_tensor_out mask_reservespace,
+            _megdnn_tensor_out othr_reservespace, _megdnn_workspace workspace) = 0;
+    virtual void deduce_layout(
             const TensorLayout& queries, const TensorLayout& keys,
-            const TensorLayout& values, const TensorLayout& wqkv, TensorLayout& out,
-            TensorLayout& reserveSpace);
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& bias_k,
+            const TensorLayout& bias_v, TensorLayout& out, TensorLayout& attn_weight,
+            TensorLayout& mask_reservespace, TensorLayout& othr_reservespace) = 0;
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& queries, const TensorLayout& keys,
-            const TensorLayout& values, const TensorLayout& wqkv,
-            const TensorLayout& out, const TensorLayout& reserveSpace) = 0;
-    virtual size_t get_reservespace_in_bytes(
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& bias_k,
+            const TensorLayout& bias_v, const TensorLayout& out,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace) = 0;
+    virtual size_t get_mask_reservespace_in_bytes(
             const TensorLayout& queries, const TensorLayout& keys,
-            const TensorLayout& values, const TensorLayout& wqkv,
-            const TensorLayout& out, const TensorLayout& reserveSpace) = 0;
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& bias_k,
+            const TensorLayout& bias_v, const TensorLayout& out,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace) = 0;
+    virtual size_t get_othr_reservespace_in_bytes(
+            const TensorLayout& queries, const TensorLayout& keys,
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& bias_k,
+            const TensorLayout& bias_v, const TensorLayout& out,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace) = 0;
 
 protected:
     void check_exec(
             const TensorLayout& queries, const TensorLayout& keys,
-            const TensorLayout& values, const TensorLayout& wqkv,
-            const TensorLayout& out, const TensorLayout& reserveSpace,
-            size_t workspace_in_bytes);
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& bias_k,
+            const TensorLayout& bias_v, const TensorLayout& out,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace, size_t workspace_in_bytes);
 };
 using MultiHeadAttn = MultiHeadAttnForward;
 
 class MultiHeadAttnBackward : public MultiHeadAttnBase {
-    DEF_OPR_IMPL(MultiHeadAttnBackward, MultiHeadAttnBase, 6, 4);
+    DEF_OPR_IMPL(MultiHeadAttnBackward, MultiHeadAttnBase, 9, 6);
 
 public:
     virtual void exec(
             _megdnn_tensor_in diff, _megdnn_tensor_in queries, _megdnn_tensor_in keys,
-            _megdnn_tensor_in values, _megdnn_tensor_in wqkv,
-            _megdnn_tensor_in reserveSpace, _megdnn_tensor_out dqueries,
-            _megdnn_tensor_out dkeys, _megdnn_tensor_out dvalues,
-            _megdnn_tensor_out dweights, _megdnn_workspace workspace) = 0;
+            _megdnn_tensor_in values, _megdnn_tensor_in qkvo_weight_bias,
+            _megdnn_tensor_in attn_mask, _megdnn_tensor_in attn_weight,
+            _megdnn_tensor_in mask_reservespace, _megdnn_tensor_in othr_reservespace,
+            _megdnn_tensor_out dqueries, _megdnn_tensor_out dkeys,
+            _megdnn_tensor_out dvalues, _megdnn_tensor_out dqkvo_weight_bias,
+            _megdnn_tensor_out dbias_k, _megdnn_tensor_out dbias_v,
+            _megdnn_workspace workspace) = 0;
     MGE_WIN_DECLSPEC_FUC void deduce_layout(
             const TensorLayout& diff, const TensorLayout& queries,
             const TensorLayout& keys, const TensorLayout& values,
-            const TensorLayout& wqkv, const TensorLayout& reserveSpace,
-            TensorLayout& dqueries, TensorLayout& dkeys, TensorLayout& dvalues,
-            TensorLayout& dweights);
+            const TensorLayout& qkvo_weight_bias, const TensorLayout& attn_mask,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace, TensorLayout& dqueries,
+            TensorLayout& dkeys, TensorLayout& dvalues, TensorLayout& dqkvo_weight_bias,
+            TensorLayout& dbias_k, TensorLayout& dbias_v);
     virtual size_t get_workspace_in_bytes(
             const TensorLayout& diff, const TensorLayout& queries,
             const TensorLayout& keys, const TensorLayout& values,
-            const TensorLayout& wqkv, const TensorLayout& reserveSpace,
-            const TensorLayout& dqueries, const TensorLayout& dkeys,
-            const TensorLayout& dvalues, const TensorLayout& dweights) = 0;
+            const TensorLayout& qkvo_weight_bias, const TensorLayout& attn_mask,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace, const TensorLayout& dqueries,
+            const TensorLayout& dkeys, const TensorLayout& dvalues,
+            const TensorLayout& dqkvo_weight_bias, const TensorLayout& dbias_k,
+            const TensorLayout& dbias_v) = 0;
 
 protected:
     void check_exec(
             const TensorLayout& diff, const TensorLayout& queries,
             const TensorLayout& keys, const TensorLayout& values,
-            const TensorLayout& wqkv, const TensorLayout& reserveSpace,
-            const TensorLayout& dqueries, const TensorLayout& dkeys,
-            const TensorLayout& dvalues, const TensorLayout& dweights,
-            size_t workspace_in_bytes);
+            const TensorLayout& qkvo_weight_bias, const TensorLayout& attn_mask,
+            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
+            const TensorLayout& othr_reservespace, const TensorLayout& dqueries,
+            const TensorLayout& dkeys, const TensorLayout& dvalues,
+            const TensorLayout& dqkvo_weight_bias, const TensorLayout& dbias_k,
+            const TensorLayout& dbias_v, size_t workspace_in_bytes);
 };
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"

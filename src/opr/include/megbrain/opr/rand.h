@@ -87,13 +87,49 @@ _DEFINE_RNG_OPR_WITH_INPUT_CLASS(GammaRNG)
 #undef _OUTPUTS
 #undef _INPUTS
 
-/* ================= 4 input =================  */
-#define _INPUTS(preifx) preifx i0, preifx i1, preifx i2, preifx i3
-#define _OUTPUTS        SymbolVarArray
-_DEFINE_RNG_OPR_WITH_INPUT_CLASS(MultiHeadAttnForward)
-#undef _OUTPUTS
-#undef _INPUTS
 #undef _DEFINE_RNG_OPR_WITH_INPUT_CLASS
+
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        MultiHeadAttnForward, RNGOprBase<megdnn::MultiHeadAttnForward>) // {
+    void add_input_layout_constraint() override;
+    cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;
+
+public:
+    MultiHeadAttnForward(
+            VarNode* queries, VarNode* keys, VarNode* values, VarNode* qkvo_weight_bias,
+            VarNode* attn_mask, VarNode* bias_k, VarNode* bias_v, const Param& param,
+            const OperatorNodeConfig& config);
+    MultiHeadAttnForward(
+            VarNode* queries, VarNode* keys, VarNode* values, VarNode* qkvo_weight_bias,
+            VarNode* attn_mask, const Param& param, const OperatorNodeConfig& config);
+    MultiHeadAttnForward(
+            VarNode* queries, VarNode* keys, VarNode* values, VarNode* qkvo_weight_bias,
+            VarNode* bias_k, VarNode* bias_v, const Param& param,
+            const OperatorNodeConfig& config);
+    MultiHeadAttnForward(
+            VarNode* queries, VarNode* keys, VarNode* values, VarNode* qkvo_weight_bias,
+            const Param& param, const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar queries, SymbolVar keys, SymbolVar values,
+            SymbolVar qkvo_weight_bias, SymbolVar attn_mask, SymbolVar bias_k,
+            SymbolVar bias_v, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar queries, SymbolVar keys, SymbolVar values,
+            SymbolVar qkvo_weight_bias, SymbolVar attn_mask, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar queries, SymbolVar keys, SymbolVar values,
+            SymbolVar qkvo_weight_bias, SymbolVar bias_k, SymbolVar bias_v,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar queries, SymbolVar keys, SymbolVar values,
+            SymbolVar qkvo_weight_bias, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+    void init_output_static_infer_desc() override;
+    void scn_do_execute() override;
+};
 
 }  // namespace intl
 
@@ -146,13 +182,27 @@ MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
 public:
     MGE_WIN_DECLSPEC_FUC MultiHeadAttnBackward(
             VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values,
-            VarNode* wqkv, VarNode* reserveSpace, const Param& param,
+            VarNode* qkvo_weight_bias, VarNode* attn_mask, VarNode* attn_weight,
+            VarNode* mask_reservespace, VarNode* othr_reservespace, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC MultiHeadAttnBackward(
+            VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values,
+            VarNode* qkvo_weight_bias, VarNode* attn_weight, VarNode* mask_reservespace,
+            VarNode* othr_reservespace, const Param& param,
             const OperatorNodeConfig& config);
 
     MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
             SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
-            SymbolVar wqkv, SymbolVar reserveSpace, const Param& param = {},
-            const OperatorNodeConfig& config = {});
+            SymbolVar qkvo_weight_bias, SymbolVar attn_mask, SymbolVar attn_weight,
+            SymbolVar mask_reservespace, SymbolVar othr_reservespace,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVarArray make(
+            SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
+            SymbolVar qkvo_weight_bias, SymbolVar attn_weight,
+            SymbolVar mask_reservespace, SymbolVar othr_reservespace,
+            const Param& param = {}, const OperatorNodeConfig& config = {});
 
 private:
     void init_output_static_infer_desc() override;

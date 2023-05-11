@@ -5321,8 +5321,8 @@ std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const 
         props_.emplace_back("tensor_combination_type", "INVALID");
         break;
     }
-    props_.emplace_back("need_weights", std::to_string(op_.need_weights));
     props_.emplace_back("add_zero_attn", std::to_string(op_.add_zero_attn));
+    props_.emplace_back("need_weights", std::to_string(op_.need_weights));
     props_.emplace_back("reslink", std::to_string(op_.reslink));
     props_.emplace_back("training", std::to_string(op_.training));
     props_.emplace_back("seed", std::to_string(op_.seed));
