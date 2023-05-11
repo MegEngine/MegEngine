@@ -2,11 +2,13 @@
 #include "megbrain/dtype.h"
 #include "megbrain/imperative/backtrace.h"
 #include "megbrain/imperative/cpp_cupti.h"
+#include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/backward_graph.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/profiler.h"
 #include "megbrain/imperative/transformation.h"
+#include "megbrain/imperative/transformations/complex.h"
 #include "megbrain/imperative/transformations/dim_expansion.h"
 #include "megbrain/imperative/transformations/dtype_promote.h"
 #include "megbrain/imperative/transformations/eval.h"
@@ -826,6 +828,10 @@ void init_tensor(py::module m) {
                               .register_at<Segment::DimExpansion>(
                                       std::make_shared<DimExpansionTransformation>())
                               .release());
+    MGB_MARK_USED_VAR(transformations
+                              .register_at<Segment::Complex>(
+                                      std::make_shared<ComplexTransformation>())
+                              .release());
     auto format_trans = std::make_shared<FormatTransformation>();
     MGB_MARK_USED_VAR(
             transformations.register_at<Segment::Format>(format_trans).release());
@@ -1460,6 +1466,31 @@ void init_tensor(py::module m) {
           [format_trans]() { return format_trans->get_auto_convert(); });
 
     py::register_exception<TraceError>(m, "TraceError");
+
+    m.def("create_complex", [](py::object real, py::object imag) {
+        return TensorWrapper::make(
+                py_tensor_type,
+                imperative::apply(
+                        CreateComplex(),
+                        TensorWrapper::try_cast(real.ptr())->m_tensor->data(),
+                        TensorWrapper::try_cast(imag.ptr())->m_tensor->data())[0]);
+    });
+
+    m.def("get_real", [](py::object complex) {
+        return TensorWrapper::make(
+                py_tensor_type,
+                imperative::apply(
+                        GetReal(),
+                        TensorWrapper::try_cast(complex.ptr())->m_tensor->data())[0]);
+    });
+
+    m.def("get_imag", [](py::object complex) {
+        return TensorWrapper::make(
+                py_tensor_type,
+                imperative::apply(
+                        GetImag(),
+                        TensorWrapper::try_cast(complex.ptr())->m_tensor->data())[0]);
+    });
 }
 
 #undef MGE_PY_INTERFACE

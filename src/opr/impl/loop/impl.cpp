@@ -235,6 +235,8 @@ public:
                 break;
             case DTypeEnum::Uint16:
                 break;
+            case DTypeEnum::Complex64:
+                break;
 #define cb(_dt)          \
     case DTypeEnum::_dt: \
         break;

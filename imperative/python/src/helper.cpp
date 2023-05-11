@@ -160,7 +160,8 @@ int to_mgb_supported_dtype_raw(int dtype) {
 #define FOREACH_NPY_DTYPE_PAIR(cb)                                             \
     cb(Uint8, NPY_UINT8) cb(Int8, NPY_INT8) cb(Uint16, NPY_UINT16)             \
             cb(Int16, NPY_INT16) cb(Int32, NPY_INT32) cb(Float16, NPY_FLOAT16) \
-                    cb(Float32, NPY_FLOAT32) cb(Bool, NPY_BOOL)
+                    cb(Float32, NPY_FLOAT32) cb(Bool, NPY_BOOL)                \
+                            cb(Complex64, NPY_COMPLEX64)
 
 #define FOREACH_NPY_MGB_DTYPE_PAIR(cb) \
     FOREACH_NPY_DTYPE_PAIR(cb)         \

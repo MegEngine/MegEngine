@@ -9,8 +9,11 @@ from ..core._imperative_rt.core2 import (
     Const,
     apply,
     broadcast_cpp,
+    create_complex,
     dtype_promotion,
     expand_dims_cpp,
+    get_imag,
+    get_real,
     split_cpp,
     squeeze_cpp,
 )
@@ -20,13 +23,14 @@ from ..core.ops.builtin import Copy, Identity
 from ..core.tensor.utils import astensor1d, convert_inputs, get_device, subgraph_fn
 from ..device import get_default_device
 from ..tensor import Tensor
-from .elemwise import ceil
+from .elemwise import ceil, cos, sin
 
 __all__ = [
     "arange",
     "broadcast_to",
     "concat",
     "cond_take",
+    "copy",
     "cumsum",
     "diag",
     "expand_dims",
@@ -35,21 +39,24 @@ __all__ = [
     "full",
     "full_like",
     "gather",
+    "imag",
     "linspace",
     "meshgrid",
     "ones",
     "ones_like",
+    "polar",
     "repeat",
     "reshape",
     "roll",
+    "scatter",
     "split",
     "squeeze",
     "stack",
-    "scatter",
-    "tile",
-    "copy",
-    "transpose",
     "swapaxes",
+    "tile",
+    "transpose",
+    "complex",
+    "real",
     "where",
     "zeros",
     "zeros_like",
@@ -415,6 +422,26 @@ def ones_like(inp: Tensor) -> Tensor:
          [1 1 1]], dtype=int32, device=xpux:0)
     """
     return full_like(inp, 1.0)
+
+
+def polar(abs: Tensor, angle: Tensor) -> Tensor:
+    return create_complex(abs * cos(angle), abs * sin(angle))
+
+
+def complex(real: Tensor, imag: Tensor) -> Tensor:
+    if not isinstance(real, Tensor):
+        real = Tensor(real)
+    if not isinstance(imag, Tensor):
+        imag = Tensor(imag)
+    return create_complex(real, imag)
+
+
+def real(complex: Tensor) -> Tensor:
+    return get_real(complex)
+
+
+def imag(complex: Tensor) -> Tensor:
+    return get_imag(complex)
 
 
 def full_like(inp: Tensor, value: Union[int, float]) -> Tensor:

@@ -19,15 +19,17 @@ public:
         GroupComm,
         DTypePromote,
         DimExpansion,
+        Complex,
         Format,
         Grad,
         Scalar,
         Symbol,
         Trace,
         Eval,
+        SEGMENT_COUNT,
     };
 
-    std::array<std::vector<std::shared_ptr<Transformation>>, 10> segments;
+    std::array<std::vector<std::shared_ptr<Transformation>>, SEGMENT_COUNT> segments;
 
 private:
     template <Segment segment>

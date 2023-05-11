@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <cfloat>
+#include <complex>
 #include <cstddef>
 #include <limits>
 
@@ -31,7 +32,7 @@ namespace megdnn {
 #define MEGDNN_FOREACH_DTYPE_NAME(cb)                                                \
     cb(Float32) cb(Uint8) cb(Int8) cb(Int16) cb(Int32) cb(IntB1) cb(IntB2) cb(IntB4) \
             cb(Byte) DNN_INC_FLOAT16(cb(Float16)) DNN_INC_FLOAT16(cb(BFloat16))      \
-                    cb(UintB4) cb(Bool) cb(Uint16)
+                    cb(UintB4) cb(Bool) cb(Uint16) cb(Complex64)
 
 /*!
  * \brief iterate through each full byte dtype
@@ -39,7 +40,7 @@ namespace megdnn {
 #define MEGDNN_FOREACH_FULL_BYTE_DTYPE(cb)                                      \
     cb(Float32) cb(Uint8) cb(Int8) cb(Int16) cb(Int32) cb(Byte)                 \
             DNN_INC_FLOAT16(cb(Float16)) DNN_INC_FLOAT16(cb(BFloat16)) cb(Bool) \
-                    cb(Uint16)
+                    cb(Uint16) cb(Complex64)
 
 /*!
  * \brief iterate through each fractional byte dtype
@@ -314,6 +315,7 @@ typedef bool dt_bool;
 typedef uint16_t dt_uint16;
 DNN_INC_FLOAT16(typedef half_float::half dt_float16;)
 DNN_INC_FLOAT16(typedef half_bfloat16::bfloat16 dt_bfloat16;)
+typedef std::complex<float> dt_complex64;
 
 #define MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE 100000
 #if MEGDNN_CC_HOST
@@ -341,6 +343,7 @@ struct DTypeEnum {
 #endif
     Bool = 12,
     Uint16 = 13,
+    Complex64 = 14,
 #define FST(_name) _name = MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE,
 #define D(_name)   _name,
     MEGDNN_FOREACH_PARAMETERIZED_DTYPE_2(FST, D)
@@ -356,12 +359,28 @@ DTypeEnum(uint32_t e) : ev(e) {}
 
 #if MEGDNN_CC_HOST
 //! dtype numeric category fo
-enum class DTypeCategory : int { OTHER, FLOAT, INT, LOWBIT, QUANTIZED, BOOL };
+enum class DTypeCategory : int {
+    OTHER,
+    FLOAT,
+    INT,
+    LOWBIT,
+    QUANTIZED,
+    BOOL,
+    COMPLEX,
+};
 //! dtype signedness
 enum class DTypeSignedness : int { OTHER, UNSIGNED, SIGNED };
 #else
     struct DTypeCategory {
-        enum Ev { OTHER, FLOAT, INT, LOWBIT, QUANTIZED, BOOL };
+        enum Ev {
+            OTHER,
+            FLOAT,
+            INT,
+            LOWBIT,
+            QUANTIZED,
+            BOOL,
+            COMPLEX,
+        };
         int ev;
     };
     struct DTypeSignedness {
@@ -446,6 +465,15 @@ public:
     size_t low_bit() const { return m_trait->low_bit; }
 
     bool is_low_bit() const { return low_bit() != 0; }
+
+    bool is_complex() const {
+        return
+#if MEGDNN_CC_HOST
+                m_trait->category == DTypeCategory::COMPLEX;
+#else
+                    m_trait->category.ev == DTypeCategory::Ev::COMPLEX;
+#endif
+    }
 
     bool is_quantized_lowbit() const {
         return low_bit() != 0 &&
@@ -663,6 +691,11 @@ DNN_INC_FLOAT16(MEGDNN_DEF_DT(
 template <>
 struct DTypeTrait<dtype::Byte> {
     MEGDNN_DEF_DT_BASIC_FIELDS(Byte, dt_byte, OTHER, OTHER, 0, false);
+};
+
+template <>
+struct DTypeTrait<dtype::Complex64> {
+    MEGDNN_DEF_DT_BASIC_FIELDS(Complex64, dt_complex64, COMPLEX, SIGNED, 0, false);
 };
 
 #define MEGDNN_DEF_FRACTION_DT(_name, b)                                              \

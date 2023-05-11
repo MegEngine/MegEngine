@@ -400,6 +400,8 @@ cg::OperatorNodeBase::NodeProp* Loop::do_make_node_prop() const {
                     break;
                 case DTypeEnum::Bool:
                     break;
+                case DTypeEnum::Complex64:
+                    break;
 
 #define cb(x)          \
     case DTypeEnum::x: \
