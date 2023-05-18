@@ -1,3 +1,4 @@
+from ... import functional as F
 from .. import linear as Float
 from .module import QATModule
 
@@ -13,10 +14,16 @@ class Linear(Float.Linear, QATModule):
             Default: True
     """
 
+    def calc_linear_qat(self, inp):
+        w_qat = self.apply_quant_weight(self.weight)
+        b_qat = self.apply_quant_bias(self.bias, inp, w_qat)
+        linear = self.calc_linear(inp, w_qat, b_qat)
+        return linear
+
     def forward(self, inp):
         w_qat = self.apply_quant_weight(self.weight)
         b_qat = self.apply_quant_bias(self.bias, inp, w_qat)
-        return self.apply_quant_activation(self._calc_linear(inp, w_qat, b_qat))
+        return self.apply_quant_activation(self.calc_linear(inp, w_qat, b_qat))
 
     @classmethod
     def from_float_module(cls, float_module: Float.Linear):
@@ -30,3 +37,12 @@ class Linear(Float.Linear, QATModule):
         qmod.weight = float_module.weight
         qmod.bias = float_module.bias
         return qmod
+
+
+class LinearRelu(Linear):
+    r"""A :class:`~.QATModule` include :class:`~.module.Linear` and :func:`~.relu` with QAT support.
+    Could be applied with :class:`~.Observer` and :class:`~.quantization.fake_quant.FakeQuantize`.
+    """
+
+    def forward(self, inp):
+        return self.apply_quant_activation(F.relu(self.calc_linear_qat(inp)))

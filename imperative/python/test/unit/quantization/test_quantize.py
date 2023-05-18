@@ -5,11 +5,14 @@ from megengine import Parameter, Tensor
 from megengine import module as Float
 from megengine.functional import ones, zeros
 from megengine.module import (
+    BatchNorm1d,
     BatchNorm2d,
     Conv2d,
     ConvBn2d,
     ConvTranspose2d,
     ConvTransposeBn2d,
+    Linear,
+    LinearBn1d,
     ReLU,
 )
 from megengine.module import qat as QAT
@@ -33,7 +36,10 @@ from megengine.quantization.quantize import (
     quantize_qat,
     reset_qconfig,
 )
-from megengine.utils.bn_fusion import fuse_conv_bn_relu_module
+from megengine.utils.bn_fusion import (
+    fuse_conv_bn_relu_module,
+    fuse_linear_bn_relu_module,
+)
 
 
 class FloatNet(Float.Module):
@@ -380,6 +386,46 @@ def test_ConvTransposeBn2d_fold_weight_bias():
     fused_conv.train()
     expected_result = bn(conv(inputs))
     actual_result = fused_conv(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+
+def test_LinearBn1d_fold_weight_bias():
+    in_features = 10
+    out_features = 5
+
+    linear = Linear(in_features, out_features)
+    bn = BatchNorm1d(out_features)
+    relu = ReLU()
+
+    fused_linear = fuse_linear_bn_relu_module(linear, bn, relu)
+    bn.eval()
+    fused_linear.eval()
+    inputs = Tensor(np.random.randn(4, in_features).astype(np.float32))
+    expected_result = relu(bn(linear(inputs)))
+    actual_result = fused_linear(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+    linear.eval()
+    bn.eval()
+    relu.eval()
+    fused_linear = fuse_linear_bn_relu_module(linear, bn, relu)
+    fused_linear.eval()
+    expected_result = relu(linear(inputs))
+    actual_result = fused_linear(inputs)
+    np.testing.assert_allclose(
+        expected_result.numpy(), actual_result.numpy(), atol=1e-4
+    )
+
+    linear.train()
+    bn.train()
+    fused_linear = fuse_linear_bn_relu_module(linear, bn, None)
+    fused_linear.train()
+    expected_result = bn(linear(inputs))
+    actual_result = fused_linear(inputs)
     np.testing.assert_allclose(
         expected_result.numpy(), actual_result.numpy(), atol=1e-4
     )

@@ -24,7 +24,8 @@ from .dropout import Dropout
 from .elemwise import Elemwise
 from .embedding import Embedding
 from .identity import Identity
-from .linear import Linear
+from .linear import Linear, LinearRelu
+from .linear_bn import LinearBn1d, LinearBnRelu1d
 from .lrn import LocalResponseNorm
 from .module import Module
 from .multiheadattn import MultiHeadAttention

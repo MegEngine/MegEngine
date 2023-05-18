@@ -19,6 +19,10 @@ from megengine.module import (
     ConvTransposeBn2d,
     ConvTransposeRelu2d,
     DequantStub,
+    Linear,
+    LinearBn1d,
+    LinearBnRelu1d,
+    LinearRelu,
     Module,
     QuantStub,
 )
@@ -329,4 +333,128 @@ def test_qat_conv_transpose2d():
         qat_outputs = qat_net(inputs)
         np.testing.assert_allclose(
             normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6
+        )
+
+
+def test_qat_linearbn1d():
+    in_features = 10
+    out_features = 5
+
+    class TestNet(Module):
+        def __init__(self, bias):
+            super().__init__()
+            self.quant = QuantStub()
+            self.dequant = DequantStub()
+            self.linear_bn = LinearBn1d(in_features, out_features, bias=bias,)
+
+        def forward(self, inp):
+            out = self.quant(inp)
+            out = self.linear_bn(out)
+            out = self.dequant(out)
+            return out
+
+    inputs = tensor(np.random.randn(4, in_features).astype(np.float32))
+    for bias in [True, False]:
+        net = TestNet(bias)
+        net.train()
+        qat_net = quantize_qat(net, inplace=False)
+        disable_fake_quant(qat_net)
+        normal_outputs = net(inputs)
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            net.linear_bn.bn.running_mean.numpy(),
+            qat_net.linear_bn.bn.running_mean.numpy(),
+            atol=5e-8,
+        )
+        np.testing.assert_allclose(
+            net.linear_bn.bn.running_var.numpy(),
+            qat_net.linear_bn.bn.running_var.numpy(),
+            atol=5e-7,
+        )
+
+        net.eval()
+        normal_outputs = net(inputs)
+        qat_net.eval()
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6,
+        )
+
+
+def test_qat_linear_relu():
+    in_features = 10
+    out_features = 5
+
+    class TestNet(Module):
+        def __init__(self, bias):
+            super().__init__()
+            self.quant = QuantStub()
+            self.dequant = DequantStub()
+            self.linear_relu = LinearRelu(in_features, out_features, bias=bias,)
+
+        def forward(self, inp):
+            out = self.quant(inp)
+            out = self.linear_relu(out)
+            out = self.dequant(out)
+            return out
+
+    inputs = tensor(np.random.randn(4, in_features).astype(np.float32))
+    for bias in [True, False]:
+        net = TestNet(bias)
+        net.train()
+        qat_net = quantize_qat(net, inplace=False)
+        disable_fake_quant(qat_net)
+        normal_outputs = net(inputs)
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6,
+        )
+
+        net.eval()
+        normal_outputs = net(inputs)
+        qat_net.eval()
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6,
+        )
+
+
+def test_qat_linear_bn_relu():
+    in_features = 10
+    out_features = 5
+
+    class TestNet(Module):
+        def __init__(self, bias):
+            super().__init__()
+            self.quant = QuantStub()
+            self.dequant = DequantStub()
+            self.linear_bn_relu = LinearBnRelu1d(in_features, out_features, bias=bias,)
+
+        def forward(self, inp):
+            out = self.quant(inp)
+            out = self.linear_bn_relu(out)
+            out = self.dequant(out)
+            return out
+
+    inputs = tensor(np.random.randn(4, in_features).astype(np.float32))
+    for bias in [True, False]:
+        net = TestNet(bias)
+        net.train()
+        qat_net = quantize_qat(net, inplace=False)
+        disable_fake_quant(qat_net)
+        normal_outputs = net(inputs)
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6,
+        )
+
+        net.eval()
+        normal_outputs = net(inputs)
+        qat_net.eval()
+        qat_outputs = qat_net(inputs)
+        np.testing.assert_allclose(
+            normal_outputs.numpy(), qat_outputs.numpy(), atol=1e-6,
         )

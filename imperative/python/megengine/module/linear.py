@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..functional.nn import linear
+from ..functional.nn import linear, relu
 from ..tensor import Parameter
 from . import init
 from .module import Module
@@ -62,13 +62,22 @@ class Linear(Module):
         if self.bias is not None:
             init.zeros_(self.bias)
 
-    def _calc_linear(self, x, weight, bias):
+    def calc_linear(self, x, weight, bias):
         return linear(x, weight, bias, compute_mode=self.compute_mode)
 
     def forward(self, x):
-        return self._calc_linear(x, self.weight, self.bias)
+        return self.calc_linear(x, self.weight, self.bias)
 
     def _module_info_string(self) -> str:
         return "in_features={}, out_features={}, bias={}".format(
             self.in_features, self.out_features, self.bias is not None
         )
+
+
+class LinearRelu(Linear):
+    r"""A fused :class:`~.Module` including :class:`~.module.Linear` and :func:`~.relu`.
+    Could be replaced with :class:`~.QATModule` version :class:`~.qat.LinearRelu` using :func:`~.quantize.quantize_qat`.
+    """
+
+    def forward(self, inp):
+        return relu(self.calc_linear(inp, self.weight, self.bias))
