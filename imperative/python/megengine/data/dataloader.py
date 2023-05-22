@@ -178,12 +178,9 @@ class DataLoader:
 
         main_memory = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024 / 1024
         total_memory = (self.num_workers + 1) * main_memory
-        current_memory = (
-            int(os.popen("cat /sys/fs/cgroup/memory/memory.limit_in_bytes").read())
-            / 1024
-            / 1024
-            / 1024
-        )
+        limit_in_bytes = os.popen("cat /sys/fs/cgroup/memory/memory.limit_in_bytes")
+        current_memory = int(limit_in_bytes.read()) / 1024 / 1024 / 1024
+        limit_in_bytes.close()
         if current_memory < total_memory:
             logger.warning(
                 "Each worker need to read the shared meta-data, which will be increasing the reference count."
