@@ -672,7 +672,17 @@ PyObject* TensorWrapper::format() {
 PyObject* TensorWrapper::numpy() {
     auto hv = m_tensor->numpy();
     if (!hv) {
-        PyErr_SetString(PyExc_ValueError, "tensor invalid");
+        if (TransformationManager::get_instance()
+                    .segments[TransformationManager::Segment::Eval]
+                    .size() > 1) {
+            PyErr_SetString(
+                    PyExc_ValueError,
+                    "tensor invalid, can not infer value of this tensor under "
+                    "trace(symbolic=True). You can try to use trace(symbolic=False) to "
+                    "avoid this issue.");
+        } else {
+            PyErr_SetString(PyExc_ValueError, "tensor invalid");
+        }
         return nullptr;
     }
     auto arr = py::reinterpret_steal<py::array>(
