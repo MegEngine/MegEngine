@@ -2,7 +2,9 @@
 
 #include "src/common/handle_impl.h"
 #include "src/common/utils.h"
+#if !MGE_BUILD_CL_ONLY
 #include "src/fallback/handle.h"
+#endif
 #include "src/naive/handle.h"
 
 #include "midout.h"

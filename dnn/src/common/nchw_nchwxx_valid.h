@@ -1,7 +1,15 @@
 #pragma once
 #include "megdnn/oprs.h"
+
+#if !MGE_BUILD_CL_ONLY
 #include "src/fallback/conv_bias/opr_impl.h"
+#endif
+
 namespace megdnn {
+#if MGE_BUILD_CL_ONLY
+using NonlineMode = ConvBias::Param::NonlineMode;
+using BiasMode = ConvBiasForward::BiasMode;
+#endif
 namespace {
 enum NchwNchwxxType {
     NCHW44_FP32,
