@@ -164,6 +164,7 @@ void GroupNormForwardImpl::exec(
         _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
         _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             data.layout, weight.layout, bias.layout, dst.layout, mean.layout,
             rstd.layout, workspace.size);
@@ -176,6 +177,9 @@ void GroupNormForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 void GroupNormBackwardImpl::exec(
@@ -183,6 +187,7 @@ void GroupNormBackwardImpl::exec(
         _megdnn_tensor_in mean, _megdnn_tensor_in rstd, _megdnn_tensor_out ddata,
         _megdnn_tensor_out dweight, _megdnn_tensor_out dbias,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             diff.layout, data.layout, weight.layout, mean.layout, rstd.layout,
             ddata.layout, dweight.layout, dbias.layout, workspace.size);
@@ -199,6 +204,9 @@ void GroupNormBackwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

@@ -1,12 +1,12 @@
 #pragma once
 #include "megdnn/oprs.h"
 
-#if !MGE_BUILD_CL_ONLY
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 #include "src/fallback/conv_bias/opr_impl.h"
 #endif
 
 namespace megdnn {
-#if MGE_BUILD_CL_ONLY
+#if MGE_BUILD_WITHOUT_NAIVE_EXEC
 using NonlineMode = ConvBias::Param::NonlineMode;
 using BiasMode = ConvBiasForward::BiasMode;
 #endif

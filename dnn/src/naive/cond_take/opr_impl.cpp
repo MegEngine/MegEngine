@@ -46,6 +46,7 @@ size_t CondTakeImpl::get_workspace_in_bytes(
 CondTakeImpl::Output CondTakeImpl::exec(
         _megdnn_tensor_in data, _megdnn_tensor_in mask, _megdnn_workspace workspace,
         DynOutMallocPolicyCall malloc_policy) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto size = check_exec_get_size(data.layout, mask.layout, workspace.size);
     auto idx_tmp = workspace.ptr<dt_int32>();
 
@@ -83,6 +84,10 @@ CondTakeImpl::Output CondTakeImpl::exec(
     }
 
     return {{out_data, out_idx}};
+#else
+    __builtin_trap();
+    return {};
+#endif
 }
 
 template <typename ctype>

@@ -16,6 +16,7 @@ using namespace naive;
 void Convolution3DForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_conv3d_fwd) {
         auto filter_meta =
                 check_exec(src.layout, filter.layout, dst.layout, workspace.size);
@@ -47,11 +48,15 @@ void Convolution3DForwardImpl::exec(
         megdnn_assert_internal(0);
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 void Convolution3DBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta =
             check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
 #define cb(dt)                                                            \
@@ -70,10 +75,14 @@ void Convolution3DBackwardDataImpl::exec(
 #undef cb
 
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 void Convolution3DBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta = check_exec(src.layout, diff.layout, grad.layout, workspace.size);
 #define cb(dt)                                                            \
     do {                                                                  \
@@ -91,6 +100,9 @@ void Convolution3DBackwardFilterImpl::exec(
 #undef cb
 
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 std::vector<Convolution3DForward::Algorithm*> Convolution3DForwardImpl::
         get_all_algorithms(

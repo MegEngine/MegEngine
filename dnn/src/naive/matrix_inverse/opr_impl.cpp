@@ -68,6 +68,7 @@ void do_exec(ctype* dst, const ctype* src, size_t batch, size_t n, void* workspa
 
 void MatrixInverseImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     size_t batch, n;
     check_exec(src.layout, dst.layout, workspace, &batch, &n);
 #define cb(DType)                                                                  \
@@ -80,6 +81,9 @@ void MatrixInverseImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

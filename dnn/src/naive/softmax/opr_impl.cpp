@@ -42,6 +42,7 @@ size_t SoftmaxForwardImpl::get_workspace_in_bytes(
 
 void SoftmaxForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 
     WorkspaceBundle workspace_bundle{
@@ -68,6 +69,9 @@ void SoftmaxForwardImpl::exec(
 
     elemwise_opr->param().mode = Elemwise::Mode::TRUE_DIV;
     elemwise_opr->exec({dst, deno_tensor}, dst);
+#else
+    __builtin_trap();
+#endif
 }
 
 //=============================Softmax backward ============================
@@ -96,6 +100,7 @@ size_t SoftmaxBackwardImpl::get_workspace_in_bytes(
 void SoftmaxBackwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, diff.layout, grad.layout, workspace.size);
 
     WorkspaceBundle workspace_bundle{
@@ -124,6 +129,9 @@ void SoftmaxBackwardImpl::exec(
 
     elemwise_opr->param().mode = Elemwise::Mode::SUB;
     elemwise_opr->exec({mul_lhs_tensor, mul_rhs_tensor}, grad);
+#else
+    __builtin_trap();
+#endif
 }
 }  // namespace naive
 }  // namespace megdnn

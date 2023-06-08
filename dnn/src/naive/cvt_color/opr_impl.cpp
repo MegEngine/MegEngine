@@ -916,6 +916,7 @@ void CvtColorImpl::cvt_color_exec(
 
 void CvtColorImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     using namespace megcv;
     check_exec(src.layout, dst.layout, workspace.size);
     MEGDNN_DISPATCH_CPU_KERN_OPR(
@@ -924,6 +925,9 @@ void CvtColorImpl::exec(
             } else if (dst.layout.dtype == dtype::Uint8()) {
                 cvt_color_exec<uchar>(src, dst);
             } else { megdnn_throw("Unsupported datatype of CvtColor optr."); });
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

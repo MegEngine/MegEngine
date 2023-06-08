@@ -31,6 +31,7 @@ void DiagImpl::exec_internal(
 
 void DiagImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 #define cb(DType)                                                           \
     if (src.layout.dtype == DType()) {                                      \
@@ -42,6 +43,9 @@ void DiagImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     cb(::megdnn::dtype::Bool)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

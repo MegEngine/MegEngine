@@ -77,6 +77,7 @@ void exec_set(
 void IndexingOneHotForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in index, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, index.layout, dst.layout, workspace.size);
 
 #define cb(_dt)                                                                   \
@@ -90,11 +91,15 @@ void IndexingOneHotForwardImpl::exec(
         cb(megdnn::dtype::Quantized8Asymm) default : megdnn_throw("bad dtype");
     }
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 void IndexingSetOneHotForwardImpl::exec(
         _megdnn_tensor_inout data, _megdnn_tensor_in index, _megdnn_tensor_in sub,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(data.layout, index.layout, sub.layout, workspace.size);
 
 #define cb(_dt)                                                                    \
@@ -108,6 +113,9 @@ void IndexingSetOneHotForwardImpl::exec(
         cb(megdnn::dtype::Quantized8Asymm) default : megdnn_throw("bad dtype");
     }
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

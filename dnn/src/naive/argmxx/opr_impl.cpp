@@ -58,6 +58,7 @@ namespace naive {
 
 void ArgmaxForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 #define cb(DType)                                                          \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {            \
@@ -68,10 +69,14 @@ void ArgmaxForwardImpl::exec(
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 void ArgminForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 #define cb(DType)                                                           \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {             \
@@ -82,6 +87,9 @@ void ArgminForwardImpl::exec(
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

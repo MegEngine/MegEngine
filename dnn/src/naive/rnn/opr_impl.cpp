@@ -25,6 +25,7 @@ void RNNImpl::exec(
         _megdnn_tensor_in flatten_weights, _megdnn_tensor_out output,
         _megdnn_tensor_out hy, _megdnn_tensor_out reserve_space,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_rnn_fwd) {
         auto _param = param();
         size_t D = _param.bidirectional ? 2 : 1;
@@ -46,6 +47,9 @@ void RNNImpl::exec(
                 _param.nonlineMode, this->handle(), new_workspace);
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t RNNImpl::get_workspace_in_bytes(
@@ -81,6 +85,7 @@ void RNNBackwardImpl::exec(
         _megdnn_tensor_in dy, _megdnn_tensor_in dhy, _megdnn_tensor_in flatten_weights,
         _megdnn_tensor_in reserve_space, _megdnn_tensor_out dx, _megdnn_tensor_out dhx,
         _megdnn_tensor_out dw, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     TensorNDArray layer_inputs;
     TensorNDArray layer_outputs;
     std::vector<std::vector<TensorNDArray>> cell_seq_states;
@@ -143,6 +148,9 @@ void RNNBackwardImpl::exec(
             cells, D, num_layers, input_size, param().bias, nonlineMode, layer_inputs,
             layer_outputs, cell_seq_states, dy, dhy_arr, dx, dhx_arr, dw,
             this->handle(), new_workspace);
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t RNNBackwardImpl::get_workspace_in_bytes(

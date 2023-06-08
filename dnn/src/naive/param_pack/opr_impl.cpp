@@ -31,6 +31,7 @@ void ParamPackConcatImpl::exec(
         _megdnn_tensor_in srcs, _megdnn_tensor_in offsets, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
     check_exec(dst.layout, offsets.layout, srcs.layout);
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 
 #define cb(DType)                                                                    \
     if (dst.layout.dtype == DType()) {                                               \
@@ -42,4 +43,8 @@ void ParamPackConcatImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     megdnn_throw("bad type");
 #undef cb
+
+#else
+    __builtin_trap();
+#endif
 }

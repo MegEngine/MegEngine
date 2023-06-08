@@ -9,6 +9,7 @@ using namespace naive;
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
         const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto size = param.size;
     auto src0 = param[0];
     auto src1 = param[1];
@@ -26,10 +27,14 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16x32x32x32(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+#else
+    __builtin_trap();
+#endif
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16xf32xf32xf32(
         const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto size = param.size;
     auto src0 = param[0];
     auto src1 = param[1];
@@ -47,10 +52,14 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_int16xf32xf32xf32(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+#else
+    __builtin_trap();
+#endif
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_uint8xf32xf32xf32(
         const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto size = param.size;
     auto src0 = param[0];
     auto src1 = param[1];
@@ -68,10 +77,15 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_uint8xf32xf32xf32(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+#else
+    MEGDNN_MARK_USED_VAR(dst);
+    __builtin_trap();
+#endif
 }
 
 void ElemwiseMultiTypeImpl::on_mul_int16xf32xf32(
         const ElemwiseOpParamN<2>& param, const TensorND& dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto size = param.size;
     auto src0 = param[0];
     auto src1 = param[1];
@@ -86,10 +100,14 @@ void ElemwiseMultiTypeImpl::on_mul_int16xf32xf32(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+#else
+    __builtin_trap();
+#endif
 }
 
 void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
         const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     switch (param[0].layout.dtype.enumv()) {
 #define cb(t)                  \
     case DTypeTrait<t>::enumv: \
@@ -99,11 +117,15 @@ void ElemwiseMultiTypeImpl::on_fuse_mul_add3_iXxf32xf32xi8(
         default:
             megdnn_throw("unsupported src dtype");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 template <typename ctype>
 void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8(
         const ElemwiseOpParamN<3>& param, const TensorND& dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto size = param.size;
     auto src0 = param[0];
     auto src1 = param[1];
@@ -122,6 +144,9 @@ void ElemwiseMultiTypeImpl::dispatch_fma3_iXxf32xf32xi8(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(work());
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

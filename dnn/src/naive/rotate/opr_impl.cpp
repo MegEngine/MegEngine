@@ -30,6 +30,7 @@ void exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out dst, bool clockwise
 
 void RotateImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 #define cb(DType)                                                   \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {     \
@@ -42,6 +43,9 @@ void RotateImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

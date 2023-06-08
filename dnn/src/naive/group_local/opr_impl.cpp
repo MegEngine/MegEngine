@@ -126,6 +126,7 @@ namespace naive {
 void GroupLocalForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, filter.layout, dst.layout, workspace.size);
     auto N = src.layout.shape[0], IC = src.layout.shape[1], IH = src.layout.shape[2],
          IW = src.layout.shape[3];
@@ -156,11 +157,15 @@ void GroupLocalForwardImpl::exec(
     } else {
         megdnn_assert_internal(false);
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void GroupLocalBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
     auto N = grad.layout.shape[0], IC = grad.layout.shape[1], IH = grad.layout.shape[2],
          IW = grad.layout.shape[3];
@@ -175,11 +180,15 @@ void GroupLocalBackwardDataImpl::exec(
     MEGDNN_DISPATCH_CPU_KERN_OPR(backward_data(
             filter.ptr<dt_float32>(), diff.ptr<dt_float32>(), grad.ptr<dt_float32>(), N,
             IC, IH, IW, FH, FW, OC, OH, OW, group, pad_h, pad_w, stride_h, stride_w));
+#else
+    __builtin_trap();
+#endif
 }
 
 void GroupLocalBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, diff.layout, grad.layout, workspace.size);
     auto N = src.layout.shape[0], IC = src.layout.shape[1], IH = src.layout.shape[2],
          IW = src.layout.shape[3];
@@ -194,6 +203,9 @@ void GroupLocalBackwardFilterImpl::exec(
     MEGDNN_DISPATCH_CPU_KERN_OPR(backward_filter(
             src.ptr<dt_float32>(), diff.ptr<dt_float32>(), grad.ptr<dt_float32>(), N,
             IC, IH, IW, FH, FW, OC, OH, OW, group, pad_h, pad_w, stride_h, stride_w));
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

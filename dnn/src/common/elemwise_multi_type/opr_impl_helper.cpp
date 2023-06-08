@@ -17,6 +17,7 @@ using namespace megdnn;
 
 void ElemwiseMultiTypeImplHelper::exec(
         _megdnn_in const TensorNDArray& src, _megdnn_tensor_out dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     switch (m_param.mode) {
         case Mode::FUSE_MUL_ADD3_INT16x32x32x32:
             on_fuse_mul_add3_int16x32x32x32(make_elemwise_op_param<3>(src, dst), dst);
@@ -112,6 +113,9 @@ void ElemwiseMultiTypeImplHelper::exec(
         default:
             megdnn_throw("invalid mode");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 #undef ON_QUANTIZED_MODE

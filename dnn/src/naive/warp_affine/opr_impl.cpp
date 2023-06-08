@@ -196,6 +196,7 @@ void WarpAffineImpl::kern_naive_nhwc(
 void WarpAffineImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, mat.layout, dst.layout, workspace.size);
 
     if (warp::is_cv_available(
@@ -249,6 +250,9 @@ void WarpAffineImpl::exec(
         }
 #undef cb
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

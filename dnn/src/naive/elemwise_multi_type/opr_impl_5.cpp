@@ -10,6 +10,7 @@ using namespace naive;
 
 void ElemwiseMultiTypeImpl::on_quantized_mode(
         const ElemwiseOpParamN<3>& param, const TensorND& dst, Elemwise::Mode mode) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     megdnn_assert(
             param[0].layout.dtype.category() == DTypeCategory::QUANTIZED &&
             param[0].layout.dtype.category() == param[1].layout.dtype.category() &&
@@ -38,6 +39,9 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         default:
             megdnn_assert_internal(0);
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

@@ -65,6 +65,7 @@ MaskConvForwardImpl::MaskConvForwardImpl(Handle* handle) : MaskConvForward(handl
 void MaskConvForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in mask,
         _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MEGDNN_MARK_USED_VAR(mask);
     m_conv_opr->param() = this->param();
     m_conv_opr->exec(src, filter, dst, nullptr, workspace);
@@ -78,6 +79,9 @@ void MaskConvForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb);
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t MaskConvForwardImpl::get_workspace_in_bytes(
@@ -90,6 +94,7 @@ size_t MaskConvForwardImpl::get_workspace_in_bytes(
 
 void MaskPropagateImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto p = param();
 #define cb(DType)                                                                  \
     if (src.layout.dtype == DType()) {                                             \
@@ -103,6 +108,9 @@ void MaskPropagateImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 }  // namespace naive
 }  // namespace megdnn

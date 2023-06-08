@@ -621,6 +621,7 @@ void WarpPerspectiveForwardImpl::exec(
         _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_in mat,
         _megdnn_tensor_in mat_idx, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     TensorLayoutArray srcs_layout;
     for (auto&& src : srcs) {
         srcs_layout.push_back(src.layout);
@@ -680,11 +681,15 @@ void WarpPerspectiveForwardImpl::exec(
 #undef KERN_NAIVE_MULTI_SRC
 #undef DISPATCH_ST_MT_MULTI_SRC
 #undef DISPATCH_ST_MULTI_SRC
+#else
+    __builtin_trap();
+#endif
 }
 
 void WarpPerspectiveForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
         _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec_allow_nhwc_mat_idx(
             src.layout, mat.layout, mat_idx.layout, dst.layout, workspace.size);
     size_t batch = dst.layout[0];
@@ -841,6 +846,9 @@ void WarpPerspectiveForwardImpl::exec(
 #undef KERN_NAIVE
 #undef DISPATCH_ST_MT
 #undef DISPATCH_ST
+#else
+    __builtin_trap();
+#endif
 }
 
 template <typename ctype, typename mtype>
@@ -906,6 +914,7 @@ void WarpPerspectiveBackwardDataImpl::kern_naive(
 void WarpPerspectiveBackwardDataImpl::exec(
         _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx, _megdnn_tensor_in diff,
         _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(mat.layout, mat_idx.layout, diff.layout, grad.layout, workspace.size);
     megdnn_assert(
             param().format == param::WarpPerspective::Format::NCHW,
@@ -931,6 +940,9 @@ void WarpPerspectiveBackwardDataImpl::exec(
                          diff.layout.dtype.name())
                          .c_str());
 #undef DISPATCH_ST_MT
+#else
+    __builtin_trap();
+#endif
 }
 
 template <typename ctype, typename mtype>
@@ -1046,6 +1058,7 @@ void WarpPerspectiveBackwardMatImpl::kern_naive(
 void WarpPerspectiveBackwardMatImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in mat, _megdnn_tensor_in mat_idx,
         _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             src.layout, mat.layout, mat_idx.layout, diff.layout, grad.layout,
             workspace.size);
@@ -1071,6 +1084,9 @@ void WarpPerspectiveBackwardMatImpl::exec(
                          diff.layout.dtype.name())
                          .c_str());
 #undef DISPATCH_ST_MT
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

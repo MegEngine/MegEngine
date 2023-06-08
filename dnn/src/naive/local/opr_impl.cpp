@@ -66,7 +66,11 @@ void LocalForwardImpl::naive_kern(const FloatNoncontigBatchKernParam& param) {
 void LocalForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     exec_use_float_noncontig_batch(src, filter, dst, workspace);
+#else
+    __builtin_trap();
+#endif
 }
 
 LocalForwardImpl::FloatNoncontigBatchKernParam LocalForwardImpl::make_float_kern_param(
@@ -98,6 +102,7 @@ void LocalForwardImpl::exec_use_float_noncontig_batch(
 void LocalBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
     size_t N = grad.layout.shape[0], IC = grad.layout.shape[1],
            IH = grad.layout.shape[2], IW = grad.layout.shape[3];
@@ -141,11 +146,15 @@ void LocalBackwardDataImpl::exec(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern());
+#else
+    __builtin_trap();
+#endif
 }
 
 void LocalBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, diff.layout, grad.layout, workspace.size);
     size_t N = src.layout.shape[0], IC = src.layout.shape[1], IH = src.layout.shape[2],
            IW = src.layout.shape[3];
@@ -189,6 +198,9 @@ void LocalBackwardFilterImpl::exec(
         }
     };
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern());
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

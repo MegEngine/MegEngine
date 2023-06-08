@@ -367,6 +367,7 @@ void exec_internal(
 void SVDForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out u, _megdnn_tensor_out s,
         _megdnn_tensor_out vt, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, u.layout, s.layout, vt.layout, workspace.size);
 
     Param p = param();
@@ -384,6 +385,9 @@ void SVDForwardImpl::exec(
         return;
     }
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

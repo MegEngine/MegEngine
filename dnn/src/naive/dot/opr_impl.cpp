@@ -27,6 +27,7 @@ namespace naive {
 void DotForwardImpl::exec(
         _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(A.layout, B.layout, C.layout, workspace.size);
     auto n = A.layout.total_nr_elems();
 #define cb(DType)                                                               \
@@ -40,6 +41,9 @@ void DotForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

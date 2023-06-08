@@ -53,6 +53,7 @@ void exec_mesh_indexing(
 void MeshIndexingImpl::exec(
         _megdnn_tensor_in src, const IndexDesc& desc, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(src.layout, dst.layout, desc);
 #define cb(DType)                                                                \
@@ -65,6 +66,9 @@ void MeshIndexingImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 /* ========================= IncrMeshIndexing =========================== */
@@ -87,6 +91,7 @@ void exec_incr_mesh_indexing(
 void IncrMeshIndexingImpl::exec(
         _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                   \
@@ -100,6 +105,9 @@ void IncrMeshIndexingImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 /* ========================= BatchedMeshIndexing =========================== */
@@ -122,6 +130,7 @@ void exec_batched_mesh_indexing(
 void BatchedMeshIndexingImpl::exec(
         _megdnn_tensor_in src, const IndexDesc& desc, _megdnn_tensor_out dst,
         _megdnn_workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, desc);
 
 #define cb(DType)                                                   \
@@ -135,6 +144,9 @@ void BatchedMeshIndexingImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 /* ========================= SetMeshIndexing =========================== */
@@ -157,6 +169,7 @@ void exec_set_mesh_indexing(
 void SetMeshIndexingImpl::exec(
         _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                  \
@@ -171,6 +184,9 @@ void SetMeshIndexingImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 /* =========================== BatchedIncrMeshIndexing =========================== */
@@ -193,6 +209,7 @@ void exec_batched_incr_mesh_indexing(
 void BatchedIncrMeshIndexingImpl::exec(
         _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                           \
@@ -206,6 +223,9 @@ void BatchedIncrMeshIndexingImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 /* =========================== BatchedSetMeshIndexing =========================== */
@@ -228,6 +248,7 @@ void exec_batched_set_mesh_indexing(
 void BatchedSetMeshIndexingImpl::exec(
         _megdnn_tensor_inout data, _megdnn_tensor_in value, const IndexDesc& desc,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MEGDNN_MARK_USED_VAR(workspace);
     check_exec(data.layout, value.layout, desc);
 #define cb(DType)                                                          \
@@ -242,6 +263,9 @@ void BatchedSetMeshIndexingImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

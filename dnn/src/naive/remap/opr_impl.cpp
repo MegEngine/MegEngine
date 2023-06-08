@@ -12,6 +12,7 @@ namespace {
 template <param::Remap::Format format>
 inline int get_offset(int, int, int, int, int, int);
 
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 template <>
 inline int get_offset<param::Remap::Format::NCHW>(
         int height, int width, int channel, int h, int w, int) {
@@ -29,6 +30,7 @@ inline int get_offset<param::Remap::Format::NHWCD4>(
         int height, int width, int channel, int, int w, int c) {
     return ((height * c + channel) * w + width) * 4;
 }
+#endif
 
 template <
         typename ctype, param::Remap::Format format,
@@ -340,6 +342,7 @@ void remap_NEAREST_backwardmat(
 void RemapImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in map_xy, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, map_xy.layout, dst.layout, workspace.size);
     int N, C, IH, IW, OH, OW;
     if (param().format == param::Remap::Format::NCHW) {
@@ -424,11 +427,15 @@ void RemapImpl::exec(
         default:
             megdnn_throw("unsupported dtype in remap naive\n");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void RemapBackwardDataImpl::exec(
         _megdnn_tensor_in map_xy, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(map_xy.layout, diff.layout, grad.layout, workspace.size);
     megdnn_assert(
             param().format == param::Remap::Format::NCHW,
@@ -480,11 +487,15 @@ void RemapBackwardDataImpl::exec(
         default:
             megdnn_throw("unsupported dtype in remap backward naive\n");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void RemapBackwardMatImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in map_xy, _megdnn_tensor_in diff,
         _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, map_xy.layout, diff.layout, grad.layout, workspace.size);
     megdnn_assert(
             param().format == param::Remap::Format::NCHW,
@@ -537,6 +548,9 @@ void RemapBackwardMatImpl::exec(
         default:
             megdnn_throw("unsupported dtype in remap backward naive\n");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

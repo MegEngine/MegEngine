@@ -109,6 +109,7 @@ void Images2NeibsForwardImpl::exec_internal(
 
 void Images2NeibsForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 #define cb(DType)                                                             \
     if (src.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {               \
@@ -119,6 +120,9 @@ void Images2NeibsForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb);
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 template <typename T>
@@ -163,6 +167,7 @@ void Images2NeibsBackwardImpl::exec_internal(
 
 void Images2NeibsBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(diff.layout, grad.layout, workspace.size);
 #define cb(DType)                                                               \
     if (diff.layout.dtype == DType()) {                                         \
@@ -173,6 +178,9 @@ void Images2NeibsBackwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb);
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

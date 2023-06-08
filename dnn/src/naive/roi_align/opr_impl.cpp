@@ -155,6 +155,7 @@ namespace naive {
 void ROIAlignForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in rois, _megdnn_tensor_out dst,
         _megdnn_tensor_out index, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, rois.layout, dst.layout, index.layout, workspace.size);
 #define cb(DType)                                                                \
     if (src.layout.dtype == DType()) {                                           \
@@ -165,11 +166,15 @@ void ROIAlignForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 void ROIAlignBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in rois, _megdnn_tensor_in index,
         _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(diff.layout, rois.layout, index.layout, grad.layout, workspace.size);
 #define cb(DType)                                                                 \
     if (diff.layout.dtype == DType()) {                                           \
@@ -180,6 +185,9 @@ void ROIAlignBackwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

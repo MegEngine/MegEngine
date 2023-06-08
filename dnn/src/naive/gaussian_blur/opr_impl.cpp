@@ -171,6 +171,7 @@ void GaussianBlurImpl::exec_internal(_megdnn_tensor_in src, _megdnn_tensor_out d
 
 void GaussianBlurImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace /*workspace*/) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 #define cb(DType)                                                     \
     if (src.layout.dtype == DType()) {                                \
         using ctype = typename DTypeTrait<DType>::ctype;              \
@@ -181,6 +182,9 @@ void GaussianBlurImpl::exec(
     cb(dtype::Float32);
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

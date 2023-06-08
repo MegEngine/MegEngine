@@ -76,6 +76,7 @@ void dispatch_exec(
         HandleImpl* handle, const TensorND& data, const TensorND& value,
         const IndexingMultiAxisVec::IndexDesc& index,
         const IndexingMultiAxisVec::ExecInfo& exec_info) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 #define cb(_dt)                                                           \
     case DTypeTrait<_dt>::enumv: {                                        \
         MEGDNN_DISPATCH_CPU_KERN(                                         \
@@ -88,6 +89,9 @@ void dispatch_exec(
         cb(::megdnn::dtype::Bool) default : megdnn_throw("bad dtype");
     }
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // anonymous namespace

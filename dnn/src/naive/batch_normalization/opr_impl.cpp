@@ -201,6 +201,7 @@ void BNForwardImpl::exec(
         _megdnn_tensor_inout mean, _megdnn_tensor_inout variance,
         _megdnn_tensor_out batch_mean, _megdnn_tensor_out batch_inv_variance,
         _megdnn_tensor_out, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             src.layout, bn_scale.layout, bn_bias.layout, mean.layout, variance.layout,
             batch_mean.layout, batch_inv_variance.layout, dst.layout, workspace.size);
@@ -232,6 +233,9 @@ void BNForwardImpl::exec(
                 megdnn_assert_internal(0);
         }
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 WorkspaceBundle BNBackwardImpl::get_workspace_bundle(
@@ -255,6 +259,7 @@ void BNBackwardImpl::exec(
         _megdnn_tensor_in bn_scale, _megdnn_tensor_in, _megdnn_tensor_out d_bn_scale,
         _megdnn_tensor_out d_bn_bias, _megdnn_tensor_out dx_out,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             x_in.layout, dy_in.layout, saved_batch_mean.layout,
             saved_batch_inv_variance.layout, bn_scale.layout, d_bn_scale.layout,
@@ -291,6 +296,9 @@ void BNBackwardImpl::exec(
                 megdnn_assert_internal(0);
         }
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 #undef rep_4d

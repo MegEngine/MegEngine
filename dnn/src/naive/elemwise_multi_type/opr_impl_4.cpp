@@ -10,6 +10,7 @@ using namespace naive;
 
 void ElemwiseMultiTypeImpl::on_quantized_mode(
         const ElemwiseOpParamN<2>& param, const TensorND& dst, Elemwise::Mode mode) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     megdnn_assert(
             param[0].layout.dtype.enumv() == param[1].layout.dtype.enumv() &&
             param[0].layout.dtype.category() == DTypeCategory::QUANTIZED);
@@ -60,10 +61,14 @@ void ElemwiseMultiTypeImpl::on_quantized_mode(
         default:
             megdnn_assert_internal(0);
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void ElemwiseMultiTypeImpl::dest_type_bool_mode(
         const ElemwiseOpParamN<1>& param, const TensorND& dst, Elemwise::Mode mode) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     switch (mode) {
         case Elemwise::Mode::ISINF: {
             switch (param[0].layout.dtype.enumv()) {
@@ -109,10 +114,14 @@ void ElemwiseMultiTypeImpl::dest_type_bool_mode(
     }
 #undef DISPATCH_MODE
 #undef DISPATCH
+#else
+    __builtin_trap();
+#endif
 }
 
 void ElemwiseMultiTypeImpl::dest_type_bool_mode(
         const ElemwiseOpParamN<2>& param, const TensorND& dst, Elemwise::Mode mode) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     megdnn_assert(param[0].layout.dtype.enumv() == param[1].layout.dtype.enumv());
     switch (mode) {
         case Elemwise::Mode::EQ: {
@@ -185,6 +194,9 @@ void ElemwiseMultiTypeImpl::dest_type_bool_mode(
     }
 #undef DISPATCH_MODE
 #undef DISPATCH
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

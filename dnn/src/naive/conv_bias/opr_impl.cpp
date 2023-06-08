@@ -212,6 +212,7 @@ void ConvBiasForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
         _megdnn_tensor_in z, _megdnn_tensor_out dst,
         const PreprocessedFilter* preprocessed_filter, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_conv_bias_fwd) {
         dt_byte* workspace_ptr = workspace.raw_ptr;
         // ============================w * f + b================================
@@ -285,6 +286,9 @@ void ConvBiasForwardImpl::exec(
                 param().nonlineMode, sfb, z, dst, workspace_ptr));
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<ConvBiasForward::Algorithm*> ConvBiasForwardImpl::get_all_algorithms(

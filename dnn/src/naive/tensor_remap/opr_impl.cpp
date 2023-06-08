@@ -57,6 +57,7 @@ void backward(const TensorND& diff, const TensorND& map, const TensorND& grad) {
 void IndexingRemapForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in map, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, map.layout, dst.layout, workspace.size);
     switch (src.layout.dtype.enumv()) {
 #define cb(dt)                                                                       \
@@ -71,11 +72,15 @@ void IndexingRemapForwardImpl::exec(
                                   "remap forward naive\n",
                                   src.layout.dtype.name()));
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void IndexingRemapBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in map, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(diff.layout, map.layout, grad.layout, workspace.size);
     switch (diff.layout.dtype.enumv()) {
 #define cb(dt)                                                     \
@@ -90,6 +95,9 @@ void IndexingRemapBackwardImpl::exec(
                           "unsupported dtype %s in indexing remap backward naive\n",
                           diff.layout.dtype.name()));
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

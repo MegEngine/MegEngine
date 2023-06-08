@@ -1,4 +1,5 @@
 #include "src/naive/lstm/opr_impl.h"
+#include "src/common/utils.cuh"
 #include "src/naive/rnn/funcs.h"
 #include "src/naive/rnn/rnn.h"
 
@@ -14,6 +15,7 @@ void LSTMImpl::exec(
         _megdnn_tensor_in flatten_weights, _megdnn_tensor_out output,
         _megdnn_tensor_out hy, _megdnn_tensor_out cy, _megdnn_tensor_out reserve_space,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_lstm_fwd) {
         auto _param = param();
         size_t D = _param.bidirectional ? 2 : 1;
@@ -33,6 +35,9 @@ void LSTMImpl::exec(
                 param::RNNCell::NonlineMode::IDENTITY, this->handle(), new_workspace);
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t LSTMImpl::get_workspace_in_bytes(
@@ -67,6 +72,7 @@ void LSTMBackwardImpl::exec(
         _megdnn_tensor_in dcy, _megdnn_tensor_in flatten_weights,
         _megdnn_tensor_in reserve_space, _megdnn_tensor_out dx, _megdnn_tensor_out dhx,
         _megdnn_tensor_out dcx, _megdnn_tensor_out dw, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     TensorNDArray layer_inputs;
     TensorNDArray layer_outputs;
     std::vector<std::vector<TensorNDArray>> cell_seq_states;
@@ -121,6 +127,9 @@ void LSTMBackwardImpl::exec(
             param::RNNCell::NonlineMode::IDENTITY, layer_inputs, layer_outputs,
             cell_seq_states, dy, dhy_arr, dx, dhx_arr, dw, this->handle(),
             new_workspace);
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t LSTMBackwardImpl::get_workspace_in_bytes(

@@ -110,29 +110,41 @@ void naive_kern(
 void LocalShareForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, filter.layout, dst.layout, workspace.size);
     MEGDNN_DISPATCH_CPU_KERN_OPR(
             (naive_kern<dt_float32, dt_float32, dt_float32, dt_float32, StrategyFwd>(
                     src, filter, dst, param())););
+#else
+    __builtin_trap();
+#endif
 }
 
 void LocalShareBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
     MEGDNN_DISPATCH_CPU_KERN_OPR(
             (naive_kern<
                     dt_float32, dt_float32, dt_float32, dt_float32, StrategyBwdData>(
                     grad, filter, diff, param())););
+#else
+    __builtin_trap();
+#endif
 }
 
 void LocalShareBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, diff.layout, grad.layout, workspace.size);
     MEGDNN_DISPATCH_CPU_KERN_OPR(
             (naive_kern<dt_float32, dt_float32, dt_float32, dt_float32, StrategyBwdFlt>(
                     src, grad, diff, param())););
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<LocalShareForward::Algorithm*> LocalShareForwardImpl::get_all_algorithms(

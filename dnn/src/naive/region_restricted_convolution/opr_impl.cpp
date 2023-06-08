@@ -17,6 +17,7 @@ using namespace naive;
 void RegionRestrictedConvolutionForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_region_restricted_conv_fwd) {
         auto filter_meta = check_exec(
                 src.layout, filter.layout, rin.layout, rout.layout, dst.layout,
@@ -63,6 +64,9 @@ void RegionRestrictedConvolutionForwardImpl::exec(
                 dst.layout.dtype.name(), static_cast<int>(param().compute_mode)));
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t RegionRestrictedConvolutionBackwardDataImpl::get_workspace_in_bytes(
@@ -91,6 +95,7 @@ size_t RegionRestrictedConvolutionBackwardDataImpl::get_workspace_in_bytes(
 void RegionRestrictedConvolutionBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta = check_exec(
             filter.layout, diff.layout, rin.layout, rout.layout, grad.layout,
             workspace.size);
@@ -153,6 +158,9 @@ void RegionRestrictedConvolutionBackwardDataImpl::exec(
             filter.layout.dtype.name(), diff.layout.dtype.name(),
             rin.layout.dtype.name(), rout.layout.dtype.name(), grad.layout.dtype.name(),
             static_cast<int>(cmode)));
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t RegionRestrictedConvolutionBackwardFilterImpl::get_workspace_in_bytes(
@@ -175,6 +183,7 @@ size_t RegionRestrictedConvolutionBackwardFilterImpl::get_workspace_in_bytes(
 void RegionRestrictedConvolutionBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_in rin,
         _megdnn_tensor_in rout, _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta = check_exec(
             src.layout, diff.layout, rin.layout, rout.layout, grad.layout,
             workspace.size);
@@ -237,6 +246,9 @@ void RegionRestrictedConvolutionBackwardFilterImpl::exec(
 #endif
 
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

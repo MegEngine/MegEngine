@@ -485,6 +485,7 @@ size_t RelayoutFormatImpl::get_workspace_in_bytes(
 
 void RelayoutFormatImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     megdnn_assert(
             src.layout.dtype.category() == DTypeCategory::FLOAT ||
             src.layout.dtype.enumv() == DTypeEnum::Int32 ||
@@ -766,6 +767,9 @@ void RelayoutFormatImpl::exec(
                     m_handle, extract_from_workspace(dst, ws_nd, param().group););
         }
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

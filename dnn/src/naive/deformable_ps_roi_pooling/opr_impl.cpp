@@ -243,6 +243,7 @@ void Fwd::exec(
         _megdnn_tensor_in data, _megdnn_tensor_in rois, _megdnn_tensor_in trans,
         _megdnn_tensor_out out_data, _megdnn_tensor_out out_count,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             data.layout, rois.layout, trans.layout, out_data.layout, out_count.layout,
             workspace.size);
@@ -281,6 +282,9 @@ void Fwd::exec(
 
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern(param()));
     return;
+#else
+    __builtin_trap();
+#endif
 }
 
 /* ============== Bwd Implementation ============== */
@@ -290,6 +294,7 @@ void Bwd::exec(
         _megdnn_tensor_in out_diff, _megdnn_tensor_in out_count,
         _megdnn_tensor_out data_diff, _megdnn_tensor_out trans_diff,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             data.layout, rois.layout, trans.layout, out_diff.layout, out_count.layout,
             data_diff.layout, trans_diff.layout, workspace.size);
@@ -328,6 +333,9 @@ void Bwd::exec(
 
     MEGDNN_DISPATCH_CPU_KERN_OPR(kern(param()));
     return;
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

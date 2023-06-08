@@ -106,6 +106,7 @@ static void deformable_conv_forward(
 void Fwd::exec(
         _megdnn_tensor_in im, _megdnn_tensor_in filter, _megdnn_tensor_in offset,
         _megdnn_tensor_in mask, _megdnn_tensor_out dst, _megdnn_workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto&& out = dst;
     auto filter_meta =
             make_canonized_filter_meta(im.layout.ndim, filter.layout, offset.layout);
@@ -122,6 +123,9 @@ void Fwd::exec(
             mask.ptr<float>(), dst.ptr<float>(), OC, IC, N, FH, FW, IH, IW, PH, PW, DH,
             DW, SH, SW, OH, OW, group, deformable_group));
     return;
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<DeformableConvForward::Algorithm*> Fwd::get_all_algorithms(
@@ -404,6 +408,7 @@ size_t BwdFlt::get_workspace_in_bytes(
 void BwdFlt::exec(
         _megdnn_tensor_in im, _megdnn_tensor_in offset, _megdnn_tensor_in mask,
         _megdnn_tensor_in out_grad, _megdnn_tensor_out filter_grad, _megdnn_workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto&& out = out_grad;
     auto fm = make_canonized_filter_meta(
             im.layout.ndim, filter_grad.layout, offset.layout);
@@ -420,6 +425,9 @@ void BwdFlt::exec(
             im.ptr<float>(), offset.ptr<float>(), mask.ptr<float>(),
             out_grad.ptr<float>(), filter_grad.ptr<float>(), OC, IC, N, FH, FW, IH, IW,
             PH, PW, DH, DW, SH, SW, OH, OW, group, deformable_group));
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<BwdFlt::Algorithm*> BwdFlt::get_all_algorithms(
@@ -469,6 +477,7 @@ void BwdData::exec(
         _megdnn_tensor_in mask, _megdnn_tensor_in out_grad, _megdnn_tensor_out im_grad,
         _megdnn_tensor_out offset_grad, _megdnn_tensor_out mask_grad,
         _megdnn_workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto fm = make_canonized_filter_meta(im.layout.ndim, filter.layout, offset.layout);
     size_t group = fm.group, deformable_group = fm.deformable_group, N = im.layout[0],
            IC = im.layout[1], IH = im.layout[2], IW = im.layout[3],
@@ -483,6 +492,9 @@ void BwdData::exec(
             mask.ptr<float>(), out_grad.ptr<float>(), im_grad.ptr<float>(),
             offset_grad.ptr<float>(), mask_grad.ptr<float>(), OC, IC, N, FH, FW, IH, IW,
             PH, PW, SH, SW, DH, DW, OH, OW, group, deformable_group));
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<BwdData::Algorithm*> BwdData::get_all_algorithms(

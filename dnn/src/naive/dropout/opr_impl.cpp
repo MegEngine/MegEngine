@@ -56,6 +56,7 @@ size_t DropoutForwardImpl::get_mask_size_in_bytes(const TensorLayout& inp) {
 void DropoutForwardImpl::exec(
         _megdnn_tensor_in inp, _megdnn_tensor_out oup, _megdnn_tensor_out mask,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(inp.layout, oup.layout, mask.layout, workspace.size);
     size_t length = inp.layout.total_nr_elems();
     uint64_t seed = param().seed;
@@ -73,11 +74,15 @@ void DropoutForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 void DropoutBackwardImpl::exec(
         _megdnn_tensor_in doup, _megdnn_tensor_in mask, _megdnn_tensor_out dinp,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(doup.layout, mask.layout, dinp.layout, workspace.size);
     size_t length = doup.layout.total_nr_elems();
 
@@ -92,6 +97,9 @@ void DropoutBackwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

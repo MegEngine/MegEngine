@@ -64,6 +64,7 @@ namespace naive {
 void TQTForwardImpl::exec(
         _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_out output,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(input.layout, scale.layout, output.layout, workspace.size);
     ElemwiseOpParamN<3> src;
     src[0] = input;
@@ -79,12 +80,16 @@ void TQTForwardImpl::exec(
     }
     cb(dtype::Float32)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 void TQTBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
         _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             diff.layout, input.layout, scale.layout, grad_x.layout, grad_s.layout,
             workspace.size);
@@ -105,6 +110,9 @@ void TQTBackwardImpl::exec(
     }
     cb(dtype::Float32)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

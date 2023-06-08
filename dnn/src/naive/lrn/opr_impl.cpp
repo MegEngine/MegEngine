@@ -71,6 +71,7 @@ namespace naive {
 
 void LRNForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
 #define cb(DType)                                                               \
     if (src.layout.dtype == DType()) {                                          \
@@ -81,11 +82,15 @@ void LRNForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 void LRNBackwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_tensor_in diff,
         _megdnn_tensor_out grad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, diff.layout, grad.layout, workspace.size);
 #define cb(DType)                                                                 \
     if (src.layout.dtype == DType()) {                                            \
@@ -96,6 +101,9 @@ void LRNBackwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

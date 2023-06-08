@@ -44,6 +44,7 @@ void ConcatForwardImpl::exec_internal(
 void ConcatForwardImpl::exec(
         _megdnn_in const TensorNDArray& srcs, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 #define cb(DType)                                                                 \
     if (dst.layout.dtype.enumv() == DTypeTrait<DType>::enumv) {                   \
         using ctype = typename DTypeTrait<DType>::ctype;                          \
@@ -54,6 +55,9 @@ void ConcatForwardImpl::exec(
     MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

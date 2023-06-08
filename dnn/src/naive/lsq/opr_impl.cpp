@@ -70,6 +70,7 @@ void LSQForwardImpl::exec(
         _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
         _megdnn_tensor_in grad_scale, _megdnn_tensor_out output,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             input.layout, scale.layout, zero_point.layout, grad_scale.layout,
             output.layout, workspace.size);
@@ -91,6 +92,9 @@ void LSQForwardImpl::exec(
     }
     cb(dtype::Float32)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 void LSQBackwardImpl::exec(
@@ -98,6 +102,7 @@ void LSQBackwardImpl::exec(
         _megdnn_tensor_in zero_point, _megdnn_tensor_in grad_scale,
         _megdnn_tensor_out grad_x, _megdnn_tensor_out grad_s,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             diff.layout, input.layout, scale.layout, zero_point.layout,
             grad_scale.layout, grad_x.layout, grad_s.layout, workspace.size);
@@ -122,6 +127,9 @@ void LSQBackwardImpl::exec(
     }
     cb(dtype::Float32)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

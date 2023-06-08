@@ -27,6 +27,7 @@ namespace megdnn {
 namespace naive {
 
 void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in delta) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(dest.layout, delta.layout);
     ElemwiseOpParamN<2> src = make_param(dest, delta);
     auto param = m_param;
@@ -39,6 +40,9 @@ void AddUpdateForwardImpl::exec(_megdnn_tensor_inout dest, _megdnn_tensor_in del
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

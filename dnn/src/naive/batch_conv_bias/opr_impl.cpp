@@ -50,6 +50,7 @@ size_t BatchConvBiasForwardImpl::get_workspace_in_bytes(
 void BatchConvBiasForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_in bias,
         _megdnn_tensor_in z, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta = check_exec(
             src.layout, filter.layout, bias.layout, z.layout, dst.layout,
             workspace.size);
@@ -94,6 +95,9 @@ void BatchConvBiasForwardImpl::exec(
 #undef DISPATCH_RAW
     MEGDNN_DISPATCH_CPU_KERN_OPR(handle_z_inp_and_activation_naive(
             param().nonlineMode, sfb, z, dst, reinterpret_cast<dt_byte*>(ws.get(1))));
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<BatchConvBiasForward::Algorithm*> BatchConvBiasForwardImpl::

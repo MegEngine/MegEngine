@@ -152,6 +152,7 @@ void warp_affine_cv(
 void megdnn::naive::warp_affine_cv_exec(
         _megdnn_tensor_in src, _megdnn_tensor_in trans, _megdnn_tensor_in dst,
         float border_value, BorderMode bmode, InterpolationMode imode, Handle* handle) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     size_t ch = dst.layout[3];
     size_t width = dst.layout[2];
     size_t height = dst.layout[1];
@@ -209,6 +210,9 @@ void megdnn::naive::warp_affine_cv_exec(
     } else {
         megdnn_throw("Unsupported datatype of WarpAffine optr.");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

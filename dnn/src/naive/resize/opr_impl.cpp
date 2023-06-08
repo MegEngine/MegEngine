@@ -318,6 +318,7 @@ void ResizeImpl::kern_naive_nchwx(const KernParam<ctype>& kern_param) {
 
 void ResizeImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
     if (param().format == param::Resize::Format::NCHW) {
 #define cb(dt, ct, _midout_iv)                                              \
@@ -385,6 +386,9 @@ void ResizeImpl::exec(
                 param().format == param::Resize::Format::NHWC, "invalid resize format");
         MEGDNN_DISPATCH_CPU_KERN_OPR(resize_cv_exec(src, dst, param().imode));
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // ***************************Backward*************************** //

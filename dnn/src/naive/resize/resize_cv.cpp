@@ -1345,6 +1345,7 @@ void resize_opencv(const Mat<T>& src, Mat<T>& dst, InterpolationMode ip) {
 void megdnn::naive::resize_cv_exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst,
         param::Resize::InterpolationMode imode) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     megdnn_assert(src.layout[3] == 1 || src.layout[3] == 3, "unsupported src channel");
     for (size_t i = 0; i < src.layout.shape[0]; ++i) {
         if (dst.layout.dtype == dtype::Float32()) {
@@ -1413,6 +1414,9 @@ void megdnn::naive::resize_cv_exec(
             megdnn_throw("Unsupported datatype of resize optr.");
         }
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 // vim: syntax=cpp.doxygen

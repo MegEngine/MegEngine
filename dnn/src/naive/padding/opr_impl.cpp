@@ -144,6 +144,7 @@ void backward_exec_reflect_internal(
 }
 
 void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     forward_check_exec(src.layout, dst.layout);
     SmallVector<size_t> offsets(get_offsets());
     ShapeParams params;
@@ -198,9 +199,13 @@ void PaddingForwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         default:
             megdnn_assert(false, "unsupported padding mode!");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void PaddingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     backward_check_exec(src.layout, dst.layout);
     SmallVector<size_t> offsets(get_offsets());
     ShapeParams params;
@@ -253,6 +258,9 @@ void PaddingBackwardImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
         default:
             megdnn_assert(false, "unsupported padding mode!");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t PaddingForwardImpl::get_workspace_in_bytes(

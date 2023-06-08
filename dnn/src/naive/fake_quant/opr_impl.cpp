@@ -52,6 +52,7 @@ namespace naive {
 void FakeQuantForwardImpl::exec(
         _megdnn_tensor_in input, _megdnn_tensor_in scale, _megdnn_tensor_in zero_point,
         _megdnn_tensor_out output, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             input.layout, scale.layout, zero_point.layout, output.layout,
             workspace.size);
@@ -71,12 +72,16 @@ void FakeQuantForwardImpl::exec(
     }
     cb(dtype::Float32)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 void FakeQuantBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in input, _megdnn_tensor_in scale,
         _megdnn_tensor_in zero_point, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(
             diff.layout, input.layout, scale.layout, zero_point.layout, grad.layout,
             workspace.size);
@@ -98,6 +103,9 @@ void FakeQuantBackwardImpl::exec(
     }
     cb(dtype::Float32)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 }  // namespace naive
 }  // namespace megdnn

@@ -230,6 +230,19 @@ if(NOT APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+    # check more -Wl,-z,nocopyreloc -Wl,--icf=all to reduce elf size -fuse-ld=gold is
+    # not compat with -Wl,-z,nocopyreloc -Wl,--icf=all so we only try enable icf on
+    # ANDROID
+    check_cxx_compiler_flag("-Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld"
+                            LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL)
+    if(LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL AND ANDROID)
+      message(STATUS "icf is supported in this compiler")
+      set(CMAKE_EXE_LINKER_FLAGS
+          "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld")
+      set(CMAKE_SHARED_LINKER_FLAGS
+          "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld")
+    endif()
+
   endif()
 endif()
 
@@ -666,6 +679,8 @@ endif()
 
 if(NOT MGE_ENABLE_EXCEPTIONS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+  # some lite macro will triger format-security error when disable exceptions
+  add_definitions(-Wno-format-security)
 endif()
 
 if(MGE_BUILD_IMPERATIVE_RT OR ANDROID)

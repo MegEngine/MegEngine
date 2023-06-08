@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstring>
+#include "src/common/utils.cuh"
 
 namespace megdnn {
 namespace naive {
@@ -186,6 +187,7 @@ void LSTMCellWeightWrapper::backward(
         const TensorNDArray& douts, _megdnn_tensor_out dx, TensorNDArray& dstates,
         _megdnn_tensor_out dwi, _megdnn_tensor_out dwh, _megdnn_tensor_out dbias,
         _megdnn_workspace workspace) const {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     size_t used_workspace_size = 0;
     // get gates
     auto lstm_opr = handle->create_operator<LSTMCellForward>();
@@ -272,6 +274,9 @@ void LSTMCellWeightWrapper::backward(
     CellWeightsWrapperBase::backward(
             handle, nonlineMode, x, {states[0]}, gates_tensor, {gates_grad}, dx,
             base_dstates, dwi, dwh, dbias, new_workspace);
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace rnn

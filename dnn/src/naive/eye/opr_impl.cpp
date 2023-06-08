@@ -9,6 +9,7 @@ namespace megdnn {
 namespace naive {
 
 void EyeImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(dst.layout, workspace.size);
     megdnn_assert(
             std::max(dst.layout.shape[0], dst.layout.shape[1]) <
@@ -22,6 +23,9 @@ void EyeImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     cb(::megdnn::dtype::Bool)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 
 template <typename ctype>

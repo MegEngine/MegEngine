@@ -18,6 +18,7 @@ using namespace naive;
 void ConvolutionForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in filter, _megdnn_tensor_out dst,
         const PreprocessedFilter* preprocessed_filter, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_conv_fwd) {
         auto filter_meta = check_exec(
                 src.layout, filter.layout, dst.layout, workspace.size,
@@ -61,6 +62,9 @@ void ConvolutionForwardImpl::exec(
                 dst.layout.dtype.name(), static_cast<int>(param().compute_mode)));
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
@@ -88,6 +92,7 @@ size_t ConvolutionBackwardDataImpl::get_workspace_in_bytes(
 void ConvolutionBackwardDataImpl::exec(
         _megdnn_tensor_in filter, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta =
             check_exec(filter.layout, diff.layout, grad.layout, workspace.size);
     using ComputeMode = Param::ComputeMode;
@@ -163,6 +168,9 @@ void ConvolutionBackwardDataImpl::exec(
             "unsupported ConvolutionBackwardData(%s, %s) -> %s with cmode = %d",
             filter.layout.dtype.name(), diff.layout.dtype.name(),
             grad.layout.dtype.name(), static_cast<int>(cmode)));
+#else
+    __builtin_trap();
+#endif
 }
 
 size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
@@ -184,6 +192,7 @@ size_t ConvolutionBackwardFilterImpl::get_workspace_in_bytes(
 void ConvolutionBackwardFilterImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in diff, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto filter_meta = check_exec(src.layout, diff.layout, grad.layout, workspace.size);
     using ComputeMode = Param::ComputeMode;
     auto cmode = param().compute_mode;
@@ -228,6 +237,9 @@ void ConvolutionBackwardFilterImpl::exec(
 #endif
 
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<ConvolutionForward::Algorithm*> ConvolutionForwardImpl::get_all_algorithms(

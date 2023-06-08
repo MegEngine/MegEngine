@@ -26,6 +26,7 @@ namespace megdnn {
 namespace naive {
 void MaskedFillImpl::exec(
         _megdnn_tensor_in origin, _megdnn_tensor_in index, _megdnn_tensor_out dest) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(origin.layout, index.layout, dest.layout);
 
     megdnn_assert(origin.layout.is_contiguous() && index.layout.is_contiguous());
@@ -49,6 +50,9 @@ void MaskedFillImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     cb(::megdnn::dtype::Bool)
 #undef cb
+#else
+    __builtin_trap();
+#endif
 }
 }  // namespace naive
 }  // namespace megdnn

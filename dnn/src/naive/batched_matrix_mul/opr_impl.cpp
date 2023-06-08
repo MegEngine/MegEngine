@@ -20,6 +20,7 @@ size_t BatchedMatrixMulForwardImpl::get_workspace_in_bytes(
 void BatchedMatrixMulForwardImpl::exec(
         _megdnn_tensor_in A, _megdnn_tensor_in B, _megdnn_tensor_out C,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(A.layout, B.layout, C.layout, workspace.size);
 
     m_opr->param() = this->param();
@@ -46,6 +47,9 @@ void BatchedMatrixMulForwardImpl::exec(
         TensorND C_{C.layout.remove_axis(0), C_ref};
         m_opr->exec(A_, B_, C_, workspace);
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 std::vector<BatchedMatrixMulForward::Algorithm*> BatchedMatrixMulForwardImpl::

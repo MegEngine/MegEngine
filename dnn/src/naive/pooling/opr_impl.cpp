@@ -413,6 +413,7 @@ void post_process(const TensorND& dst, TensorND& comp_dst) {
 
 void PoolingForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, workspace.size);
     TensorND comp_src = src;
     TensorND comp_dst = dst;
@@ -563,6 +564,9 @@ void PoolingForwardImpl::exec(
 #undef DISPATCH_WITH_POOLER_AND_IDX_GETTER
 #undef DISPATCH_WITH_POOLER
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 PoolingForward::Algorithm* PoolingForwardImpl::get_algorithm_from_desc(
@@ -647,6 +651,7 @@ size_t PoolingBackwardImpl::get_workspace_in_bytes(
 void PoolingBackwardImpl::exec(
         _megdnn_tensor_in ssrc, _megdnn_tensor_in sdst, _megdnn_tensor_in sdiff,
         _megdnn_tensor_out sgrad, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(ssrc.layout, sdst.layout, sdiff.layout, sgrad.layout, workspace.size);
     TensorND src = ssrc;
     TensorND dst = sdst;
@@ -728,6 +733,9 @@ void PoolingBackwardImpl::exec(
     if (sgrad.layout.dtype.enumv() == DTypeTrait<dtype::BFloat16>::enumv) {
         ctypecvt.comp_to_dst_type(grad, sgrad);
     }
+#endif
+#else
+    __builtin_trap();
 #endif
 }
 

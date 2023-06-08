@@ -6,6 +6,7 @@ namespace megdnn {
 namespace naive {
 
 void LinspaceImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(dst.layout, workspace.size);
     size_t n = dst.layout.total_nr_elems();
 #define cb(DType)                                                                \
@@ -16,6 +17,9 @@ void LinspaceImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
     megdnn_assert_internal(0);
+#else
+    __builtin_trap();
+#endif
 }
 
 template <typename ctype>

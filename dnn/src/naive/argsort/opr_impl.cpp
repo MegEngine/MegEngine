@@ -53,6 +53,7 @@ namespace naive {
 void ArgsortForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_tensor_out indices,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout, indices.layout, workspace.size);
     auto M = src.layout.shape[0], N = src.layout.shape[1];
     switch (src.layout.dtype.enumv()) {
@@ -69,11 +70,15 @@ void ArgsortForwardImpl::exec(
         default:
             megdnn_throw("bad dtype");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 void ArgsortBackwardImpl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in indices, _megdnn_tensor_out grad,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(diff.layout, indices.layout, grad.layout, workspace.size);
     size_t M = grad.layout.shape[0], N = grad.layout.shape[1],
            SRC_W = indices.layout[1];
@@ -91,6 +96,9 @@ void ArgsortBackwardImpl::exec(
         default:
             megdnn_throw("bad dtype");
     }
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

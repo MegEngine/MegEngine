@@ -299,6 +299,7 @@ namespace naive {
 void CorrelationForwardImpl::exec(
         _megdnn_tensor_in data1, _megdnn_tensor_in data2, _megdnn_tensor_out dst,
         _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(data1.layout, data2.layout, dst.layout, workspace.size);
 #define cb(DType)                                                                \
     if (data1.layout.dtype == DType()) {                                         \
@@ -309,11 +310,15 @@ void CorrelationForwardImpl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 void CorrelationBackwardData1Impl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
         _megdnn_tensor_out grad1, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(diff.layout, data1.layout, data2.layout, grad1.layout, workspace.size);
 #define cb(DType)                                                  \
     if (diff.layout.dtype == DType()) {                            \
@@ -325,11 +330,15 @@ void CorrelationBackwardData1Impl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 void CorrelationBackwardData2Impl::exec(
         _megdnn_tensor_in diff, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
         _megdnn_tensor_out grad2, _megdnn_workspace workspace) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(diff.layout, data1.layout, data2.layout, grad2.layout, workspace.size);
 #define cb(DType)                                                  \
     if (diff.layout.dtype == DType()) {                            \
@@ -341,6 +350,9 @@ void CorrelationBackwardData2Impl::exec(
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
 #undef cb
     megdnn_throw("bad dtype");
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

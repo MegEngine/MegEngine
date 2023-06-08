@@ -190,6 +190,7 @@ void DctChannelSelectForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in mask_offset,
         _megdnn_tensor_in mask_val, _megdnn_tensor_out dst,
         _megdnn_workspace /*workspace*/) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     MIDOUT_BEGIN(megdnn_naive_dct_fwd) {
         int in = src.layout.shape[0];
         int ic = src.layout.shape[1];
@@ -220,6 +221,9 @@ void DctChannelSelectForwardImpl::exec(
         }
     }
     MIDOUT_END();
+#else
+    __builtin_trap();
+#endif
 }
 
 }  // namespace naive

@@ -247,6 +247,7 @@ template <typename Opr>
 std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
         const typename rdnn::AlgoChooser<Opr>::AlgoChooserHelper& helper,
         CircularDepsChecker& checker) {
+#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     auto&& search_item = megdnn::Algorithm::SearchItem{
             OprTypeFromOprTrait<Opr>::opr_type, helper.param(),
             to_layout_array<Opr>(helper.fastrun_layouts())};
@@ -274,6 +275,10 @@ std::vector<megdnn::Algorithm::SearchItem> flatten_search_space(
     ret.push_back(search_item);
     checker.remove(search_item);
     return ret;
+#else
+    __builtin_trap();
+    return {};
+#endif
 }
 
 //! serialize a algo's desc to string. format is
