@@ -115,11 +115,9 @@ void _set_priority_to_id(const std::vector<mgb::cg::VarNode*>& dest_vars) {
 }
 
 py::object Py_Varnode = py::none();
-
+const std::unique_ptr<mgb::OprFootprint> _imperative_sm_opr_footprint_ptr{
+        std::make_unique<mgb::OprFootprint>()};
 void init_graph_rt(py::module m) {
-    static const std::unique_ptr<mgb::OprFootprint> _imperative_sm_opr_footprint_ptr{
-            std::make_unique<mgb::OprFootprint>()};
-
     def_rendezvous<DeviceTensorND>(m, "DeviceTensorNDRendezvous");
 
     def_rendezvous<HostNDWithEvent>(m, "HostTensorNDRendezvous");

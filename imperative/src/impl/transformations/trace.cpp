@@ -83,7 +83,7 @@ VarNodeArray TraceResult::dump(
     std::unordered_map<std::string, std::vector<cg::OperatorNodeBase*>> name2ops;
     // iterate over opr_seq
     for (auto&& item : seq) {
-        auto&& [op, inputs, outputs] = item;
+        auto&& [op, inputs, outputs, type] = item;
         VarNodeArray input_nodes;
         for (auto&& input : inputs) {
             auto& node = nodes[input];
@@ -207,7 +207,8 @@ ValueRefList TracingTransformation::apply_transformation(
         auto wrapped_output = record_var(outputs[0], as_const, VarKind::Internal);
         auto input_id = wrapped_input->id();
         auto output_id = wrapped_output->id();
-        m_seq.push_back({{}, {input_id}, {output_id}});
+
+        m_seq.push_back({{}, {input_id}, {output_id}, OpKind::CreateTensor});
         return {wrapped_output};
     } else if (auto* get_attr = op.as<GetAttr>()) {
         auto unwrapped_input = unwrap_var(inputs[0]);
@@ -246,7 +247,30 @@ ValueRefList TracingTransformation::apply_transformation(
         }
         auto output = record_var(input, false, VarKind::Internal);
         m_vars[output->id()].mark = trace_mark_var->mark();
-        m_seq.push_back({{}, {tracing_var->id()}, {output->id()}});
+        m_seq.push_back(
+
+                {{}, {tracing_var->id()}, {output->id()}, OpKind::TraceMarkVar});
+        return {output};
+    } else if (auto* iomarker = op.as<IOMarkVar>()) {
+        mgb_assert(inputs.size() == 1, "IOMarkVar expects exactly one input");
+        auto input = inputs[0];
+        auto tracing_var = input.as_ref(m_value_type);
+        if (!tracing_var) {
+            bool is_input = iomarker->kind() == IOMarkVar::Kind::Input;
+            if (is_input) {
+                tracing_var = record_var(input, false, VarKind::External);
+            } else {
+                tracing_var = record_var(input, m_capture_as_const, VarKind::External);
+            }
+        } else {
+            input = tracing_var->value();
+        }
+        auto output = record_var(input, false, VarKind::Internal);
+        if (iomarker->kind() == IOMarkVar::Kind::Input)
+            m_vars[tracing_var->id()].inp_marker.insert(iomarker->mark());
+        else
+            m_vars[output->id()].out_marker.insert(iomarker->mark());
+        m_seq.push_back({{}, {tracing_var->id()}, {output->id()}, OpKind::IOMarkVar});
         return {output};
     } else if (auto* trace_name_var = op.as<RenameValue>()) {
         mgb_assert(inputs.size() == 1, "RenameValue expects exactly one input");
@@ -259,7 +283,7 @@ ValueRefList TracingTransformation::apply_transformation(
         }
         auto output = record_var(input, false, VarKind::Internal);
         m_vars[output->id()].name = trace_name_var->name();
-        m_seq.push_back({{}, {tracing_var->id()}, {output->id()}});
+        m_seq.push_back({{}, {tracing_var->id()}, {output->id()}, OpKind::Rename});
         return {output};
     } else if (op.is<GetName>()) {
         mgb_assert(inputs.size() == 1, "GetName expects exactly one input");
@@ -276,6 +300,78 @@ ValueRefList TracingTransformation::apply_transformation(
     } else {
         // TODO: handle DTRCommand and ...
         return op.fallback(inputs);
+    }
+}
+
+void TracingTransformation::postprocess_trace_result() {
+    std::unordered_map<size_t, size_t> identity_oi_map, identity_io_map;
+    for (auto&& op : m_seq) {
+        if (op.op == nullptr && op.inputs.size() == 1 && op.outputs.size() == 1) {
+            identity_oi_map[op.outputs[0]] = op.inputs[0];
+            identity_io_map[op.inputs[0]] = op.outputs[0];
+        }
+    }
+
+    for (auto&& op : m_seq) {
+        if (op.kind == OpKind::IOMarkVar) {
+            auto&& inpvar = m_vars[op.inputs[0]];
+            auto&& outvar = m_vars[op.outputs[0]];
+            if (inpvar.inp_marker.size() > 0) {
+                auto id = inpvar.id;
+                if (inpvar.kind != VarKind::External) {
+                    while (identity_oi_map.find(id) != identity_oi_map.end()) {
+                        id = identity_oi_map[id];
+                    }
+                    if (m_vars[id].kind == VarKind::External) {
+                        for (auto mark : inpvar.inp_marker) {
+                            mgb_assert(
+                                    inpmark_to_id.find(mark) == inpmark_to_id.end() ||
+                                            inpmark_to_id[mark] == id,
+                                    "two nodes have same mark");
+                            inpmark_to_id[mark] = id;
+                            m_vars[id].inp_marker.insert(mark);
+                        }
+                        inpvar.inp_marker.clear();
+                    }
+                } else {
+                    for (auto mark : inpvar.inp_marker) {
+                        mgb_assert(
+                                inpmark_to_id.find(mark) == inpmark_to_id.end() ||
+                                        inpmark_to_id[mark] == id,
+                                "two nodes have same mark");
+                        inpmark_to_id[mark] = id;
+                    }
+                }
+            } else {
+                mgb_assert(outvar.out_marker.size() > 0);
+                auto id = outvar.id;
+                if (!outvar.data_required) {
+                    while (identity_io_map.find(id) != identity_io_map.end()) {
+                        id = identity_io_map[id];
+                    }
+
+                    if (m_vars[id].data_required) {
+                        for (auto mark : outvar.out_marker) {
+                            mgb_assert(
+                                    outmark_to_id.find(mark) == outmark_to_id.end() ||
+                                            outmark_to_id[mark] == id,
+                                    "two nodes have same mark");
+                            outmark_to_id[mark] = id;
+                            m_vars[id].out_marker.insert(mark);
+                        }
+                        outvar.out_marker.clear();
+                    }
+                } else {
+                    for (auto mark : outvar.out_marker) {
+                        mgb_assert(
+                                outmark_to_id.find(mark) == outmark_to_id.end() ||
+                                        outmark_to_id[mark] == id,
+                                "two nodes have same mark");
+                        outmark_to_id[mark] = id;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -526,7 +622,10 @@ void CompiledTransformation::trace_input(size_t id, ValueRef value) {
                             var.device->to_string().c_str(),
                             device.to_string().c_str());
                 }
-                var_accessor.data_setter(value.dev_tensor()->as_nd());
+                if (m_setted_extern.find(id) == m_setted_extern.end()) {
+                    var_accessor.data_setter(value.dev_tensor()->as_nd());
+                    m_setted_extern.insert(id);
+                }
                 break;
             }
             case VarKind::Constant: {
@@ -732,6 +831,7 @@ void CompiledTransformation::wait() {
     m_pc = 0;
     std::exception_ptr graph_exc;
     std::swap(m_graph_exc, graph_exc);
+    m_setted_extern.clear();
     if (graph_exc) {
         // graph with exception cannot be reused
         recompile();

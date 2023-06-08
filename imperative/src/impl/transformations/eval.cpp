@@ -130,6 +130,11 @@ ValueRefList InterpreterTransformation::apply_transformation(
         } else {
             return {ValueRef()};
         }
+    } else if (op.is<GetId>()) {
+        auto& val = inputs[0].cast(m_value_type);
+        int64_t id = val.id();
+        return {IntegerValue::make(id)};
+
     } else if (op.is<DupTensor>()) {
         auto& input = inputs[0].cast(m_value_type);
         DeviceTensorND dev_tensor;

@@ -142,6 +142,10 @@ const std::string OpDef::make_name() const {
     return m_scope + "." + trait()->make_name(*this);
 }
 
+const std::string OpDef::type_name() const {
+    return trait()->name;
+}
+
 static thread_local OpDef::allocator_t local_allocator;
 
 void OpDef::set_allocator(allocator_t allocator) {

@@ -9,6 +9,7 @@ import pickle
 import re
 import struct
 import sys
+from collections import OrderedDict, defaultdict
 from typing import Any, Sequence
 
 import cv2
@@ -16,9 +17,22 @@ import numpy as np
 
 from .. import tensor
 from ..core import _imperative_rt as rt
-from ..core._imperative_rt import GraphProfiler, GraphProfiler2, SerializationMetadata
+from ..core._imperative_rt import (
+    CompNode,
+    GraphProfiler,
+    GraphProfiler2,
+    SerializationMetadata,
+)
 from ..core._imperative_rt.core2 import Tensor as RawTensor
-from ..core._imperative_rt.core2 import Trace, TraceError, name_tensor  # skip_tracing,
+from ..core._imperative_rt.core2 import Trace, TraceError  # skip_tracing,
+from ..core._imperative_rt.core2 import add_backward_callback as _add_backward_callback
+from ..core._imperative_rt.core2 import (
+    get_marked_input_tensor,
+    get_marked_output_tensor,
+    get_marked_tensor,
+    marked_input_tensor,
+    name_tensor,
+)
 from ..core._imperative_rt.graph import _set_priority_to_id
 from ..core._imperative_rt.ops import (
     AssertEqual,
@@ -31,6 +45,7 @@ from ..core._imperative_rt.ops import (
 from ..core._trace_option import set_symbolic_shape
 from ..core.tensor import megbrain_graph as G
 from ..logger import get_logger
+from ..tensor import Tensor
 from ..utils import comp_graph_tools as cgtools
 from ..utils.naming import AutoNaming
 from ..utils.profiler import is_profiling
@@ -94,7 +109,12 @@ class trace:
         opt_level: optimization level for compiling trace. Default: 2
         graph_opt_config: configuration for graph optimization. Default: None
         symbolic_shape: whether to use symbolic shape for tracing. Default: True
+        without_host: if True, will run python code of wrapped function on the first call,
+            and run the compiled graph/function on subsequent calls. if False, will run python code every time.
+            Default: False
     """
+
+    third_party_backend = False
 
     def __new__(cls, *args, **kwargs):
         if not args:
@@ -113,6 +133,7 @@ class trace:
         opt_level: int = 2,
         graph_opt_config: GraphOptimizationConfig = None,
         symbolic_shape: bool = True,
+        without_host: bool = False,
     ):
         self.__wrapped__ = function
         self._capture_as_const = capture_as_const or record_only
@@ -150,6 +171,7 @@ class trace:
             graph_options["graph_opt.jit_config.fuse_reduce"] = mapping[
                 graph_opt_config.jit_fuse_reduce
             ]
+
         if sublinear_memory_config is not None:
             graph_options["enable_sublinear_memory_opt"] = True
             graph_options[
@@ -186,8 +208,114 @@ class trace:
         self._trace.profile = profiling
         self._trace.array_comparator = array_comparator
         self._trace.record_input_shapes = _input_node_use_static_shape()
+        self._trace.without_host = without_host
+        self.check_external = True
+        self.traced = False
+        self.input_num = 0
+        self.output_num = 0
+        self.arg_list = []
+        self.out_list = []
+
+        self.overall = True
+
+        # forward keeped activation
+        self.keeped_activation = []
+
+        self.third_party_backend_compiled = False
+
+    @property
+    def check_external(self):
+        return self._trace.check_external
+
+    @check_external.setter
+    def check_external(self, flag):
+        self._trace.check_external = flag
+
+    @property
+    def without_host(self):
+        return self._trace.without_host
+
+    def flatten_inputs(self, *args, **kwargs):
+        from ..traced_module.pytree import tree_flatten
+        from ..module import Module
+
+        tensor_args = []
+        modules = []
+        fargs, _ = tree_flatten((args, kwargs))
+        for a in fargs:
+            if isinstance(a, RawTensor):
+                tensor_args.append(a)
+            elif isinstance(a, Module):
+                modules.append(a)
+        for m in modules:
+            tensor_args.extend(list(m.parameters()))
+        return tensor_args
+
+    def compile(self):
+        raise NotImplementedError
+
+    def execute(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def setup_env(self):
+        pass
+
+    def unset_env(self):
+        pass
+
+    def compile_and_exec(self, *args, **kwargs):
+        if not self.third_party_backend_compiled:
+            self.compile()
+            self.third_party_backend_compiled = True
+        return self.execute(*args, **kwargs)
+
+    def convert_optimizer_state_to_tensor(self, *args, **kwargs):
+        from ..traced_module.pytree import tree_flatten, SUPPORTED_LEAF_CLS
+        from ..optimizer import Optimizer
+        from ..tensor import Tensor
+
+        if Optimizer not in SUPPORTED_LEAF_CLS:
+            SUPPORTED_LEAF_CLS.append(Optimizer)
+        args, _ = tree_flatten((args, kwargs))
+        for arg in args:
+            if isinstance(arg, Optimizer):
+                arg._disable_type_convert = False
+                for param_group in arg.param_groups:
+                    for k, v in param_group.items():
+                        if not isinstance(v, (Tensor, Sequence)):
+                            param_group[k] = Tensor(v)
+                        elif isinstance(v, Sequence) and not isinstance(v[0], Tensor):
+                            new_v = []
+                            for i in range(len(v)):
+                                new_v.append(Tensor(v[i]))
+                            param_group[k] = new_v
+
+    def setup_io_without_trace(self, inputs, outputs):
+        self.traced = True
+        self.arg_list = [i for i in inputs if i != -1]
+        self.out_list = outputs
+        self.input_num = len(self.arg_list)
+        self.output_num = len([i for i in outputs if i != -1])
+
+    def setup_without_host(self):
+        self.inp_modules = set()
+        self.module_tensors = set()
+        self.tensor_to_attr = dict()
+        self.attr_to_key = dict()
+        self.update_param_dict = dict()
+        self.update_opt_param_dict = dict()
+        self.capture_optimizer_state = set()
+        self.opt_param_dict = dict()
 
     def __call__(self, *args, **kwargs):
+        if not self.without_host:
+            return self.trace_normal(*args, **kwargs)
+        elif self.overall:
+            return self.trace_without_host_overall(*args, **kwargs)
+        else:
+            return self.trace_without_host(*args, **kwargs)
+
+    def trace_normal(self, *args, **kwargs):
         global active_trace
         symbolic_shape = None
         outputs = None
@@ -213,6 +341,270 @@ class trace:
                 if not handling_exc:
                     raise
         return outputs
+
+    def trace_without_host(self, *args, **kwargs):
+        from ..traced_module.pytree import tree_flatten, SUPPORTED_LEAF_CLS
+        from ..module import Module
+        from ..utils.module_utils import get_expand_structure
+        from ..tensor import Tensor
+        from ..optimizer import Optimizer
+
+        assert self.without_host and not self.overall
+        global active_trace
+        symbolic_shape = None
+        outputs = None
+        if self.traced and self.third_party_backend:
+            return self.compile_and_exec(*args, **kwargs)
+        try:
+            active_trace = self
+            self._trace.enter()
+            if self._trace.compiled():
+                arglist = self.flatten_inputs(*args, **kwargs)
+                idx = 0
+                inp_dict = {}
+                for a in arglist:
+                    if isinstance(a, RawTensor):
+                        inp_dict[self.arg_list[idx]] = a
+                        idx += 1
+                self._trace.put_datas(inp_dict)
+                outlist = []
+                for i in self.out_list:
+                    if i == -1:
+                        if not hasattr(self, "outdef"):
+                            outlist.append(None)
+                    else:
+                        outlist.append(self._trace.get_data(i))
+                keep_vars = []
+                for i in self.keeped_activation:
+                    keep_vars.append(self._trace.get_data(i))
+
+                outputs = (
+                    self.outdef.unflatten(outlist)
+                    if hasattr(self, "outdef")
+                    else outlist
+                )
+                if keep_vars:
+                    return outputs, keep_vars
+                else:
+                    return outputs
+
+            arg_list = self.flatten_inputs(*args, **kwargs)
+            for i, arg in enumerate(arg_list):
+                arg_list[i]._reset(get_marked_input_tensor(self.input_num, arg))
+                self.arg_list.append(self.input_num)
+                self.input_num += 1
+            del arg_list
+            symbolic_shape = set_symbolic_shape(self._symbolic_shape)
+            if self.third_party_backend:
+                self.setup_env()
+            outputs = self.__wrapped__(*args, **kwargs)
+
+        finally:
+            handling_exc = sys.exc_info() != (None,) * 3
+            active_trace = None
+            if symbolic_shape is not None:
+                symbolic_shape = set_symbolic_shape(symbolic_shape)
+                assert symbolic_shape == self._symbolic_shape
+            if self.third_party_backend:
+                self.unset_env()
+            if (
+                self._capture_as_const
+                and (outputs is not None)
+                and not self.without_host
+            ):
+                self._process_outputs(outputs)
+            if not self._trace.compiled():
+                outlist, self.outdef = tree_flatten(outputs)
+                for i, out in enumerate(outlist):
+                    assert isinstance(out, RawTensor), type(out)
+                    outlist[i] = get_marked_output_tensor(self.output_num, out)
+                    del out
+                    self.out_list.append(self.output_num)
+                    self.output_num += 1
+                outputs = self.outdef.unflatten(outlist)
+            try:
+                # may raise TraceError
+                self._trace.exit()
+            except Exception as e:
+                if isinstance(e, TraceError):
+                    if not handling_exc:
+                        raise
+                else:
+                    self._trace.set_execption(str(e))
+                    raise
+            self.traced = True
+        return outputs
+
+    def trace_without_host_overall(self, *args, **kwargs):
+        # record overall train step include forward, backward, param update in a single trace object
+        from ..traced_module.pytree import tree_flatten, SUPPORTED_LEAF_CLS
+        from ..module import Module
+        from ..utils.module_utils import get_expand_structure
+        from ..tensor import Tensor
+        from ..optimizer import Optimizer
+
+        assert self.without_host
+        global active_trace
+        symbolic_shape = None
+        outputs = None
+        if self.traced and self.third_party_backend:
+            return self.compile_and_exec(*args, **kwargs)
+        try:
+            active_trace = self
+            if not self.traced:
+                self.convert_optimizer_state_to_tensor(*args, **kwargs)
+            self._trace.enter()
+            if self._trace.compiled():
+                arglist, _ = tree_flatten((args, kwargs))
+                idx = 0
+                inp_dict = {}
+                for a in arglist:
+                    if isinstance(a, RawTensor):
+                        inp_dict[self.arg_list[idx]] = a
+                        idx += 1
+                for t, key in self.opt_param_dict.items():
+                    inp_dict[key] = t
+                self._trace.put_datas(inp_dict)
+                for attr, key in self.attr_to_key.items():
+                    param = get_expand_structure(attr[0], attr[1])
+                    self._trace.put_data(key, param)
+                outlist = []
+                for i in self.out_list:
+                    if i == -1:
+                        if not hasattr(self, "outdef"):
+                            outlist.append(None)
+                    else:
+                        outlist.append(self._trace.get_data(i))
+                for attr, key in self.update_param_dict.items():
+                    param = get_expand_structure(attr[0], attr[1])
+                    param._reset(self._trace.get_data(key))
+                for state, key in self.update_opt_param_dict.items():
+                    state._reset(self._trace.get_data(key))
+                keep_vars = []
+                for i in self.keeped_activation:
+                    keep_vars.append(self._trace.get_data(i))
+
+                outputs = (
+                    self.outdef.unflatten(outlist)
+                    if hasattr(self, "outdef")
+                    else outlist
+                )
+                if keep_vars:
+                    return outputs, keep_vars
+                else:
+                    return outputs
+
+            self.setup_without_host()
+
+            def get_attr_hook(obj, attr):
+                rst = object.__getattribute__(obj, attr)
+                if isinstance(rst, RawTensor):
+                    assert rst in self.tensor_to_attr
+                    attr = self.tensor_to_attr[rst]
+                    if attr not in self.attr_to_key:
+                        self.attr_to_key[attr] = self.input_num
+                        self.input_num += 1
+                        marked_input_tensor(self.attr_to_key[attr], rst)
+                return rst
+
+            origin_reset = Tensor._reset
+            self.update_param_num = 0
+
+            def tensor_wrapper_resethook(obj, other):
+                if obj in self.tensor_to_attr:
+                    attr = self.tensor_to_attr[obj]
+                    other = get_marked_output_tensor(self.output_num, other)
+                    self.update_param_num += 1
+                    self.update_param_dict[attr] = self.output_num
+                    self.output_num += 1
+                elif obj in self.capture_optimizer_state:
+                    other = get_marked_output_tensor(self.output_num, other)
+                    self.update_opt_param_dict[obj] = self.output_num
+                    self.output_num += 1
+                origin_reset(obj, other)
+
+            arg_list, self.argdef = tree_flatten((args, kwargs))
+            for i, arg in enumerate(arg_list):
+                if isinstance(arg, Module):
+                    for k, v in arg.named_tensors():
+                        if v not in self.tensor_to_attr:
+                            self.tensor_to_attr[v] = (arg, k)
+                    self.inp_modules.add(arg)
+                elif isinstance(arg, RawTensor):
+                    arg_list[i] = get_marked_input_tensor(self.input_num, arg)
+                    self.arg_list.append(self.input_num)
+                    self.input_num += 1
+                elif isinstance(arg, Optimizer):
+                    opt_params, _ = tree_flatten(arg.state_dict(keep_var=True))
+                    for p in opt_params:
+                        if isinstance(p, Tensor):
+                            self.capture_optimizer_state.add(p)
+            self.opt_param_dict = {}
+            for t in self.capture_optimizer_state:
+                if t not in self.tensor_to_attr:  # not module parameter
+                    mark_param = get_marked_input_tensor(self.input_num, t)
+                    self.opt_param_dict[t] = self.input_num
+                    t[...] = mark_param
+                    self.input_num += 1
+            args, kwargs = self.argdef.unflatten(arg_list)
+            Module.__getattribute__ = get_attr_hook
+            Tensor._reset = tensor_wrapper_resethook
+            symbolic_shape = set_symbolic_shape(self._symbolic_shape)
+            if self.third_party_backend:
+                self.setup_env()
+            outputs = self.__wrapped__(*args, **kwargs)
+            del arg_list
+            del args
+            del kwargs
+
+            Module.__getattribute__ = object.__getattribute__
+            Tensor._reset = origin_reset
+
+            for attr, key in self.attr_to_key.items():
+                param = get_expand_structure(attr[0], attr[1])
+        finally:
+            handling_exc = sys.exc_info() != (None,) * 3
+            active_trace = None
+            if symbolic_shape is not None:
+                symbolic_shape = set_symbolic_shape(symbolic_shape)
+                assert symbolic_shape == self._symbolic_shape
+            if self.third_party_backend:
+                self.unset_env()
+            if (
+                self._capture_as_const
+                and (outputs is not None)
+                and not self.without_host
+            ):
+                self._process_outputs(outputs)
+            if not self._trace.compiled():
+                outlist, self.outdef = tree_flatten(outputs)
+                for i, out in enumerate(outlist):
+                    assert isinstance(out, RawTensor)
+                    outlist[i] = get_marked_output_tensor(self.output_num, out)
+                    del out
+                    self.out_list.append(self.output_num)
+                    self.output_num += 1
+                outputs = self.outdef.unflatten(outlist)
+            try:
+                # may raise TraceError
+                self._trace.exit()
+            except Exception as e:
+                if isinstance(e, TraceError):
+                    if not handling_exc:
+                        raise
+                else:
+                    self._trace.set_execption(str(e))
+                    raise
+            self.traced = True
+        return outputs
+
+    @property
+    def ops(self):
+        return self._trace.ops
+
+    @property
+    def vars(self):
+        return self._trace.vars
 
     def _process_inputs(self, *args, **kwargs):
         for i, arg in enumerate(args):
