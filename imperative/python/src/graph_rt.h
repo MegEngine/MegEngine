@@ -10,7 +10,7 @@
 
 namespace py = pybind11;
 extern py::object Py_Varnode;
-
+extern const std::unique_ptr<mgb::OprFootprint> _imperative_sm_opr_footprint_ptr;
 template <typename T>
 class GraphNodePtr {
     std::shared_ptr<mgb::cg::ComputingGraph> m_graph;

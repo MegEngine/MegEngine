@@ -5,6 +5,7 @@
 #include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/ops/autogen.h"
 #include "megbrain/imperative/ops/backward_graph.h"
+#include "megbrain/imperative/ops/opr_attr.h"
 #include "megbrain/imperative/ops/utility.h"
 #include "megbrain/imperative/profiler.h"
 #include "megbrain/imperative/transformation.h"
@@ -49,6 +50,8 @@
 
 #include "../../src/impl/mgb_cg_impl.h"
 #include "./backtrace.h"
+
+#include <iostream>
 
 namespace py = pybind11;
 namespace views = ranges::views;
@@ -729,6 +732,10 @@ PyObject* TensorWrapper::isscalar() {
     }
 }
 
+PyObject* TensorWrapper::value_id() {
+    return py::cast(m_tensor->value_id()).release().ptr();
+}
+
 PyObject* TensorWrapper::_var() {
     TypedValueRef<NodeValue> value =
             imperative::apply(GetVarVal(), m_tensor->data())[0].as_ref<NodeValue>();
@@ -863,6 +870,10 @@ void init_tensor(py::module m) {
                               .register_at<Segment::Complex>(
                                       std::make_shared<ComplexTransformation>())
                               .release());
+    MGB_MARK_USED_VAR(transformations
+                              .register_at<Segment::Grad>(
+                                      std::make_shared<GradTransformationGuard>())
+                              .release());
     auto format_trans = std::make_shared<FormatTransformation>();
     MGB_MARK_USED_VAR(
             transformations.register_at<Segment::Format>(format_trans).release());
@@ -919,6 +930,7 @@ void init_tensor(py::module m) {
                     .def<&TensorWrapper::_watch>("_watch")
                     .def<&TensorWrapper::_var>("var")
                     .def<&TensorWrapper::_graph>("graph")
+                    .def<&TensorWrapper::value_id>("value_id")
                     .def_getset<
                             &TensorWrapper::module_trace_info,
                             &TensorWrapper::set_module_trace_info>("_NodeMixin__node")
@@ -1081,6 +1093,14 @@ void init_tensor(py::module m) {
         sync_py_task_q();
     });
 
+    py::class_<GradSlotPtr>(m, "GradSlot")
+            .def_property_readonly("grad", [](GradSlotPtr& self) -> py::object {
+                if (self->grad())
+                    return TensorWrapper::make(py_tensor_type, self->grad());
+                else
+                    return py::none();
+            });
+
     // GradTransformation
     py::handle grad_key_type =
             GradKeyWrapper::wrap_t::type()
@@ -1098,6 +1118,29 @@ void init_tensor(py::module m) {
     py::setattr(m, "GradKey", grad_key_type);
     m.def("backward", &GradKeyWrapper::backward);
     m.def("get_backward_closure", &GradKeyWrapper::get_backward_closure);
+    m.def("get_grad_slot", [](py::object tensor) -> py::object {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        if (tw) {
+            auto rst = imperative::apply(GetGradSlot(), tw->m_tensor->data());
+            if (rst.size() == 1) {
+                GradSlotPtr slot = rst[0].cast<GradSlotValue>();
+                return py::cast(slot);
+            } else {
+                return py::none();
+            }
+        }
+
+        return py::none();
+    });
+    m.def("get_handle_id", [](py::object tensor) -> py::object {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        if (tw) {
+            auto rst = imperative::apply(GetId(), tw->m_tensor->data());
+            int id = rst[0].cast<IntegerValue>();
+            return py::cast(id);
+        }
+        return py::none();
+    });
 
     m.def("set_py_tensor_type", [](py::object type_obj) {
         py_tensor_type = reinterpret_cast<PyTypeObject*>(type_obj.inc_ref().ptr());
@@ -1120,6 +1163,9 @@ void init_tensor(py::module m) {
         bool capture_as_const = false;
         bool profile = false;
         bool record_input_shapes = false;
+        bool without_host = false;
+        bool check_external = true;
+        bool remove_unused_data_required = true;
         py::function options_visitor;
         std::shared_ptr<TracingTransformation> tracing;
         std::shared_ptr<CompiledTransformation> compiled;
@@ -1130,6 +1176,8 @@ void init_tensor(py::module m) {
         std::unique_ptr<CleanupGuard<>> tracing_guard;
         std::unique_ptr<CleanupGuard<>> compiled_guard;
         std::unique_ptr<CleanupGuard<>> lazy_eval_guard;
+        std::unordered_map<size_t, size_t> inpmark_to_id;
+        std::unordered_map<size_t, size_t> outmark_to_id;
 
         bool compare_value(ValueRef lhs, ValueRef rhs) {
             auto lvalue = lhs.cast_ref<HostValue>();
@@ -1149,11 +1197,23 @@ void init_tensor(py::module m) {
             return array_comparator(larr, rarr);
         }
 
+        void mark_input(size_t mark, size_t id) {
+            trace_result->vars[id].inp_marker.insert(mark);
+            mgb_assert(inpmark_to_id.find(mark) == inpmark_to_id.end());
+            inpmark_to_id[mark] = id;
+        }
+        void mark_output(size_t mark, size_t id) {
+            trace_result->vars[id].out_marker.insert(mark);
+            mgb_assert(outmark_to_id.find(mark) == outmark_to_id.end());
+            outmark_to_id[mark] = id;
+        }
         void enter() {
             auto& self = *this;
             if (!self.trace_result) {  // untraced
                 self.tracing = std::make_shared<TracingTransformation>(
                         self.capture_as_const, self.record_input_shapes);
+                if (self.without_host)
+                    self.tracing->enable_record_all_shapes();
                 if (self.symbolic) {
                     self.lazy_eval =
                             std::make_shared<LazyEvalTransformation>(self.no_exec);
@@ -1183,8 +1243,11 @@ void init_tensor(py::module m) {
                                 std::make_shared<GraphProfiler>(&current_graph));
                     }
                 }
-                compiled_guard =
-                        transformations.register_at<Segment::Trace>(self.compiled);
+                if (!without_host)
+                    compiled_guard =
+                            transformations.register_at<Segment::Trace>(self.compiled);
+                else
+                    self.compiled->set_pc_to_end();
                 // start execute because InputCallback depends
                 self.compiled->execute();
             } else if (self.tracing) {
@@ -1203,7 +1266,31 @@ void init_tensor(py::module m) {
             auto& self = *this;
             if (self.tracing) {
                 tracing_guard.reset();
+                if (self.without_host) {
+                    self.tracing->postprocess_trace_result();
+                    self.inpmark_to_id = self.tracing->inpmark_to_id;
+                    self.outmark_to_id = self.tracing->outmark_to_id;
+                }
                 self.trace_result = self.tracing->get_result();
+                if (self.without_host) {
+                    for (auto&& var : self.trace_result->vars) {
+                        var.shape_required = false;
+                        var.value_required = false;
+                        if (var.data_required && var.out_marker.empty() &&
+                            remove_unused_data_required)
+                            var.data_required = false;
+                        if (var.inp_marker.empty() &&
+                            var.kind == TraceResult::VarInfo::Kind::External) {
+                            if (var.bound_data) {
+                                var.kind = TraceResult::VarInfo::Kind::Constant;
+                            } else if (self.check_external) {
+                                throw std::runtime_error(
+                                        "have some unknown input tensors in trace "
+                                        "result");
+                            }
+                        }
+                    }
+                }
                 self.tracing.reset();
                 if (self.lazy_eval) {
                     auto lazy_eval = std::move(self.lazy_eval);
@@ -1211,7 +1298,8 @@ void init_tensor(py::module m) {
                     lazy_eval->check_exception();
                 }
             } else if (self.compiled) {
-                compiled_guard.reset();
+                if (!without_host)
+                    compiled_guard.reset();
                 self.compiled->wait();
             } else {
                 mgb_throw(MegBrainError, "invalid state: neither tracing nor compiled");
@@ -1255,6 +1343,10 @@ void init_tensor(py::module m) {
             .def_readwrite("record_input_shapes", &Trace::record_input_shapes)
             .def_readwrite("array_comparator", &Trace::array_comparator)
             .def_readwrite("profile", &Trace::profile)
+            .def_readwrite("without_host", &Trace::without_host)
+            .def_readwrite("check_external", &Trace::check_external)
+            .def_readwrite(
+                    "remove_unused_data_required", &Trace::remove_unused_data_required)
             .def_property_readonly(
                     "options",
                     [](Trace& self) {
@@ -1281,6 +1373,65 @@ void init_tensor(py::module m) {
             .def("enter", &Trace::enter)
             .def("exit", &Trace::exit)
             .def("dump", &Trace::dump)
+            .def("set_execption",
+                 [](Trace& self, std::string error) {
+                     if (self.compiled) {
+                         auto exc = std::make_exception_ptr(TraceError(error));
+                         self.compiled->set_exception(exc);
+                     }
+                 })
+            .def("compiled", [](Trace& self) { return bool(self.compiled); })
+            .def("put_data",
+                 [](Trace& self, int mark, py::object tensor) {
+                     auto id = self.inpmark_to_id[mark];
+                     auto&& varinfo = self.trace_result->vars[id];
+                     mgb_assert(varinfo.kind == TraceResult::VarInfo::Kind::External);
+                     auto&& accessor = self.compiled->get_accessor_by_id(id);
+                     auto* tw = TensorWrapper::try_cast(tensor.ptr());
+                     mgb_assert(tw);
+                     accessor.data_setter(
+                             tw->m_tensor->data().dev_tensor()->as_nd(true));
+                 })
+            .def("put_datas",
+                 [](Trace& self, std::unordered_map<int, py::object> inps) {
+                     for (auto&& inp : inps) {
+                         auto&& mark = inp.first;
+                         auto&& tensor = inp.second;
+                         auto id = self.inpmark_to_id[mark];
+                         auto&& varinfo = self.trace_result->vars[id];
+                         mgb_assert(
+                                 varinfo.kind == TraceResult::VarInfo::Kind::External);
+                         auto&& accessor = self.compiled->get_accessor_by_id(id);
+                         auto* tw = TensorWrapper::try_cast(tensor.ptr());
+                         mgb_assert(tw);
+                         accessor.data_setter(
+                                 tw->m_tensor->data().dev_tensor()->as_nd(true));
+                     }
+                 })
+            .def("get_data",
+                 [](Trace& self, int mark) {
+                     auto id = self.outmark_to_id[mark];
+                     auto&& varinfo = self.trace_result->vars[id];
+                     mgb_assert(varinfo.data_required);
+                     auto&& accessor = self.compiled->get_accessor_by_id(id);
+                     mgb_assert(accessor.data_getter);
+                     auto dev_value = DeviceValue::make(accessor.data_getter());
+                     return TensorWrapper::make(
+                             py_tensor_type,
+                             imperative::apply(
+                                     CreateTensor(
+                                             CreateTensor::Common, dev_value->device(),
+                                             dev_value->dtype(), dev_value->shape()),
+                                     DeviceStorage::make(dev_value->storage()))[0]);
+                 })
+            .def_property_readonly(
+                    "ops", [](Trace& self) { return self.trace_result->seq; })
+            .def_property_readonly(
+                    "vars", [](Trace& self) { return self.trace_result->vars; })
+            .def_property_readonly(
+                    "inpmark_to_id", [](Trace& self) { return self.inpmark_to_id; })
+            .def_property_readonly(
+                    "outmark_to_id", [](Trace& self) { return self.outmark_to_id; })
             .def("begin_excluded_region",
                  [](Trace& self) {
                      mgb_assert(bool(self.tracing) ^ bool(self.compiled));
@@ -1290,22 +1441,169 @@ void init_tensor(py::module m) {
                          self.compiled_guard.reset();
                      }
                  })
-            .def("end_excluded_region", [](Trace& self) {
-                mgb_assert(bool(self.tracing) ^ bool(self.compiled));
-                if (self.tracing) {
-                    self.tracing_guard =
-                            transformations.register_at<Segment::Trace>(self.tracing);
-                } else if (self.compiled) {
-                    self.compiled_guard =
-                            transformations.register_at<Segment::Trace>(self.compiled);
-                }
-            });
+            .def("end_excluded_region",
+                 [](Trace& self) {
+                     mgb_assert(bool(self.tracing) ^ bool(self.compiled));
+                     if (self.tracing) {
+                         self.tracing_guard =
+                                 transformations.register_at<Segment::Trace>(
+                                         self.tracing);
+                     } else if (self.compiled) {
+                         self.compiled_guard =
+                                 transformations.register_at<Segment::Trace>(
+                                         self.compiled);
+                     }
+                 })
+            .def("mark_output", &Trace::mark_output)
+            .def("mark_input", &Trace::mark_input);
+    using VarInfo = TraceResult::VarInfo;
+    using OpKind = TraceResult::SeqItem::OpKind;
+    std::unordered_map<VarInfo::Kind, std::string> kind2str = {
+            {VarInfo::Kind::Internal, "internal"},
+            {VarInfo::Kind::External, "external"},
+            {VarInfo::Kind::Constant, "const"},
+    };
+    std::unordered_map<OpKind, std::string> opkind2str = {
+            {OpKind::Unknown, "unknown"},
+            {OpKind::TraceMarkVar, "trace_mark_var"},
+            {OpKind::IOMarkVar, "io_mark_var"},
+            {OpKind::CreateTensor, "create_tensor"},
+            {OpKind::Rename, "rename"}
 
+    };
+    py::class_<VarInfo>(m, "VarInfo")
+            .def_property_readonly("shape", [](VarInfo& self) { return self.shape; })
+            .def_property_readonly(
+                    "value_required", [](VarInfo& self) { return self.value_required; })
+            .def_property_readonly(
+                    "shape_required", [](VarInfo& self) { return self.shape_required; })
+            .def_readwrite("data_required", &VarInfo::data_required)
+            .def("set_external",
+                 [](VarInfo& self) { self.kind = VarInfo::Kind::External; })
+            .def_property_readonly(
+                    "bound_data",
+                    [](VarInfo& self) -> py::object {
+                        if (self.bound_data)
+                            return py::reinterpret_steal<py::array>(
+                                    npy::ndarray_from_tensor(
+                                            self.bound_data.numpy()->as_nd(true),
+                                            npy::ShareType::TRY_SHARE));
+                        return py::none();
+                    })
+            .def_property_readonly(
+                    "dtype",
+                    [](VarInfo& self) {
+                        auto ret = static_cast<DType>(*self.dtype);
+                        if (ret == dtype::Byte()) {
+                            ret = dtype::Uint8();
+                        }
+                        return ret;
+                    })
+            .def_property_readonly(
+                    "device",
+                    [](VarInfo& self) { return static_cast<CompNode>(*self.device); })
+            .def_property_readonly("id", [](VarInfo& self) { return self.id; })
+            .def_property_readonly(
+                    "handle_id", [](VarInfo& self) { return self.handle_id; })
+            .def_property_readonly("name", [](VarInfo& self) { return self.name; })
+            .def_property_readonly("mark", [](VarInfo& self) { return self.mark; })
+            .def_property_readonly(
+                    "inp_mark", [](VarInfo& self) { return self.inp_marker; })
+            .def_property_readonly(
+                    "out_mark", [](VarInfo& self) { return self.out_marker; })
+            .def_property_readonly("kind", [kind2str](VarInfo& self) {
+                return kind2str.find(self.kind)->second;
+            });
+    using SeqItem = TraceResult::SeqItem;
+    auto json = py::module::import("json");
+
+    py::class_<SeqItem>(m, "OpInfo")
+            .def(py::init([opkind2str](
+                                  std::shared_ptr<OpDef> op,
+                                  const SmallVector<size_t>& inputs,
+                                  const SmallVector<size_t>& outputs,
+                                  const std::string& op_kind) {
+                SeqItem::OpKind enum_op_kind = SeqItem::OpKind::Unknown;
+                for (auto&& kv : opkind2str) {
+                    if (op_kind == kv.second) {
+                        enum_op_kind = kv.first;
+                    }
+                }
+                return SeqItem{op, inputs, outputs, enum_op_kind};
+            }))
+            .def_property_readonly(
+                    "op",
+                    [opkind2str](SeqItem& self) -> py::object {
+                        if (self.op) {
+                            if (auto* op = self.op->try_cast_final<OprAttr>()) {
+                                return py::cast(op->type);
+                            }
+                            return py::cast(self.op);
+                        } else
+                            return py::cast(opkind2str.find(self.kind)->second);
+                    })
+            .def_property_readonly("inputs", [](SeqItem& self) { return self.inputs; })
+            .def_property_readonly(
+                    "outputs", [](SeqItem& self) { return self.outputs; })
+            .def_property_readonly(
+                    "type",
+                    [opkind2str](SeqItem& self) -> py::object {
+                        if (self.op)
+                            return py::cast(self.op->type_name());
+                        else
+                            return py::cast(opkind2str.find(self.kind)->second);
+                    })
+            .def_property_readonly(
+                    "kind",
+                    [opkind2str](SeqItem& self) {
+                        return opkind2str.find(self.kind)->second;
+                    })
+            .def_property_readonly("param", [json](SeqItem& self) -> py::object {
+                if (self.op) {
+                    if (auto* op = self.op->try_cast_final<OprAttr>()) {
+                        auto param =
+                                op->mgb_param(_imperative_sm_opr_footprint_ptr.get())
+                                        ->to_string();
+                        return json.attr("loads")(py::cast(param));
+                    } else {
+                        auto pyop = py::cast(self.op);
+                        return pyop.attr("__getstate__")();
+                    }
+                }
+                return py::dict();
+            });
     m.def("name_tensor", [](std::string name, py::object tensor) {
         auto* tw = TensorWrapper::try_cast(tensor.ptr());
         mgb_assert(tw, "Arg_1 shoud be Tensor!");
         auto output = imperative::apply(TraceMarkVar(name), tw->m_tensor->data())[0];
         tw->m_tensor->reset(output);
+    });
+
+    m.def("get_marked_tensor", [](std::string name, py::object tensor) {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        auto output = imperative::apply(TraceMarkVar(name), tw->m_tensor->data())[0];
+        return TensorWrapper::make(py_tensor_type, output);
+    });
+
+    m.def("get_marked_input_tensor", [](int mark, py::object tensor) {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        auto output = imperative::apply(
+                IOMarkVar(mark, IOMarkVar::Kind::Input), tw->m_tensor->data())[0];
+        return TensorWrapper::make(py_tensor_type, output);
+    });
+
+    m.def("marked_input_tensor", [](int mark, py::object tensor) {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        auto output = imperative::apply(
+                IOMarkVar(mark, IOMarkVar::Kind::Input), tw->m_tensor->data())[0];
+        tw->m_tensor->reset(output);
+    });
+
+    m.def("get_marked_output_tensor", [](int mark, py::object tensor) {
+        auto* tw = TensorWrapper::try_cast(tensor.ptr());
+        auto output = imperative::apply(
+                IOMarkVar(mark, IOMarkVar::Kind::Output), tw->m_tensor->data())[0];
+        return TensorWrapper::make(py_tensor_type, output);
     });
 
     m.def("is_grad_attached", [](std::vector<py::object> tensors) -> bool {
@@ -1377,6 +1675,17 @@ void init_tensor(py::module m) {
                     TensorWrapper::make(py_tensor_type, output_value));
         }
         return wrapped_outputs;
+    });
+
+    m.def("add_backward_callback", [](py::function callback) {
+        ValueRef id = IntegerValue::make(0);
+        GenericFunction generic_function =
+                [callback](Span<ValueRef> inputs) -> ValueRefList {
+            callback();
+            return {};
+        };
+        auto output_values =
+                imperative::apply(InsertGradCallback(generic_function), id);
     });
 
     // ModuleTraceTransformation

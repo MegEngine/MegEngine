@@ -222,6 +222,7 @@ public:
     TypedValueRef<DTypeValue> dtype() const;
     TypedValueRef<FormatValue> format() const;
     TypedValueRef<StringValue> name() const;
+    int handle_id() const;
     bool is_scalar() const;
 
     void watch() const;
@@ -298,7 +299,7 @@ protected:
 
 public:
     const IType& type() const { return *m_type; }
-
+    uint64_t id() const { return m_id; }
     static void register_value(ValueRef value);
     static ValueRef get_value_by_id(uint64_t id);
     static void begin_record_values();
@@ -538,11 +539,11 @@ public:
     const ValueRef* data() const { return m_data; }
     bool empty() const { return m_size == 0; }
     ValueRef& front() {
-        mgb_assert(m_size > 1);
+        mgb_assert(m_size >= 1);
         return m_data[0];
     }
     ValueRef& back() {
-        mgb_assert(m_size > 1);
+        mgb_assert(m_size >= 1);
         return m_data[m_size - 1];
     }
 };

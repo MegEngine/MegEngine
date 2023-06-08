@@ -2,8 +2,8 @@
 
 #include <chrono>
 #include <future>
+#include <set>
 #include <variant>
-
 #include "megbrain/gopt/inference.h"
 #include "megbrain/imperative/dispatch.h"
 #include "megbrain/imperative/interpreter.h"
@@ -17,10 +17,20 @@ namespace mgb::imperative {
 
 struct TraceResult {
     struct SeqItem {
+        enum OpKind {
+            Unknown,
+            TraceMarkVar,
+            Rename,
+            IOMarkVar,
+            CreateTensor,
+        };
         std::shared_ptr<OpDef> op;
         SmallVector<size_t> inputs;
         SmallVector<size_t> outputs;
+        OpKind kind = OpKind::Unknown;
     };
+
+    using OpKind = SeqItem::OpKind;
 
     struct VarInfo {
         enum Kind {
@@ -41,12 +51,14 @@ struct TraceResult {
         ValueRef bound_data;
         std::string mark;
         std::string name;
+        int handle_id;
 
         Kind kind;
         bool value_required = false;
         bool data_required = false;
         bool shape_required = false;
-
+        std::set<size_t> inp_marker;
+        std::set<size_t> out_marker;
         TensorShape shape;
     };
 
@@ -91,6 +103,27 @@ public:
     std::string raw_type() const { return "TraceMarkVar"; }
 };
 
+class IOMarkVar : public OperatorImpl<IOMarkVar, Operator::IdentityLike> {
+public:
+    enum Kind {
+        Input,
+        Output,
+    };
+
+private:
+    size_t m_mark;
+    Kind m_kind;
+
+public:
+    IOMarkVar(size_t mark, Kind kind) : m_mark(mark), m_kind(kind) {}
+
+    size_t mark() const { return m_mark; }
+    Kind kind() const { return m_kind; }
+
+    std::string to_string() const override { return ssprintf("IOMarkVar"); }
+    std::string raw_type() const override { return "IOMarkVar"; }
+};
+
 class TracingValue final : public ObjectValue<TracingValue> {
 private:
     ValueRef m_value = {};
@@ -125,14 +158,21 @@ class TracingTransformation final : public Transformation {
 public:
     using VarInfo = TraceResult::VarInfo;
     using VarKind = VarInfo::Kind;
+    using OpKind = TraceResult::SeqItem::OpKind;
 
 private:
     std::vector<TraceResult::SeqItem> m_seq;
     std::vector<TraceResult::VarInfo> m_vars;
     std::vector<TracingValue::weak_ref_t> m_weak_vars;
+    std::unordered_map<size_t, size_t> extern_var_to_id;
     bool m_capture_as_const = false;
     bool m_record_input_shapes = false;
+    bool m_record_all_shapes = false;
     ObjectType<TracingValue> m_value_type{"TracingValue"};
+
+public:
+    std::unordered_map<size_t, size_t> inpmark_to_id;
+    std::unordered_map<size_t, size_t> outmark_to_id;
 
 public:
     TracingTransformation(bool capture_as_const, bool record_input_shapes)
@@ -148,7 +188,14 @@ public:
      * \return TypedValueRef<TracingValue> traced value
      */
     TypedValueRef<TracingValue> record_var(ValueRef value, bool capture, VarKind kind) {
+        if (kind == VarKind::External &&
+            extern_var_to_id.find(value.id()) != extern_var_to_id.end()) {
+            return m_value_type.make(value, extern_var_to_id[value.id()]);
+        }
         size_t id = m_vars.size();
+        if (kind == VarKind::External) {
+            extern_var_to_id[value.id()] = id;
+        }
         auto wrapped_value = m_value_type.make(value, id);
         m_vars.push_back({id, value.dtype(), value.device()});
         auto& var = m_vars.back();
@@ -156,9 +203,12 @@ public:
             var.bound_data = value;
         }
         var.kind = kind;
-        if (m_record_input_shapes && kind != VarKind::Internal) {
+        if ((m_record_input_shapes && kind != VarKind::Internal) ||
+            m_record_all_shapes) {
             var.shape = value.shape()->as_tensor_shape();
         }
+        if (m_record_all_shapes)
+            var.handle_id = value.handle_id();
         if (auto name = value.name()) {
             var.name = *name;
         }
@@ -185,8 +235,9 @@ public:
     std::string name() const override { return "TracingTransformation"; }
 
     void on_unregister() noexcept override;
-
+    void postprocess_trace_result();
     TraceResult get_result() { return {m_seq, m_vars}; }
+    void enable_record_all_shapes() { m_record_all_shapes = true; }
 };
 
 class TraceError : public std::exception {
@@ -211,6 +262,7 @@ class CompiledTransformation final : public Transformation {
 public:
     using VarInfo = TraceResult::VarInfo;
     using VarKind = VarInfo::Kind;
+    using OpKind = TraceResult::SeqItem::OpKind;
 
     struct VarAccessor {
         VarNode* node;
@@ -254,6 +306,7 @@ private:
     std::vector<TraceResult::SeqItem> m_seq;
     std::vector<TraceResult::VarInfo> m_vars;
     std::vector<VarAccessor> m_var_accessors;
+    std::unordered_map<std::string, size_t> mark2id;
     size_t m_pc = 0;
     std::shared_ptr<ComputingGraph> m_graph;
     std::unique_ptr<cg::AsyncExecutable> m_executable;
@@ -268,6 +321,7 @@ private:
     std::vector<std::shared_ptr<BoxBase>> m_boxes;
     ComputingGraph::OutputSpec m_output_spec;
     ObjectType<TracedValue> m_value_type{"TracedValue"};
+    std::set<size_t> m_setted_extern;
 
 public:
     CompiledTransformation(TraceResult result, bool input_shape_static)
@@ -360,8 +414,10 @@ public:
         return value;
     }
 
-    std::string name() const override { return "CompiledTransformation"; }
+    VarAccessor& get_accessor_by_id(size_t id) { return m_var_accessors[id]; }
 
+    std::string name() const override { return "CompiledTransformation"; }
+    void set_pc_to_end() { m_pc = m_seq.size(); }
     void execute();
 
     void wait();

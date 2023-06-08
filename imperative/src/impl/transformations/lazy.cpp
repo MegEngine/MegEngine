@@ -53,6 +53,9 @@ ValueRefList LazyEvalTransformation::apply_transformation(
             outputs[i] = record_var(output_nodes[i]);
         }
         return outputs;
+    } else if (op.is<GetId>()) {
+        int64_t id = inputs[0].id();
+        return {IntegerValue::make(id)};
     } else if (auto* create_tensor = op.as<CreateTensor>()) {
         auto&& args = create_tensor->parse(inputs);
         auto get_dev_val = [&] {

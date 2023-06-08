@@ -2,6 +2,7 @@
 
 #include "megbrain/imperative/op_def.h"
 #include "megbrain/opr/param_defs.h"
+#include "megbrain/plugin/opr_footprint.h"
 
 namespace mgb {
 namespace imperative {
@@ -28,6 +29,7 @@ public:
 
     Type type;
     Param param;
+    Typeinfo* mgb_opr_type;
     megdnn::param::ExecutionPolicy policy;
     cg::OperatorNodeConfig config;
 
@@ -36,13 +38,14 @@ public:
     OprAttr(const Type& t, const Param& p, const cg::OperatorNodeConfig& c)
             : type(t), param(p), config(c) {}
     OprAttr(const Type& t, const Param& p, const megdnn::param::ExecutionPolicy ps,
-            const cg::OperatorNodeConfig& c)
-            : type(t), param(p), policy(ps), config(c) {}
+            const cg::OperatorNodeConfig& c, Typeinfo* optype)
+            : type(t), param(p), policy(ps), config(c), mgb_opr_type(optype) {}
 
     std::string repr() const;
-
+    std::shared_ptr<json::Value> mgb_param(OprFootprint*);
     bool is_same_st(const Hashable& rhs) const override;
     size_t hash() const override;
+    const std::string type_name() const override { return type; }
 };
 
 }  // namespace imperative
