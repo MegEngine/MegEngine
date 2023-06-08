@@ -1,6 +1,7 @@
 #pragma once
 
 #include "megbrain/graph.h"
+#include "megbrain/serialization/opr_load_dump.h"
 
 namespace mgb {
 
@@ -14,7 +15,10 @@ class OprFootprint {
 #if MGB_ENABLE_JSON
     using ParamJsonTrait =
             thin_function<std::shared_ptr<json::Value>(cg::OperatorNodeBase*)>;
+    using SerialParamJsonTrait = thin_function<std::shared_ptr<json::Value>(
+            serialization::OprLoadContextRawPOD&)>;
     ThinHashMap<Typeinfo*, ParamJsonTrait> m_type2param_json;
+    ThinHashMap<Typeinfo*, SerialParamJsonTrait> m_type2serialparam_json;
 #endif
 
     //! add single footprint calculator for associated opr type.
@@ -70,6 +74,8 @@ public:
 #if MGB_ENABLE_JSON
     MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> get_param_json(
             cg::OperatorNodeBase* opr);
+    MGE_WIN_DECLSPEC_FUC std::shared_ptr<json::Value> get_serial_param_json(
+            Typeinfo* type, serialization::OprLoadContextRawPOD& context);
     //! get opr foot print and graph exec info
     //! the function will recompile graph, AsyncExecutable compiled before will
     //! be invalid
