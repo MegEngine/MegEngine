@@ -54,7 +54,7 @@
 	url = https://github.com/MegEngine/cpp_redis
 [submodule "third_party/tacopie"]
 	path = third_party/tacopie
-	url = https://github.com/cpp-redis/tacopie
+	url = https://github.com/MegEngine/tacopie
 [submodule "third_party/cudnn-frontend"]
 	path = third_party/cudnn-frontend
 	url = https://github.com/MegEngine/cudnn-frontend.git
