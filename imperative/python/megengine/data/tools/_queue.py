@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import binascii
 import os
+import pickle
 import queue
 import subprocess
 from multiprocessing import Queue
@@ -58,15 +59,6 @@ class _ExceptionWrapper:
     @staticmethod
     def _deserialize_Exception(data):
         return _ExceptionWrapper(data["exc_type"], data["exc_msg"], data["where"])
-
-
-context = pyarrow.SerializationContext()
-context.register_type(
-    _ExceptionWrapper,
-    "_ExceptionWrapper",
-    custom_serializer=_ExceptionWrapper._serialize_Exception,
-    custom_deserializer=_ExceptionWrapper._deserialize_Exception,
-)
 
 
 class _PlasmaStoreManager:
@@ -137,7 +129,7 @@ class PlasmaShmQueue:
 
     def get_error(self, exc_type, where="in background"):
         data = _ExceptionWrapper(exc_type=exc_type, where=where)
-        data_buffer = pyarrow.serialize(data, context=context).to_buffer()
+        data_buffer = pickle.dumps(data)
         return data_buffer
 
     def put(self, data, block=True, timeout=None):

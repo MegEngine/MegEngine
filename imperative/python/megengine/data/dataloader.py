@@ -4,6 +4,7 @@ import gc
 import itertools
 import multiprocessing
 import os
+import pickle
 import platform
 import queue
 import random
@@ -37,7 +38,7 @@ except:
 
 if platform.system() != "Windows":
     import pyarrow
-    from .tools._queue import _ExceptionWrapper, context
+    from .tools._queue import _ExceptionWrapper
 
 
 logger = get_logger(__name__)
@@ -330,9 +331,9 @@ class _ParallelDataLoaderIter:
     def _process_data(self, data):
         self._rcvd_idx += 1
         self._try_put_index()
-        if isinstance(data, pyarrow.lib.Buffer):
-            exception = pyarrow.deserialize(data, context=context)
-            exception.reraise()
+        if isinstance(data, bytes):
+            data = pickle.loads(data)
+            data.reraise()
         return data
 
     def _get_data(self):
@@ -369,8 +370,8 @@ class _ParallelDataLoaderIter:
 
             _get_data = self._get_data()
             if len(_get_data) == 1:
-                assert isinstance(_get_data[0], pyarrow.lib.Buffer)
-                exception = pyarrow.deserialize(_get_data[0], context=context)
+                assert isinstance(_get_data[0], bytes)
+                exception = pickle.loads(_get_data[0])
                 exception.reraise()
                 self._try_put_index()
                 continue
@@ -725,7 +726,7 @@ def _worker_loop(
                 where = "in DataLoader worker process {}".format(worker_id)
                 exc_msg = "".join(traceback.format_exception(*exc_info))
                 data = _ExceptionWrapper(exc_info[0].__name__, exc_msg, where)
-                data = pyarrow.serialize(data, context=context).to_buffer()
+                data = pickle.dumps(data)
 
         data_queue.put((idx, data))
         del data, idx, place_holder, r
