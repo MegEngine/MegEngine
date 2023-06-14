@@ -37,6 +37,7 @@ TensorShape acl_shape_to_mgb_shape_for_output(aclmdlIODims acl_shape, size_t bat
 TensorShape acl_shape_to_mgb_shape_for_input(
         aclmdlIODims acl_shape, size_t batch, bool enable_dynamic_batch,
         aclFormat om_format, AtlasRuntimeOpr::AippInputFormat aipp_input_fmt) {
+    MGB_MARK_USED_VAR(aipp_input_fmt);
     TensorShape ret;
     ret.ndim = acl_shape.dimCount;
     mgb_assert(
@@ -60,11 +61,7 @@ TensorShape acl_shape_to_mgb_shape_for_input(
                 ret[0], batch);
     }
 
-    if (aipp_input_fmt != AtlasRuntimeOpr::AippInputFormat::NO_AIPP) {
-        mgb_assert(
-                om_format == ACL_FORMAT_NHWC,
-                "om format should be NHWC if enable aipp");
-    }
+    mgb_assert(om_format != ACL_FORMAT_UNDEFINED, "om input format should be defined");
 
     return ret;
 }
