@@ -1,6 +1,6 @@
 numpy>=1.18
 opencv-python
-pyarrow
+pyarrow<=11.0.0
 requests
 tabulate
 tqdm
