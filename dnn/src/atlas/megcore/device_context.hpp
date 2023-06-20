@@ -31,11 +31,15 @@ public:
             std::lock_guard<std::mutex> guard{mtx};
             if (!initialized) {
                 auto err = aclInit(nullptr);
-                initialized = err == ACL_ERROR_NONE;
-                megdnn_assert(initialized,
-                              "aclrt initialize failed: (acl:%d): %s",
-                              static_cast<int>(err),
-                              megcore::atlas::get_error_str(err));
+                if (err == ACL_ERROR_REPEAT_INITIALIZE) {
+                    initialized = true;
+                } else {
+                    initialized = err == ACL_ERROR_NONE;
+                    megdnn_assert(initialized,
+                     "aclrt initialize failed: (acl:%d): %s",
+                            static_cast<int>(err),
+                            megcore::atlas::get_error_str(err));
+                }
             }
         }
         ~InitStatus() {

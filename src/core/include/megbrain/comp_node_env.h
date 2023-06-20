@@ -368,11 +368,15 @@ public:
                 if (!initialized) {
                     const char* config_path = MGB_GETENV("MGB_ATLAS_PROFILE_JSON");
                     auto acl_err = aclInit(config_path);
-                    initialized = acl_err == ACL_ERROR_NONE;
-                    mgb_throw_if(
-                            !initialized, AtlasError,
-                            "acl initialize failed: (acl: %s)",
-                            megcore::atlas::get_error_str(acl_err));
+                    if (acl_err == ACL_ERROR_REPEAT_INITIALIZE) {
+                        initialized = true;
+                    } else {
+                        initialized = acl_err == ACL_ERROR_NONE;
+                        mgb_throw_if(
+                                !initialized, AtlasError,
+                                "acl initialize failed: (acl: %s)",
+                                megcore::atlas::get_error_str(acl_err));
+                    }
                 }
             }
             ~InitStatus() {
