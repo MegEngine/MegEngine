@@ -36,11 +36,6 @@ try:
 except:
     import _thread as thread
 
-if platform.system() != "Windows":
-    import pyarrow
-    from .tools._queue import _ExceptionWrapper
-
-
 logger = get_logger(__name__)
 
 
@@ -722,6 +717,8 @@ def _worker_loop(
                 data = worker_id
                 iteration_end = True
             else:
+                from .tools._queue import _ExceptionWrapper
+
                 exc_info = sys.exc_info()
                 where = "in DataLoader worker process {}".format(worker_id)
                 exc_msg = "".join(traceback.format_exception(*exc_info))

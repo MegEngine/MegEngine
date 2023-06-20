@@ -143,6 +143,10 @@ def test_dataloader_worker_baseerror(transform):
         batch_data = next(data_iter)
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 @pytest.mark.parametrize("num_workers", [0, 2])
 def test_stream_dataloader(num_workers):
     dataset = MyStream(100)
@@ -186,6 +190,10 @@ def test_dataloader_serial():
         assert label.shape == (4,)
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 def test_dataloader_parallel():
     # set max shared memory to 100M
     os.environ["MGE_PLASMA_MEMORY"] = "100000000"
@@ -286,6 +294,10 @@ def _multi_instances_parallel_dataloader_worker():
                 assert val_label.shape == (10,)
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 def test_dataloader_parallel_multi_instances():
     # set max shared memory to 100M
     os.environ["MGE_PLASMA_MEMORY"] = "100000000"
@@ -337,6 +349,10 @@ class MyPreStream(StreamDataset):
         raise StopIteration
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 @pytest.mark.skipif(
     platform.system() == "Windows",
     reason="dataloader do not support parallel on windows",
