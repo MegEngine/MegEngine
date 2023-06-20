@@ -691,7 +691,14 @@ def _worker_loop(
                 data = worker_id
                 iteration_end = True
             else:
-                raise e
+                from .tools._queue import _ExceptionWrapper
+
+                exc_info = sys.exc_info()
+                where = "in DataLoader worker process {}".format(worker_id)
+                exc_msg = "".join(traceback.format_exception(*exc_info))
+                data = _ExceptionWrapper(exc_info[0].__name__, exc_msg, where)
+                data = pickle.dumps(data)
+
         data_queue.put((idx, data))
         del data, idx, place_holder, r
 

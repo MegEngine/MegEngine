@@ -73,6 +73,79 @@ class MyStream(StreamDataset):
         raise StopIteration
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
+)
+def test_dataloader_worker_signal_exception():
+    dataset = init_dataset()
+
+    class FakeErrorTransform(Transform):
+        def __init__(self):
+            pass
+
+        def apply(self, input):
+            pid = os.getpid()
+            subprocess.run(["kill", "-11", str(pid)])
+            return input
+
+    dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=FakeErrorTransform(),
+        num_workers=2,
+    )
+    with pytest.raises(RuntimeError, match=r"DataLoader worker.* exited unexpectedly"):
+        data_iter = iter(dataloader)
+        batch_data = next(data_iter)
+
+
+class IndexErrorTransform(Transform):
+    def __init__(self):
+        self.array = [0, 1, 2]
+
+    def apply(self, input):
+        error_item = self.array[3]
+        return input
+
+
+class TypeErrorTransform(Transform):
+    def __init__(self):
+        self.adda = 1
+        self.addb = "2"
+
+    def apply(self, input):
+        error_item = self.adda + self.addb
+        return input
+
+
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.parametrize("transform", [IndexErrorTransform(), TypeErrorTransform()])
+def test_dataloader_worker_baseerror(transform):
+    dataset = init_dataset()
+
+    dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=transform,
+        num_workers=2,
+    )
+    with pytest.raises(RuntimeError, match=r"Caught .*Error in DataLoader worker"):
+        data_iter = iter(dataloader)
+        batch_data = next(data_iter)
+
+
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 @pytest.mark.parametrize("num_workers", [0, 2])
 def test_stream_dataloader(num_workers):
     dataset = MyStream(100)
@@ -116,6 +189,10 @@ def test_dataloader_serial():
         assert label.shape == (4,)
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 def test_dataloader_parallel():
     # set max shared memory to 100M
     os.environ["MGE_PLASMA_MEMORY"] = "100000000"
@@ -214,6 +291,10 @@ def _multi_instances_parallel_dataloader_worker():
                 assert val_label.shape == (10,)
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 def test_dataloader_parallel_multi_instances():
     # set max shared memory to 100M
     os.environ["MGE_PLASMA_MEMORY"] = "100000000"
@@ -265,6 +346,10 @@ class MyPreStream(StreamDataset):
         raise StopIteration
 
 
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
 @pytest.mark.skipif(
     platform.system() == "Windows",
     reason="dataloader do not support parallel on windows",

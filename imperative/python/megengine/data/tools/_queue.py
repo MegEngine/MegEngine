@@ -6,9 +6,15 @@ import subprocess
 from multiprocessing import Queue
 
 import pyarrow
-import pyarrow.plasma as plasma
 
 MGE_PLASMA_MEMORY = int(os.environ.get("MGE_PLASMA_MEMORY", 4000000000))  # 4GB
+
+try:
+    import pyarrow.plasma as plasma
+except ModuleNotFoundError:
+    raise RuntimeError(
+        "pyarrow remove plasma in version 12.0.0, please use pyarrow vserion < 12.0.0"
+    )
 
 # Each process only need to start one plasma store, so we set it as a global variable.
 # TODO: how to share between different processes?
