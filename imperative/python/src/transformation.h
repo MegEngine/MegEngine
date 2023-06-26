@@ -22,6 +22,7 @@ public:
         Complex,
         Format,
         Grad,
+        ExternalConvert,
         Scalar,
         Symbol,
         Trace,

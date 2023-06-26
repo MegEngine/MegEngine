@@ -1,11 +1,40 @@
 from collections import OrderedDict, defaultdict
 
+from .. import tensor
 from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import Tensor as RawTensor
+from ..core._imperative_rt.core2 import (
+    is_external_convert,
+    set_external_convert,
+    set_external_convert_hook,
+    set_py_external_type,
+    unset_external_convert,
+)
 from ..core._trace_option import set_use_xla_backend
 from ..device import get_default_device
 from ..utils.dlpack import from_dlpack, to_dlpack
 from .tracing import trace
+
+# try:
+#     from mge_xlalib.xla_extension import ArrayImpl
+
+#     from ..xla.lib import xla_client as xc
+# except ImportError:
+#     pass
+
+from mge_xlalib.xla_extension import ArrayImpl
+
+from ..xla.lib import xla_client as xc
+
+xla_client_compute_stream = None
+
+
+def apply_external_convert_hook(input, cn):
+    stream = xla_client_compute_stream
+    assert isinstance(input, ArrayImpl)
+    dlpack_capsule = xc._xla.buffer_to_dlpack_managed_tensor(input, take_ownership=True)
+    output = from_dlpack(dlpack_capsule, stream).to(cn, _borrow=True)
+    return output
 
 
 class xla_trace(trace):
@@ -48,6 +77,12 @@ class xla_trace(trace):
     def __init__(self, function, *, without_host=True, symbolic_shape=False, **kwargs):
         assert without_host, "xla trace only support without host mode"
         assert not symbolic_shape, "xla doesn't support dynamic shape currently"
+
+        set_external_convert_hook(apply_external_convert_hook)
+
+        set_py_external_type(ArrayImpl)
+        set_external_convert()
+
         super().__init__(
             function, without_host=without_host, symbolic_shape=symbolic_shape, **kwargs
         )
@@ -142,8 +177,8 @@ class xla_trace(trace):
         return xc._xla.buffer_to_dlpack_managed_tensor(x, take_ownership=take_ownership)
 
     def execute(self, *args, **kwargs):
-        from ..traced_module.pytree import tree_flatten
         from ..tensor import Tensor
+        from ..traced_module.pytree import tree_flatten
         from ..utils.module_utils import get_expand_structure
 
         inputs, _ = tree_flatten((args, kwargs))
@@ -161,6 +196,8 @@ class xla_trace(trace):
 
         arrays = self.prepare_xla_inputs(arrays)
         outputs = self.xla_exec(*arrays)
+        global xla_client_compute_stream
+        xla_client_compute_stream = xla_stream
         return_vals = []
         for i in self.out_list:
             if i == -1:
@@ -170,28 +207,25 @@ class xla_trace(trace):
                 return_vals.append(outputs[self.outkey2idx[i]])
         keeped_features = []
         for i in self.keeped_activation:
-            capsule = self.to_dlpack(outputs[self.outkey2idx[i]])
-            t = from_dlpack(capsule, xla_stream).to(cn, _borrow=True)
-            keeped_features.append(t)
+            keeped_features.append(outputs[self.outkey2idx[i]])
         out_tensors = []
         for array in return_vals:
             if array is not None:
-                capsule = self.to_dlpack(array)
-                t = from_dlpack(capsule, xla_stream)
-                out_tensors.append(t.to(cn, _borrow=True))
+                t = tensor(array, device=cn)
+                out_tensors.append(t)
             else:
                 out_tensors.append(array)
         if self.overall:
             for attr, key in self.update_param_dict.items():
                 param = get_expand_structure(attr[0], attr[1])
                 xla_array = outputs[self.outkey2idx[key]]
-                capsule = self.to_dlpack(xla_array)
-                param._reset(from_dlpack(capsule).to(cn, _borrow=True))
+                t = tensor(xla_array, device=cn)
+                param._reset(t)
 
             for state, key in self.update_opt_param_dict.items():
                 xla_array = outputs[self.outkey2idx[key]]
-                capsule = self.to_dlpack(xla_array)
-                state._reset(from_dlpack(capsule).to(cn, _borrow=True))
+                t = tensor(xla_array, device=cn)
+                state._reset(t)
         rst = (
             self.outdef.unflatten(out_tensors)
             if hasattr(self, "outdef")

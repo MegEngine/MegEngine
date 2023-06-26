@@ -31,6 +31,7 @@ namespace mgb::imperative::python {
 extern interpreter::Interpreter::Channel* interpreter_for_py;
 extern PyTypeObject* py_tensor_type;
 extern PyTypeObject* py_varnode_type;
+extern PyTypeObject* py_external_type;
 extern pybind11::handle py_device_type;
 extern PyObject* cpp_use_symbolic_shape;
 extern PyObject* cpp_astensor1d;
@@ -142,6 +143,8 @@ public:
     PyObject* _detail();
     PyObject* _var();
     PyObject* _graph();
+    PyObject* _is_external_value();
+    PyObject* _external_obj();
     void _watch();
 };
 

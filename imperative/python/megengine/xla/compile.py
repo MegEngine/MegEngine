@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Set,
 
 import numpy as np
 
+from .. import tensor
 from ..distributed import is_distributed
 from ..utils.dlpack import from_dlpack, to_dlpack
 from . import ir_utils
@@ -68,10 +69,20 @@ class InputsHandler:
 
     def __call__(self, input_buffers):
         rst = []
-        for ibuf in input_buffers:
-            capsule = to_dlpack(ibuf)
-            xla_array = self.from_dlpack(capsule)
-            rst.append([xla_array])
+        for idx, i in enumerate(input_buffers):
+            if i._is_external_value():
+                rst.append([i._external_obj()])
+            else:
+                if "gpu" in i.device.physical_name:
+                    capsule = to_dlpack(i)
+                    xla_array = self.from_dlpack(capsule)
+                    rst.append([xla_array])
+                else:
+                    r = self.handler(
+                        self.local_devices, [self.input_indices[idx],], [i,]
+                    )[0]
+                    rst.append(r)
+                    i._reset(tensor(r[0]))
         return rst
 
     def __str__(self):

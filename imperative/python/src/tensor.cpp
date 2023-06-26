@@ -28,6 +28,7 @@
 #include "./common.h"
 #include "./dlpack.h"
 #include "./dlpack_convertor.h"
+#include "./external_convert.h"
 #include "./grad.h"
 #include "./graph_rt.h"
 #include "./helper.h"
@@ -61,6 +62,7 @@ namespace mgb::imperative::python {
 interpreter::Interpreter::Channel* interpreter_for_py = nullptr;
 PyTypeObject* py_tensor_type = nullptr;
 PyTypeObject* py_varnode_type = nullptr;
+PyTypeObject* py_external_type = nullptr;
 pybind11::handle py_device_type = nullptr;
 PyObject* cpp_use_symbolic_shape;
 
@@ -589,7 +591,13 @@ TensorWrapper::TensorWrapper(PyObject* args, PyObject* kwargs) {
                                     : no_cache ? CreateTensor::Unique
                                                : CreateTensor::Common;
             ValueRef val;
-            if (py::isinstance(data, Py_Varnode)) {
+            bool use_external_inp = py_external_type != nullptr;
+            if (use_external_inp &&
+                PyObject_TypeCheck(py::handle(data).ptr(), py_external_type)) {
+                val = imperative::apply(
+                        CreateExternalWrapper(data, cn),
+                        Span<ValueRef>(nullptr, nullptr))[0];
+            } else if (py::isinstance(data, Py_Varnode)) {
                 cg::VarNode* m_node = py::handle(data).cast<cg::VarNode*>();
                 val = imperative::apply(
                         CreateNode(m_node), Span<ValueRef>(nullptr, nullptr))[0];
@@ -748,6 +756,27 @@ PyObject* TensorWrapper::_graph() {
             imperative::apply(GetVarVal(), m_tensor->data())[0].as_ref<NodeValue>();
     auto* graph = value->graph();
     return py::cast(graph).release().ptr();
+}
+
+PyObject* TensorWrapper::_external_obj() {
+    TypedValueRef<PyobjectValue> value =
+            imperative::apply(GetExternalVal(), m_tensor->data())[0]
+                    .as_ref<PyobjectValue>();
+    return value->object().release().ptr();
+}
+
+PyObject* TensorWrapper::_is_external_value() {
+    auto&& external_tsf =
+            TransformationManager::get_instance()
+                    .segments[TransformationManager::Segment::ExternalConvert];
+    auto* tsf = reinterpret_cast<ExternalConvertTransformation*>(external_tsf[0].get());
+    mgb_assert(tsf->enabled());
+    auto valueref = m_tensor->data();
+    if (valueref.is(tsf->value_type())) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
 }
 
 void dlpack_capsule_destructor(PyObject* data) {
@@ -931,6 +960,8 @@ void init_tensor(py::module m) {
                     .def<&TensorWrapper::_var>("var")
                     .def<&TensorWrapper::_graph>("graph")
                     .def<&TensorWrapper::value_id>("value_id")
+                    .def<&TensorWrapper::_is_external_value>("_is_external_value")
+                    .def<&TensorWrapper::_external_obj>("_external_obj")
                     .def_getset<
                             &TensorWrapper::module_trace_info,
                             &TensorWrapper::set_module_trace_info>("_NodeMixin__node")
@@ -1148,6 +1179,10 @@ void init_tensor(py::module m) {
 
     m.def("set_py_varnode_type", [](py::object type_obj) {
         py_varnode_type = reinterpret_cast<PyTypeObject*>(type_obj.inc_ref().ptr());
+    });
+
+    m.def("set_py_external_type", [](py::object type_obj) {
+        py_external_type = reinterpret_cast<PyTypeObject*>(type_obj.inc_ref().ptr());
     });
 
     m.def("set_py_device_type",
@@ -1705,6 +1740,24 @@ void init_tensor(py::module m) {
         return module_trace_transformation;
     };
 
+    static py::function external_convert_hook;
+
+    static auto get_external_convert = [] {
+        static std::shared_ptr<ExternalConvertTransformation>
+                external_convert_transformation;
+        if (!external_convert_transformation) {
+            mgb_assert(external_convert_hook);
+            external_convert_transformation =
+                    std::make_shared<ExternalConvertTransformation>(
+                            external_convert_hook);
+            MGB_MARK_USED_VAR(transformations
+                                      .register_at<Segment::ExternalConvert>(
+                                              external_convert_transformation)
+                                      .release());
+        }
+        return external_convert_transformation;
+    };
+
     m.def("set_cpp_use_symbolic_shape", &set_cpp_use_symbolic_shape);
 
     m.def("set_module_tracing", [=] { get_module_trace()->enable(); });
@@ -1712,6 +1765,12 @@ void init_tensor(py::module m) {
     m.def("unset_module_tracing", [=] { get_module_trace()->disable(); });
 
     m.def("is_tracing_module", [=] { return get_module_trace()->enabled(); });
+
+    m.def("set_external_convert", [=] { get_external_convert()->enable(); });
+
+    m.def("unset_external_convert", [=] { get_external_convert()->disable(); });
+
+    m.def("is_external_convert", [=] { return get_external_convert()->enabled(); });
     m.def("set_python_backtrace_enabled", &set_python_backtrace_enabled);
     m.def("set_transformation_backtrace_enabled",
           &set_transformation_backtrace_enabled);
@@ -1723,8 +1782,16 @@ void init_tensor(py::module m) {
         module_trace_hook.inc_ref();
     });
 
+    m.def("set_external_convert_hook", [](py::function function) {
+        external_convert_hook = function;
+        external_convert_hook.inc_ref();
+    });
+
     auto atexit = py::module::import("atexit");
-    atexit.attr("register")(py::cpp_function([]() { module_trace_hook = {}; }));
+    atexit.attr("register")(py::cpp_function([]() {
+        module_trace_hook = {};
+        external_convert_hook = {};
+    }));
     m.def("begin_record_values", [] { Value::begin_record_values(); });
 
     m.def("end_record_values", [] {
