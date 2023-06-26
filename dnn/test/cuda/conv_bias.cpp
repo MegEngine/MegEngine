@@ -230,6 +230,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_QS8) {
     }
 }
 
+#if CUDNN_VERSION != 8600
 TEST_F(CUDA, CONV_BIAS_FORWARD_FLOAT16) {
     require_compute_capability(6, 1);
 
@@ -261,6 +262,7 @@ TEST_F(CUDA, CONV_BIAS_FORWARD_FLOAT16) {
         checker.set_param(param).execs({src_shape, filter_shape, bias_shape, {}, {}});
     }
 }
+#endif
 
 TEST_F(CUDA, CONV_BIAS_NCHW_QS8) {
     //! not support NonlineMode::SIGMOID and NonlineMode::H_SWISH

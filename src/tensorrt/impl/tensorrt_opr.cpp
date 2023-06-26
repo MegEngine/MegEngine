@@ -118,9 +118,7 @@ void* TensorRTOpr::GpuAllocator::allocate(
         uint64_t size, uint64_t alignment, uint32_t flags)
         TENSORRT_NO_EXCEPT(noexcept) {
     static bool enable_log = getenv("MGB_LOG_TRT_MEM_ALLOC");
-    mgb_assert(
-            !flags && !(alignment & (alignment - 1)), "flags=%u alignment=%" PRIu64,
-            flags, alignment);
+    mgb_assert(!(alignment & (alignment - 1)), "alignment=%" PRIu64, alignment);
     auto ret = m_cn.alloc_device(size);
     mgb_assert(
             !(reinterpret_cast<uintptr_t>(ret) & (alignment - 1)),

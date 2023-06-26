@@ -21,6 +21,7 @@
 namespace megdnn {
 namespace test {
 
+#if CUDNN_MAJOR > 9
 TEST_F(CUDA, CONVOLUTION_8X8X32) {
     require_compute_capability(6, 1);
 
@@ -59,6 +60,7 @@ TEST_F(CUDA, CONVOLUTION_8X8X32) {
                 .execs({arg.src, arg.filter, {}});
     }
 }
+#endif
 
 TEST_F(CUDA, CONVOLUTION_FORWARD) {
     using namespace convolution;
