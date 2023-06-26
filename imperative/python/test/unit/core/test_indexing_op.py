@@ -422,6 +422,8 @@ def test_advance_indexing_high_level(test_varnode):
     np.testing.assert_equal(x[1, :], get_value(xx[1, :]))
     np.testing.assert_equal(x[:, 1], get_value(xx[:, 1]))
     np.testing.assert_equal(x[1:3, :], get_value(xx[1:3, :]))
+    np.testing.assert_equal(x[-2:], get_value(xx[-2:]))
+    np.testing.assert_equal(x[:, -1:], get_value(xx[:, -1:]))
 
     np.testing.assert_equal(x[:, :], get_value(xx[:, :]))
     np.testing.assert_equal(x[1, 1], get_value(xx[1, 1]))

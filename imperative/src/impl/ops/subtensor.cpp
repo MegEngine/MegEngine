@@ -202,12 +202,13 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
             ax_val = ax_val < 0 ? layout.shape[axis] + ax_val : ax_val;
             offset += ax_val * layout.stride[axis] * dtype_size;
         } else {
+            int shape_axis = src->layout().shape[axis];
             if (s_val < 0) {
-                int shape_axis = src->layout().shape[axis];
                 start = b_val == INT_MIN ? shape_axis - 1 : b_val;
                 start = mod_size(start, shape_axis);
             }
-            start = std::max(start, 0);
+            start = start == INT_MIN ? 0 : start;
+            start = start < 0 ? start + shape_axis : start;
             offset += start * layout.stride[axis] * dtype_size;
         }
     }

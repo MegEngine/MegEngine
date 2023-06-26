@@ -1247,6 +1247,29 @@ py::object _fastpath_getitem_cpp(py::handle inp_hdl, py::tuple tuple_val) {
     return ret[0];
 }
 
+py::tuple _get_tuple_idx(py::handle idx_hdl) {
+    if (py::isinstance<py::list>(idx_hdl)) {
+        bool is_all_int = true;
+        py::list idx = py::reinterpret_borrow<py::list>(idx_hdl);
+        for (size_t i = 0; i < idx.size(); i++) {
+            if (py::int_::check_(idx[i])) {
+                continue;
+            } else if (py::float_::check_(idx[i])) {
+                throw py::value_error("float idx is vaild in subtensor");
+            } else {
+                is_all_int = false;
+            }
+        }
+        if (is_all_int) {
+            return py::make_tuple(idx_hdl);
+        } else {
+            return py::tuple(idx);
+        }
+    } else {
+        return py::make_tuple(idx_hdl);
+    }
+}
+
 py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
     py::tuple try_res = _try_cond_take(inp_hdl, idx_hdl);
     if (try_res.size() == 2) {
@@ -1256,7 +1279,7 @@ py::object _getitem_cpp(py::handle inp_hdl, py::handle idx_hdl) {
     if (py::isinstance<py::tuple>(idx_hdl)) {
         tuple_val = py::reinterpret_borrow<py::tuple>(idx_hdl);
     } else {
-        tuple_val = py::make_tuple(idx_hdl);
+        tuple_val = _get_tuple_idx(idx_hdl);
     }
     if (subtensor_fastpath(inp_hdl, tuple_val)) {
         return _fastpath_getitem_cpp(inp_hdl, tuple_val);
