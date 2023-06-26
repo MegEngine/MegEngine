@@ -2474,6 +2474,12 @@ def trace_module(
                 if hasattr(mod, "argspec")
                 else inspect.getfullargspec(mod.forward)
             )
+            if isinstance(forward_argspec, inspect.FullArgSpec):
+                argspec_dict = forward_argspec._asdict()
+                # check defaults
+                tree_flatten((forward_argspec.defaults, forward_argspec.kwonlydefaults))
+                argspec_dict["annotations"] = {}
+                forward_argspec = inspect.FullArgSpec(**argspec_dict)
             args, kwargs = _convert_kwargs_to_args(forward_argspec, args, kwargs, True)
             inputs, _ = tree_flatten((args, kwargs))
             for _, i in enumerate(inputs):
