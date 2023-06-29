@@ -1808,6 +1808,23 @@ public:
     }
 };
 
+class Resize3D : public OpDefImplBase<Resize3D> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using InterpolationMode = ::megdnn::param::Resize3D::InterpolationMode;
+    using Format = ::megdnn::param::Resize3D::Format;
+    InterpolationMode imode = ::megdnn::param::Resize3D::InterpolationMode::LINEAR;
+    Format format = ::megdnn::param::Resize3D::Format::NDHWC;
+    bool align_corners = false;
+    Resize3D() = default;
+    Resize3D(InterpolationMode imode_, Format format_, bool align_corners_, std::string scope_ = {}): imode(imode_), format(format_), align_corners(align_corners_) { set_scope(scope_); }
+    Resize3D(::megdnn::param::Resize3D packed_param_0): imode(packed_param_0.imode), format(packed_param_0.format), align_corners(packed_param_0.align_corners) {}
+    ::megdnn::param::Resize3D param() const {
+        return {imode, format, align_corners};
+    }
+};
+
 class SVD : public OpDefImplBase<SVD> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

@@ -245,6 +245,35 @@ protected:
             size_t workspace_in_bytes);
 };
 
+class Resize3DBase : public OperatorBase {
+    DEF_OPR_PARAM(Resize3D);
+    DEF_OPR_IMPL(Resize3DBase, OperatorBase, 1, 1);
+
+public:
+    using InterpolationMode = Param::InterpolationMode;
+
+protected:
+    void check_layout_fwd(const TensorLayout& src, const TensorLayout& dst);
+};
+
+class Resize3DForward : public Resize3DBase {
+    DEF_OPR_IMPL(Resize3DForward, Resize3DBase, 1, 1);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& src, const TensorLayout& dst) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& src, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+};
+using Resize3D = Resize3DForward;
+
 /**
  * \brief Remap opr.
  */

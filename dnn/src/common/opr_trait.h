@@ -150,6 +150,7 @@ DEF(GroupNormBackward, 8, true, true);
 DEF(MaskedFill, 3, false, true);
 DEF(MultiHeadAttnForward, 11, true, true);
 DEF(MultiHeadAttnBackward, 15, true, true);
+DEF(Resize3D, 2, true, false);
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

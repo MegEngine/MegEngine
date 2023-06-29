@@ -502,6 +502,56 @@ MGB_IMPL_OPR_GRAD(ResizeForward) {
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ResizeBackward);
 MEGDNN_OPR_INIT2(ResizeBackward, "resize_bwd", 1, false);
 
+/* ======================= Resize3DForward ======================= */
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Resize3DForward);
+MEGDNN_OPR_INIT2(Resize3DForward, "resize3d")
+
+void Resize3DForward::init_output_dtype() {
+    output(0)->dtype(input(0)->dtype());
+    outshape_by_symvar_enable(1, 1);
+}
+
+void Resize3DForward::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+    input(1)->add_layout_constraint_contiguous();
+}
+
+void Resize3DForward::outshape_by_symvar_do_get_output_shape(
+        TensorShape& dest, const ShapeInferInfo& shpinfo) {
+    TensorShape oshp3d;
+    cg::copy_tensor_value_to_shape(oshp3d, *shpinfo.shpval_inp_val.at(0));
+    auto imgshp = shpinfo.shape_inp_shp.at(0);
+    mgb_assert(
+            imgshp.ndim == 5 && oshp3d.ndim == 3,
+            "shape mismatch for Resize3DForward: img=%s out3d=%s",
+            imgshp.to_string().c_str(), oshp3d.to_string().c_str());
+
+    dest = imgshp;
+    for (int i = 0; i < 3; ++i) {
+        dest.shape[2 + i] = oshp3d.shape[i];
+    }
+}
+
+void Resize3DForward::init_output_static_infer_desc() {
+    Super::init_output_static_infer_desc();
+    init_output_static_infer_desc_workspace(false);
+}
+
+void Resize3DForward::scn_do_execute() {
+    intl::MegDNNOprMethInvoker<megdnn::Resize3D>::exec(megdnn_opr(), this);
+}
+
+size_t Resize3DForward::get_workspace_size_bytes(
+        const TensorShapeArray& input_shapes,
+        const TensorShapeArray& output_shapes) const {
+    return intl::MegDNNOprMethInvoker<megdnn::Resize3D>::get_workspace_in_bytes(
+            megdnn_opr(), this, input_shapes, output_shapes);
+}
+
+void Resize3DForward::record_execute_deps(ExecDependencyArray& deps) {
+    record_megdnn_opr(deps);
+}
+
 /* ======================= WarpAffineForward ======================= */
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(WarpAffineForward);

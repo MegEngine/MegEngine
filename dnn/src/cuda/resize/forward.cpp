@@ -168,4 +168,41 @@ void ResizeImpl::exec(
     }
 }
 
+size_t Resize3DImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
+    return 0;
+}
+
+void Resize3DImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_in dst, _megdnn_workspace workspace) {
+    check_exec(src.layout, dst.layout, workspace.size);
+    size_t out_depth = dst.layout.shape[2];
+    size_t out_height = dst.layout.shape[3];
+    size_t out_width = dst.layout.shape[4];
+
+    size_t in_depth = src.layout.shape[2];
+    size_t in_height = src.layout.shape[3];
+    size_t in_width = src.layout.shape[4];
+
+    bool align_corners = param().align_corners;
+    auto stream = cuda_stream(this->handle());
+
+    if (src.layout.dtype == dtype::Float32{}) {
+        resize3d::resize3d_forward(
+                align_corners, src.ptr<dt_float32>(), dst.ptr<dt_float32>(),
+                src.layout[0], src.layout[1], in_depth, in_height, in_width, out_depth,
+                out_height, out_width, stream);
+#if !MEGDNN_DISABLE_FLOAT16
+    } else if (src.layout.dtype == dtype::Float16{}) {
+        resize3d::resize3d_forward(
+                align_corners, src.ptr<dt_float16>(), dst.ptr<dt_float16>(),
+                src.layout[0], src.layout[1], in_depth, in_height, in_width, out_depth,
+                out_height, out_width, stream);
+#endif
+    } else {
+        megdnn_throw(ssprintf(
+                "unsupported dtype: %s for Resize3D", src.layout.dtype.name()));
+    }
+}
+
 // vim: syntax=cpp.doxygen

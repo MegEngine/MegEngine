@@ -20536,6 +20536,169 @@ void _init_py_Resize(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Resize::typeinfo(), &py_type).second);
 }
 
+void _init_py_Resize3D_InterpolationMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<Resize3D::InterpolationMode>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "InterpolationMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+void _init_py_Resize3D_Format(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<Resize3D::Format>::type;
+
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "Format", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(Resize3D) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Resize3D)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"imode", serialization<decltype(opdef.imode)>::dump(opdef.imode)},
+            {"format", serialization<decltype(opdef.format)>::dump(opdef.format)},
+            {"align_corners", serialization<decltype(opdef.align_corners)>::dump(opdef.align_corners)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Resize3D)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("imode");
+        if (iter != state.end()) {
+            opdef.imode = serialization<decltype(opdef.imode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("format");
+        if (iter != state.end()) {
+            opdef.format = serialization<decltype(opdef.format)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("align_corners");
+        if (iter != state.end()) {
+            opdef.align_corners = serialization<decltype(opdef.align_corners)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Resize3D)
+
+int PyOp(Resize3D)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"imode", "format", "align_corners", "scope", NULL};
+    PyObject *imode = NULL, *format = NULL, *align_corners = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOO", const_cast<char**>(kwlist), &imode, &format, &align_corners, &scope))
+    return -1;
+
+    if (imode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Resize3D)*>(self)->inst().imode =
+                    py::cast<decltype(Resize3D::imode)>(py::handle(imode));
+        } CATCH_ALL(-1)
+    }
+
+    if (format) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Resize3D)*>(self)->inst().format =
+                    py::cast<decltype(Resize3D::format)>(py::handle(format));
+        } CATCH_ALL(-1)
+    }
+
+    if (align_corners) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Resize3D)*>(self)->inst().align_corners =
+                    py::cast<decltype(Resize3D::align_corners)>(py::handle(align_corners));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(Resize3D)::py_getsetters[] = {
+    {const_cast<char*>("imode"), py_get_generic(Resize3D, imode), py_set_generic(Resize3D, imode), const_cast<char*>("imode"), NULL},
+    {const_cast<char*>("format"), py_get_generic(Resize3D, format), py_set_generic(Resize3D, format), const_cast<char*>("format"), NULL},
+    {const_cast<char*>("align_corners"), py_get_generic(Resize3D, align_corners), py_set_generic(Resize3D, align_corners), const_cast<char*>("align_corners"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Resize3D)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Resize3D)::getstate, METH_NOARGS, "Resize3D getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Resize3D)::setstate, METH_VARARGS, "Resize3D setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Resize3D)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Resize3D)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Resize3D)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Resize3D)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, imode: Union[str, InterpolationMode] = ..., format: Union[str, Format] = ..., align_corners: bool = ...) -> None\n"
+};
+
+void _init_py_Resize3D(py::module m) {
+    using py_op = PyOp(Resize3D);
+    auto& py_type = PyOpType(Resize3D);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Resize3D";
+    py_type.tp_basicsize = sizeof(PyOp(Resize3D));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Resize3D";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Resize3D), &PyOp(Resize3D)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_Resize3D_InterpolationMode(py_type);
+    _init_py_Resize3D_Format(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("Resize3D", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Resize3D::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(SVD) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -23327,6 +23490,7 @@ void _init_py_WarpPerspectiveBackwardMat(py::module m) {
     _init_py_RemoveAxis(m); \
     _init_py_Reshape(m); \
     _init_py_Resize(m); \
+    _init_py_Resize3D(m); \
     _init_py_SVD(m); \
     _init_py_SetMeshIndexing(m); \
     _init_py_SetSubtensor(m); \

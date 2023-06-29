@@ -206,6 +206,43 @@ public:
             const OperatorNodeConfig& config = {});
 };
 
+/* ============================= user set shape =========================== */
+MGB_DEFINE_OPR_CLASS(
+        Resize3DForward,
+        intl::WorkspaceSizeInfer<intl::OutshapeBySymvarSCNOpr<
+                mixin::MegDNNOprHolderImpl<megdnn::Resize3DForward>>>) // {
+public:
+    Resize3DForward(
+            VarNode* in_tensor, VarNode* out_shape, const Param& param,
+            const OperatorNodeConfig& config);
+
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar in_tensor, SymbolVar out_shape, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+
+    static SymbolVar make(
+            SymbolVar in_tensor, const TensorShape& out_shape, const Param& param = {},
+            const OperatorNodeConfig& config = {}) {
+        return make(
+                in_tensor, cg::var_from_tensor_shape(in_tensor, out_shape), param,
+                config);
+    }
+
+private:
+    void init_output_dtype() override;
+    void add_input_layout_constraint() override;
+    void init_output_static_infer_desc() override;
+    void outshape_by_symvar_do_get_output_shape(
+            TensorShape& dest, const ShapeInferInfo& shpinfo) override;
+
+    void scn_do_execute() override;
+    size_t get_workspace_size_bytes(
+            const TensorShapeArray& input_shapes,
+            const TensorShapeArray& output_shapes) const override;
+    void record_execute_deps(ExecDependencyArray& deps) override;
+};
+using Resize3D = Resize3DForward;
+
 MGB_DEFINE_OPR_CLASS(
         RemapForward, intl::MegDNNOprWrapperFwd<megdnn::RemapForward>) // {
 public:

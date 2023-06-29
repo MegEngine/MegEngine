@@ -26,6 +26,15 @@ void backward_data_proxy(
         int C, int IH, int IW, int OH, int OW, cudaStream_t stream);
 
 }  // namespace resize
+
+namespace resize3d {
+template <typename ctype>
+void resize3d_forward(
+        const bool align_corners, const ctype* iptr, ctype* optr, const int N,
+        const int C, const int ID, const int IH, const int IW, const int OD,
+        const int OH, const int OW, cudaStream_t stream);
+}  // namespace resize3d
+
 }  // namespace cuda
 }  // namespace megdnn
 

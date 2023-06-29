@@ -193,6 +193,26 @@ TEST_F(CUDA, RESIZE_BACKWARD) {
     }
 }
 
+TEST_F(CUDA, RESIZE3D_NCDHW) {
+    using IMode = param::Resize3D::InterpolationMode;
+    using Format = param::Resize3D::Format;
+    auto ac_param = param::Resize3D{IMode::LINEAR, Format::NCDHW, true};
+    auto nac_param = param::Resize3D{IMode::LINEAR, Format::NCDHW, false};
+
+    auto run = [&](DType d, TensorShape ishape, TensorShape oshape) {
+        Checker<Resize3D> checker(handle_cuda());
+        checker.set_param(ac_param).set_dtype(0, d).set_dtype(1, d).execs(
+                {ishape, oshape});
+        checker.set_param(nac_param).execs({ishape, oshape});
+    };
+
+    for (auto&& dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+        run(dtype, {1, 1, 2, 2, 2}, {1, 1, 4, 4, 4});
+        run(dtype, {2, 2, 2, 3, 4}, {2, 2, 2, 3, 6});
+        run(dtype, {2, 2, 2, 3, 4}, {2, 2, 3, 4, 5});
+    }
+}
+
 #if MEGDNN_WITH_BENCHMARK
 
 TEST_F(CUDA, BENCHMARK_RESIZE_CV) {

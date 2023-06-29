@@ -160,6 +160,7 @@ private:
     cb(GaussianBlur) \
     cb(Resize) \
     cb(ResizeBackward) \
+    cb(Resize3D) \
     cb(ParamPackConcat) \
     cb(MaxTensorDiff) \
     cb(MaskConvForward) \

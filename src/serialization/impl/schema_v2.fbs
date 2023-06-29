@@ -144,6 +144,7 @@ union OperatorParam {
     param.Fill = 93,
     param.GeneralNorm=94,
     param.MultiHeadAttn=95,
+    param.Resize3D = 96,
 }
 
 table Operator {

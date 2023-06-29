@@ -6,7 +6,7 @@
 namespace mgb {
 namespace imperative {
 
-namespace {
+namespace resize {
 
 auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const Resize&>(def);
@@ -16,7 +16,21 @@ auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
 }
 
 OP_TRAIT_REG(Resize, Resize).apply_on_var_node(apply_on_var_node).fallback();
-}  // anonymous namespace
+
+}  // namespace resize
+
+namespace resize3d {
+
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const Resize3D&>(def);
+    mgb_assert(inputs.size() == 2);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::Resize3D::make(inputs[0], inputs[1], op.param(), config);
+}
+
+OP_TRAIT_REG(Resize3D, Resize3D).apply_on_var_node(apply_on_var_node).fallback();
+
+}  // namespace resize3d
 
 }  // namespace imperative
 }  // namespace mgb

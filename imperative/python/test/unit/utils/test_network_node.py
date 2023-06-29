@@ -465,6 +465,17 @@ def test_resize():
     check_pygraph_dump(fwd, [x], [out])
 
 
+def test_resize3d():
+    x = Tensor(np.random.randn(10, 3, 32, 32, 32))
+
+    @trace(symbolic=True, capture_as_const=True)
+    def fwd(x):
+        return F.vision.interpolate(x, size=(16, 16, 16), mode="trilinear")
+
+    out = fwd(x)
+    check_pygraph_dump(fwd, [x], [out])
+
+
 def test_index_onehot():
     src = Tensor([[1.0, 2.0]])
     index = Tensor([0])

@@ -474,7 +474,8 @@ def interpolate(
         size: the size of the output tensor. Default: None
         scale_factor: scaling factor of the output tensor. Default: None
         mode: interpolation methods, acceptable values are:
-            "bilinear", "linear", "bicubic" and "nearest". Default: "bilinear"
+            "bilinear", "linear", "trilinear", "bicubic" and "nearest". Default: "bilinear"
+            "trilinear" is valid only when inp is a 5D-tensor
         align_corners: This only has an effect when ``mode``
             is "bilinear" or "linear". Geometrically, we consider the pixels of the input
             and output as squares rather than points. If set to ``True``, the input
@@ -500,9 +501,9 @@ def interpolate(
         >>> np.testing.assert_allclose(out.numpy(), out2.numpy())
     """
     mode = mode.lower()
-    if mode not in ["bilinear", "linear", "bicubic", "nearest"]:
+    if mode not in ["bilinear", "linear", "trilinear", "bicubic", "nearest"]:
         raise ValueError("unsupported interpolate mode: {}".format(mode))
-    if mode not in ["bilinear", "linear"]:
+    if mode not in ["bilinear", "linear", "trilinear"]:
         if align_corners is not None:
             raise ValueError(
                 "align_corners option can only be set in the bilinear/linear interpolating mode"
@@ -514,14 +515,22 @@ def interpolate(
     if mode == "linear":
         inp = expand_dims(inp, 3)
 
-    if inp.ndim != 4:
-        raise ValueError("shape of input tensor must correspond to the operartion mode")
+    if mode == "trilinear":
+        assert (
+            inp.ndim == 5
+        ), "under trilinear mode, input tensor must have 5 dimensions"
+    else:
+        assert (
+            inp.ndim == 4
+        ), "shape of input tensor must correspond to the operartion mode"
 
     def get_dsize(scale_factor):
         if isinstance(scale_factor, (float, int)):
             scale_factor = float(scale_factor)
             if mode == "linear":
                 scale_factor = (scale_factor, float(1))
+            elif mode == "trilinear":
+                scale_factor = (scale_factor, scale_factor, scale_factor)
             else:
                 scale_factor = (scale_factor, scale_factor)
         else:
@@ -530,21 +539,28 @@ def interpolate(
                     "under linear mode, scale_factor can only be single value"
                 )
 
-        assert len(scale_factor) == 2, "shape of scale_factor must be equal to (2, )"
-        assert isinstance(scale_factor[0], float) and isinstance(
-            scale_factor[1], float
-        ), "scale_factor must be float type"
-        dsize = tuple(
+        if mode == "trilinear":
+            assert (
+                len(scale_factor) == 3
+            ), f"shape of scale_factor of interpolate-{mode} must be equal to (3, )"
+        else:
+            assert (
+                len(scale_factor) == 2
+            ), f"shape of scale_factor of interpolate-{mode} must be equal to (2, )"
+        assert all(
+            isinstance(x, (float, int)) for x in scale_factor
+        ), f"scale_factor of interpolate must be float/int type"
+        dsize = [
             floor(
                 Tensor(
-                    inp.shape[i + 2] * scale_factor[i],
+                    inp.shape[i + 2] * float(scale_factor[i]),
                     dtype="float32",
                     device=inp.device,
                 )
             )
-            for i in range(2)
-        )
-        dsize = concat([dsize[0], dsize[1]], axis=0)
+            for i in range(len(scale_factor))
+        ]
+        dsize = concat(dsize, axis=0)
         return dsize
 
     if size is None:
@@ -557,13 +573,24 @@ def interpolate(
             raise ValueError("scale_factor must be None when size is provided")
 
         if isinstance(size, int):
-            size = (size, 1)
+            if mode == "trilinear":
+                size = (size, 1, 1)
+            else:
+                size = (size, 1)
         else:
             if mode == "linear":
                 raise ValueError("under linear mode, size can only be single value")
         dsize = size
 
-    if not align_corners:
+    if mode == "trilinear":
+        if inp.dtype == np.float16:
+            inp = inp.astype("float32")
+        op = builtin.Resize3D(
+            imode="linear", format="NCDHW", align_corners=align_corners
+        )
+        shape = astensor1d(dsize, inp, dtype="int32", device=inp.device)
+        (ret,) = apply(op, inp, shape)
+    elif not align_corners:
         # fastpath for interpolate
         mode_map = {
             "linear": "linear",

@@ -965,6 +965,11 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
             'ksize_d', 0, 'ksize_h', 3, 'ksize_w', 3,
             'anchor_d', 0, 'anchor_h', 1, 'anchor_w', 1))
 
+(pdef('Resize3D')
+ .add_enum_alias('InterpolationMode', 'WarpPerspectiveV1', name_field='imode')
+ .add_enum_alias('Format', 'Convolution3D', default=1)
+ .add_fields('bool', 'align_corners', 'false'))
+
 (pdef('TopK').
  add_enum(
      'Mode',

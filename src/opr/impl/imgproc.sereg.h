@@ -195,6 +195,7 @@ MGB_SEREG_OPR(ResizeV2, 2);
 
 using DctChannelSelectV1 = opr::DctChannelSelect;
 MGB_SEREG_OPR(DctChannelSelectV1, 0);
+MGB_SEREG_OPR(Resize3D, 2);
 }  // namespace opr
 
 }  // namespace mgb

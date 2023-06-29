@@ -111,6 +111,39 @@ std::tuple<float, int, float, int> ResizeBase::get_nearest_linear_coord(
 int ResizeBase::get_nearest_src(float scale, int size, int idx) {
     return std::min(static_cast<int>(idx / scale), size - 1);
 }
+
+void Resize3DBase::check_layout_fwd(const TensorLayout& src, const TensorLayout& dst) {
+    auto errmsg = [&]() {
+        return megdnn_layout_msg(src) + ", " + ", " + megdnn_layout_msg(dst);
+    };
+    MEGDNN_MARK_USED_VAR(errmsg);
+
+    megdnn_assert(
+            param().format == Param::Format::NCDHW, "Resize3D only support NCDHW");
+    megdnn_assert(
+            src.ndim == 5 && dst.ndim == 5, "shape dim mismatch: %s", errmsg().c_str());
+    megdnn_assert(src.dtype == dst.dtype, "dtype mismatch: %s", errmsg().c_str());
+    megdnn_assert(
+            src.shape[0] == dst.shape[0], "batch size mismatch: %s", errmsg().c_str());
+    megdnn_assert(
+            src.shape[1] == dst.shape[1], "channel size mismatch: %s",
+            errmsg().c_str());
+
+    megdnn_assert_contiguous(src);
+    megdnn_assert_contiguous(dst);
+
+    auto imode = param().imode;
+    using IMode = param::Resize3D::InterpolationMode;
+    megdnn_assert(imode == IMode::INTER_LINEAR, "Resize3D only support TriLinear mode");
+}
+
+void Resize3D::check_exec(
+        const TensorLayout& src, const TensorLayout& dst, size_t workspace_in_bytes) {
+    check_layout_fwd(src, dst);
+    auto required_workspace_in_bytes = get_workspace_in_bytes(src, dst);
+    megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
+}
+
 }  // namespace megdnn
 
 // vim: syntax=cpp.doxygen

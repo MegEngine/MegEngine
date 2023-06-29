@@ -308,6 +308,156 @@ DNN_INC_FLOAT16(INST(dt_float16))
 INST(int8_t);
 #undef INST
 }  // namespace resize
+
+namespace resize3d {
+
+__device__ __forceinline__ static float pixel_get_src_index(
+        float scale, int64_t dst_index, bool align_corners) {
+    if (align_corners) {
+        return scale * dst_index;
+    } else {
+        float src_idx = scale * (dst_index + 0.5f) - 0.5f;
+        return src_idx < 0.f ? 0.f : src_idx;
+    }
+}
+
+__device__ __forceinline__ static size_t index_getter(
+        int n, int c, int d, int h, int w, const int N, const int C, const int D,
+        const int H, const int W) {
+    return n * C * D * H * W + c * D * H * W + d * H * W + h * W + w;
+}
+
+template <typename ctype>
+__global__ void trilinear_forward(
+        const int num_kernels, const float rdepth, const float rheight,
+        const float rwidth, const bool align_corners, const ctype* iptr, ctype* optr,
+        const int N, const int C, const int ID, const int IH, const int IW,
+        const int OD, const int OH, const int OW) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (index < num_kernels) {
+        const int w2 = (index % (OH * OW)) % OW;
+        const int h2 = (index % (OH * OW)) / OW;
+        const int t2 = index / (OH * OW);
+
+        if (ID == OD && IH == OH && IW == OW) {
+            const int t1 = t2;
+            const int h1 = h2;
+            const int w1 = w2;
+
+            for (int n = 0; n < N; n++) {
+                for (int c = 0; c < C; ++c) {
+                    const ctype val =
+                            iptr[index_getter(n, c, t1, h1, w1, N, C, ID, IH, IW)];
+                    optr[index_getter(n, c, t2, h2, w2, N, C, OD, OH, OW)] = val;
+                }
+            }
+            return;
+        }
+
+        const float t1r = pixel_get_src_index(rdepth, t2, align_corners);
+        const int t1 = t1r;
+        const int t1p = (t1 < ID - 1) ? 1 : 0;
+        const float t1lambda = t1r - t1;
+        const float t0lambda = static_cast<float>(1) - t1lambda;
+
+        const float h1r = pixel_get_src_index(rheight, h2, align_corners);
+        const int h1 = h1r;
+        const int h1p = (h1 < IH - 1) ? 1 : 0;
+        const float h1lambda = h1r - h1;
+        const float h0lambda = static_cast<float>(1) - h1lambda;
+
+        const float w1r = pixel_get_src_index(rwidth, w2, align_corners);
+        const int w1 = w1r;
+        const int w1p = (w1 < IW - 1) ? 1 : 0;
+        const float w1lambda = w1r - w1;
+        const float w0lambda = static_cast<float>(1) - w1lambda;
+
+        for (int n = 0; n < N; n++) {
+            for (int c = 0; c < C; ++c) {
+                const float val =
+                        t0lambda *
+                                (h0lambda * (w0lambda * iptr[index_getter(
+                                                                n, c, t1, h1, w1, N, C,
+                                                                ID, IH, IW)] +
+                                             w1lambda * iptr[index_getter(
+                                                                n, c, t1, h1, w1 + w1p,
+                                                                N, C, ID, IH, IW)]) +
+                                 h1lambda *
+                                         (w0lambda * iptr[index_getter(
+                                                             n, c, t1, h1 + h1p, w1, N,
+                                                             C, ID, IH, IW)] +
+                                          w1lambda *
+                                                  iptr[index_getter(
+                                                          n, c, t1, h1 + h1p, w1 + w1p,
+                                                          N, C, ID, IH, IW)])) +
+                        t1lambda *
+                                (h0lambda *
+                                         (w0lambda * iptr[index_getter(
+                                                             n, c, t1 + t1p, h1, w1, N,
+                                                             C, ID, IH, IW)] +
+                                          w1lambda *
+                                                  iptr[index_getter(
+                                                          n, c, t1 + t1p, h1, w1 + w1p,
+                                                          N, C, ID, IH, IW)]) +
+                                 h1lambda *
+                                         (w0lambda * iptr[index_getter(
+                                                             n, c, t1 + t1p, h1 + h1p,
+                                                             w1, N, C, ID, IH, IW)] +
+                                          w1lambda * iptr[index_getter(
+                                                             n, c, t1 + t1p, h1 + h1p,
+                                                             w1 + w1p, N, C, ID, IH,
+                                                             IW)]));
+                optr[index_getter(n, c, t2, h2, w2, N, C, OD, OH, OW)] =
+                        static_cast<ctype>(val);
+            }
+        }
+    }
+}
+
+__host__ __forceinline__ static float get_scale(
+        int input_size, int output_size, bool align_corners) {
+    if (align_corners) {
+        if (output_size > 1) {
+            return static_cast<float>(input_size - 1) / (output_size - 1);
+        } else {
+            return 0.f;
+        }
+    } else {
+        return static_cast<float>(input_size) / output_size;
+    }
+}
+
+template <typename ctype>
+void resize3d_forward(
+        const bool align_corners, const ctype* iptr, ctype* optr, const int N,
+        const int C, const int ID, const int IH, const int IW, const int OD,
+        const int OH, const int OW, cudaStream_t stream) {
+    const size_t num_kernels = OD * OH * OW;
+    const size_t num_threads = 512;
+
+    float rdepth = get_scale(ID, OD, align_corners);
+    float rheight = get_scale(IH, OH, align_corners);
+    float rwidth = get_scale(IW, OW, align_corners);
+
+    trilinear_forward<ctype>
+            <<<(num_kernels + num_threads - 1) / num_threads, num_threads, 0, stream>>>(
+                    num_kernels, rdepth, rheight, rwidth, align_corners, iptr, optr, N,
+                    C, ID, IH, IW, OD, OH, OW);
+}
+
+#define INST(ctype)                                                            \
+    template void resize3d_forward(                                            \
+            const bool, const ctype*, ctype*, const int, const int, const int, \
+            const int, const int, const int, const int, const int, cudaStream_t);
+
+INST(float)
+DNN_INC_FLOAT16(INST(dt_float16))
+
+#undef INST
+
+}  // namespace resize3d
+
 }  // namespace cuda
 }  // namespace megdnn
 

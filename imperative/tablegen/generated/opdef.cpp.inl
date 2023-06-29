@@ -7044,6 +7044,78 @@ OP_TRAIT_REG(Resize, Resize)
     .props(Resize_props_impl)
     .make_name(Resize_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Resize3D);
+
+namespace {
+size_t Resize3D_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Resize3D>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.imode));
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.format));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.align_corners));
+    return val;
+}
+bool Resize3D_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<Resize3D>(),
+         &&b_ = rhs_.cast_final_safe<Resize3D>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.imode != b_.imode) return false;
+    if (a_.format != b_.format) return false;
+    if (a_.align_corners != b_.align_corners) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> Resize3D_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Resize3D>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    switch (op_.imode){
+    case Resize3D::InterpolationMode::NEAREST:
+        props_.emplace_back("imode", "NEAREST");
+        break;
+    case Resize3D::InterpolationMode::LINEAR:
+        props_.emplace_back("imode", "LINEAR");
+        break;
+    case Resize3D::InterpolationMode::AREA:
+        props_.emplace_back("imode", "AREA");
+        break;
+    case Resize3D::InterpolationMode::CUBIC:
+        props_.emplace_back("imode", "CUBIC");
+        break;
+    case Resize3D::InterpolationMode::LANCZOS4:
+        props_.emplace_back("imode", "LANCZOS4");
+        break;
+    default:
+        props_.emplace_back("imode", "INVALID");
+        break;
+    }
+    switch (op_.format){
+    case Resize3D::Format::NCDHW:
+        props_.emplace_back("format", "NCDHW");
+        break;
+    case Resize3D::Format::NDHWC:
+        props_.emplace_back("format", "NDHWC");
+        break;
+    default:
+        props_.emplace_back("format", "INVALID");
+        break;
+    }
+    props_.emplace_back("align_corners", std::to_string(op_.align_corners));
+    return props_;
+}
+std::string Resize3D_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Resize3D>();
+    static_cast<void>(op_);
+    return "Resize3D";
+}
+} // anonymous namespace
+OP_TRAIT_REG(Resize3D, Resize3D)
+    .hash(Resize3D_hash_impl)
+    .is_same_st(Resize3D_is_same_st_impl)
+    .props(Resize3D_props_impl)
+    .make_name(Resize3D_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SVD);
 
 namespace {

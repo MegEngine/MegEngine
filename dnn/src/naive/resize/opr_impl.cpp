@@ -545,4 +545,149 @@ void ResizeBackwardImpl::exec(
     }
 }
 
+template <typename ctype>
+void Resize3DImpl::kern_naive(
+        const float rdepth, const float rheight, const float rwidth,
+        const bool align_corners, const ctype* iptr, ctype* optr, const int N,
+        const int C, const int ID, const int IH, const int IW, const int OD,
+        const int OH, const int OW) {
+    auto pixel_get_src_index = [](float scale, int64_t dst_index, bool align_corners) {
+        if (align_corners) {
+            return scale * dst_index;
+        } else {
+            float src_idx = scale * (dst_index + 0.5f) - 0.5f;
+            return src_idx < 0.f ? 0.f : src_idx;
+        }
+    };
+
+    auto i_index = [&](int in, int ic, int id, int ih, int iw) -> int {
+        return in * C * ID * IH * IW + ic * ID * IH * IW + id * IH * IW + ih * IW + iw;
+    };
+
+    auto o_index = [&](int in, int ic, int id, int ih, int iw) -> int {
+        return in * C * OD * OH * OW + ic * OD * OH * OW + id * OH * OW + ih * OW + iw;
+    };
+
+    for (int t2 = 0; t2 < OD; ++t2) {
+        for (int h2 = 0; h2 < OH; ++h2) {
+            for (int w2 = 0; w2 < OW; ++w2) {
+                const float t1r = pixel_get_src_index(rdepth, t2, align_corners);
+                const int t1 = t1r;
+                const int t1p = (t1 < ID - 1) ? 1 : 0;
+                const float t1lambda = t1r - t1;
+                const float t0lambda = static_cast<float>(1) - t1lambda;
+
+                const float h1r = pixel_get_src_index(rheight, h2, align_corners);
+                const int h1 = h1r;
+                const int h1p = (h1 < IH - 1) ? 1 : 0;
+                const float h1lambda = h1r - h1;
+                const float h0lambda = static_cast<float>(1) - h1lambda;
+
+                const float w1r = pixel_get_src_index(rwidth, w2, align_corners);
+                const int w1 = w1r;
+                const int w1p = (w1 < IW - 1) ? 1 : 0;
+                const float w1lambda = w1r - w1;
+                const float w0lambda = static_cast<float>(1) - w1lambda;
+
+                for (int n = 0; n < N; ++n) {
+                    for (int c = 0; c < C; ++c) {
+                        const float val =
+                                t0lambda *
+                                        (h0lambda *
+                                                 (w0lambda *
+                                                          iptr[i_index(
+                                                                  n, c, t1, h1, w1)] +
+                                                  w1lambda * iptr[i_index(
+                                                                     n, c, t1, h1,
+                                                                     w1 + w1p)]) +
+                                         h1lambda *
+                                                 (w0lambda * iptr[i_index(
+                                                                     n, c, t1, h1 + h1p,
+                                                                     w1)] +
+                                                  w1lambda * iptr[i_index(
+                                                                     n, c, t1, h1 + h1p,
+                                                                     w1 + w1p)])) +
+                                t1lambda *
+                                        (h0lambda *
+                                                 (w0lambda * iptr[i_index(
+                                                                     n, c, t1 + t1p, h1,
+                                                                     w1)] +
+                                                  w1lambda * iptr[i_index(
+                                                                     n, c, t1 + t1p, h1,
+                                                                     w1 + w1p)]) +
+                                         h1lambda * (w0lambda * iptr[i_index(
+                                                                        n, c, t1 + t1p,
+                                                                        h1 + h1p, w1)] +
+                                                     w1lambda * iptr[i_index(
+                                                                        n, c, t1 + t1p,
+                                                                        h1 + h1p,
+                                                                        w1 + w1p)]));
+                        optr[o_index(n, c, t2, h2, w2)] = static_cast<ctype>(val);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#define INST(ctype)                                                                  \
+    template void Resize3DImpl::kern_naive(                                          \
+            const float, const float, const float, const bool, const ctype*, ctype*, \
+            const int, const int, const int, const int, const int, const int,        \
+            const int, const int)
+INST(dt_float32);
+DNN_INC_FLOAT16(INST(dt_float16));
+#undef INST
+
+void Resize3DImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(src.layout, dst.layout, workspace.size);
+    bool align_corners = param().align_corners;
+    size_t N = src.layout.shape[0];
+    size_t C = src.layout.shape[1];
+
+    size_t OD = dst.layout.shape[2];
+    size_t OH = dst.layout.shape[3];
+    size_t OW = dst.layout.shape[4];
+
+    size_t ID = src.layout.shape[2];
+    size_t IH = src.layout.shape[3];
+    size_t IW = src.layout.shape[4];
+
+    auto get_scale = [](int input_size, int output_size, bool align_corners) -> float {
+        if (align_corners) {
+            if (output_size > 1) {
+                return static_cast<float>(input_size - 1) / (output_size - 1);
+            } else {
+                return 0.f;
+            }
+        } else {
+            return static_cast<float>(input_size) / output_size;
+        }
+    };
+
+    float rdepth = get_scale(ID, OD, align_corners);
+    float rheight = get_scale(IH, OH, align_corners);
+    float rwidth = get_scale(IW, OW, align_corners);
+
+    if (src.layout.dtype == dtype::Float32{}) {
+        Resize3DImpl::kern_naive(
+                rdepth, rheight, rwidth, align_corners, src.ptr<dt_float32>(),
+                dst.ptr<dt_float32>(), N, C, ID, IH, IW, OD, OH, OW);
+#if !MEGDNN_DISABLE_FLOAT16
+    } else if (src.layout.dtype == dtype::Float16{}) {
+        Resize3DImpl::kern_naive(
+                rdepth, rheight, rwidth, align_corners, src.ptr<dt_float16>(),
+                dst.ptr<dt_float16>(), N, C, ID, IH, IW, OD, OH, OW);
+#endif
+    } else {
+        megdnn_throw(ssprintf(
+                "unsupported dtype: %s for Resize3D", src.layout.dtype.name()));
+    }
+}
+
+size_t Resize3DImpl::get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) {
+    return 0;
+}
+
 // vim: syntax=cpp.doxygen

@@ -112,6 +112,8 @@ def Remap: MgbHashableOp<"Remap", [RemapParam]>;
 
 def Resize: MgbHashableOp<"Resize", [ResizeParam]>;
 
+def Resize3D: MgbHashableOp<"Resize3D", [Resize3DParam]>;
+
 def IndexingOneHot: MgbHashableOp<"IndexingOneHot", [AxisParam]> {
   let extraArguments = (ins
     MgbI32Attr:$ndim

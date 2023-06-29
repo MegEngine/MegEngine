@@ -768,6 +768,78 @@ TEST(TestOprImgproc, ResizeBackward) {
             {{10, 8, 8, 4}, {10, 8, 4, 8}}, param, 1e-1, 1e-2);
 }
 
+TEST(TestOprImgproc, Resize3DForward) {
+    using Param = opr::Resize3D::Param;
+    using IMode = Param::InterpolationMode;
+    using Format = Param::Format;
+    auto ac_param = Param{IMode::LINEAR, Format::NCDHW, true};
+    auto nac_param = Param{IMode::LINEAR, Format::NCDHW, false};
+
+    auto run = [&](TensorShape ishape, TensorShape oshape, std::vector<float> idata,
+                   std::vector<float> oup_ref, Param param, DType test_dtype) {
+        std::shared_ptr<HostTensorND> inp_host(
+                new HostTensorND{CompNode::load("xpux"), ishape, test_dtype});
+        for (size_t i = 0; i < ishape.total_nr_elems(); ++i) {
+            if (test_dtype == dtype::Float32()) {
+                inp_host->ptr<dt_float32>()[i] = idata[i];
+            } else if (test_dtype == dtype::Float16()) {
+                inp_host->ptr<dt_float16>()[i] = idata[i];
+            } else {
+                mgb_assert(false, "invalid");
+            }
+        }
+        std::shared_ptr<HostTensorND> oup_shape_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape({oshape.ndim}), dtype::Int32()});
+        for (size_t i = 0; i < oshape.ndim; ++i) {
+            oup_shape_host->ptr<dt_int32>()[i] = oshape[i];
+        }
+
+        auto graph = ComputingGraph::make();
+        auto inp_sym = opr::Host2DeviceCopy::make(*graph, inp_host);
+        auto oup_shape_sym = opr::Host2DeviceCopy::make(*graph, oup_shape_host);
+        auto oup = opr::Resize3D::make(inp_sym, oup_shape_sym, param);
+
+        HostTensorND oup_host;
+        auto func = graph->compile({make_callback_copy(oup, oup_host)});
+        func->execute();
+
+        for (size_t i = 0; i < oshape.total_nr_elems(); ++i) {
+            if (test_dtype == dtype::Float32()) {
+                MGB_ASSERT_FLOAT_EQ(oup_ref[i], oup_host.ptr<dt_float32>()[i]);
+            } else if (test_dtype == dtype::Float16()) {
+                MGB_ASSERT_FLOAT_NEAR(oup_ref[i], oup_host.ptr<dt_float16>()[i], 1e-3);
+            } else {
+                mgb_assert(false, "invalid");
+            }
+        }
+    };
+
+    for (auto&& test_dtype : std::vector<DType>{dtype::Float32(), dtype::Float16()}) {
+        run({1, 1, 2, 2, 2}, {4, 4, 4}, {0., 1., 2., 3., 4., 5., 6., 7.},
+            {0.,   0.25, 0.75, 1.,   0.5,  0.75, 1.25, 1.5,  1.5,  1.75, 2.25,
+             2.5,  2.,   2.25, 2.75, 3.,   1.,   1.25, 1.75, 2.,   1.5,  1.75,
+             2.25, 2.5,  2.5,  2.75, 3.25, 3.5,  3.,   3.25, 3.75, 4.,   3.,
+             3.25, 3.75, 4.,   3.5,  3.75, 4.25, 4.5,  4.5,  4.75, 5.25, 5.5,
+             5.,   5.25, 5.75, 6.,   4.,   4.25, 4.75, 5.,   4.5,  4.75, 5.25,
+             5.5,  5.5,  5.75, 6.25, 6.5,  6.,   6.25, 6.75, 7.},
+            nac_param, test_dtype);
+
+        run({1, 1, 2, 2, 2}, {4, 4, 4}, {0., 1., 2., 3., 4., 5., 6., 7.},
+            {0.,        0.3333333, 0.6666667, 1.,        0.6666667, 1.,
+             1.3333333, 1.6666666, 1.3333334, 1.6666667, 1.9999999, 2.3333333,
+             2.,        2.3333333, 2.6666665, 3.,        1.3333334, 1.6666666,
+             2.0000002, 2.3333335, 2.,        2.333333,  2.6666667, 2.9999998,
+             2.6666665, 3.,        3.3333333, 3.6666665, 3.3333333, 3.6666665,
+             4.,        4.3333335, 2.6666667, 3.,        3.3333337, 3.6666667,
+             3.3333335, 3.6666663, 4.,        4.333333,  3.9999998, 4.333333,
+             4.6666665, 5.,        4.6666665, 5.,        5.3333335, 5.666667,
+             4.,        4.333333,  4.666667,  5.,        4.6666665, 4.9999995,
+             5.3333335, 5.6666665, 5.333333,  5.6666665, 6.,        6.3333335,
+             6.,        6.333333,  6.666667,  7.},
+            ac_param, test_dtype);
+    }
+}
+
 TEST(TestOprImgproc, WarpAffineForward) {
     constexpr size_t INP_H = 6, INP_W = 4, N = 2, C = 3;
 

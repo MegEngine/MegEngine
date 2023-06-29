@@ -1924,6 +1924,18 @@ ResizeInst
     .def_readwrite("imode", &Resize::imode)
     .def_readwrite("format", &Resize::format);
 
+py::class_<Resize3D, std::shared_ptr<Resize3D>, OpDef> Resize3DInst(m, "Resize3D");
+
+Resize3DInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
+
+Resize3DInst.attr("Format") = Convolution3DInst.attr("Format");
+
+Resize3DInst
+    .def(py::init<::megdnn::param::Resize3D::InterpolationMode, ::megdnn::param::Resize3D::Format, bool, std::string>(), py::arg("imode") = ::megdnn::param::Resize3D::InterpolationMode::LINEAR, py::arg("format") = ::megdnn::param::Resize3D::Format::NDHWC, py::arg("align_corners") = false, py::arg("scope") = {})
+    .def_readwrite("imode", &Resize3D::imode)
+    .def_readwrite("format", &Resize3D::format)
+    .def_readwrite("align_corners", &Resize3D::align_corners);
+
 py::class_<SVD, std::shared_ptr<SVD>, OpDef> SVDInst(m, "SVD");
 
 SVDInst

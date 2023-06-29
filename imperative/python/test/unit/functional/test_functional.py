@@ -232,7 +232,7 @@ def test_interpolate():
     def error_shape_linear_interpolate():
         inp = tensor(np.arange(1, 5, dtype=np.float32).reshape(1, 1, 2, 2))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AssertionError):
             F.vision.interpolate(inp, scale_factor=2.0, mode="linear")
 
     def inappropriate_scale_linear_interpolate():
