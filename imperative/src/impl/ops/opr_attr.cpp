@@ -13,10 +13,6 @@ namespace imperative {
 
 namespace {
 class OprParamsLoadContext final : public serialization::OprLoadContextRawPOD {
-public:
-    bool strict = true;
-
-private:
     const OprAttr::Param& m_param;
     size_t m_pos = 0;
     ComputingGraph* m_graph;
@@ -44,8 +40,7 @@ public:
               m_graph(graph) {}
 
     ~OprParamsLoadContext() {
-        if (strict)
-            mgb_assert(m_pos == m_param.size(), "param not fully consumed");
+        mgb_assert(m_pos == m_param.size(), "param not fully consumed");
     }
 
     ComputingGraph& graph() override { return *m_graph; }
@@ -131,9 +126,7 @@ std::shared_ptr<OpDef> make_from_op_node(cg::OperatorNodeBase* opr) {
     if (get_type2policy().find(opr->dyn_typeinfo()) != get_type2policy().end()) {
         policy = get_type2policy().at(opr->dyn_typeinfo()).first(opr);
     }
-    return OprAttr::make(
-            registry->name, std::move(ctx.m_param), policy, opr->config(),
-            opr->dyn_typeinfo());
+    return OprAttr::make(registry->name, std::move(ctx.m_param), policy, opr->config());
 }
 
 std::vector<std::pair<const char*, std::string>> props(const OpDef& def) {
@@ -174,12 +167,6 @@ size_t OprAttr::hash() const {
                             policy.workspace_limit)),
             config.hash());
 }
-
-std::shared_ptr<json::Value> OprAttr::mgb_param(OprFootprint* footprint) {
-    OprParamsLoadContext ctx{param, nullptr};
-    ctx.strict = false;
-    return footprint->get_serial_param_json(mgb_opr_type, ctx);
-};
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(OprAttr);
 

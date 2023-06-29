@@ -7,7 +7,6 @@
 #include "megbrain/imperative/profiler.h"
 #include "megbrain/imperative/resource_manager.h"
 
-#include <range/v3/all.hpp>
 namespace mgb {
 namespace imperative {
 
@@ -227,7 +226,7 @@ void GradKey::backward() {
             if constexpr (std::is_same_v<T, std::monostate>) {
                 mgb_throw(AssertionError, "invalid backward");
             } else {
-                // mgb_assert(grad_fn->m_slots.size() > 0);
+                mgb_assert(grad_fn->m_slots.size() > 0);
                 SmallVector<ValueRef> grads (grad_fn->m_slots.size());
                 auto iter = grads.begin();
                 for (auto&& slot : grad_fn->m_slots) {
@@ -420,23 +419,6 @@ ValueRefList GradTransformation::apply_transformation(
         mgb_assert(!grad_fn->m_slots.empty());
         m_key->m_tape.push_back({grad_fn, op_val->op().shared_from_this()});
         return outputs;
-    } else if (auto* igc = op.as<InsertGradCallback>()) {
-        auto grad_fn = LocalPtr<GradFn>::make();
-        auto& backward =
-                std::get<CustomBackward>(grad_fn->m_backward = CustomBackward());
-        auto id = inputs[0];
-        backward.m_backward = [id, callback = igc->callback()](
-                                      Span<ValueRef> inputs) -> SmallVector<ValueRef> {
-            callback({&id, (size_t)1});
-            return {};
-        };
-        m_key->m_side_effects.push_back(grad_fn);
-        m_key->m_tape.push_back({grad_fn, nullptr});
-        auto next_id = IntegerValue::make((int)id.cast<IntegerValue>() + 1);
-        auto prev_count =
-                imperative::apply(InsertGradCallback(igc->callback()), next_id)[0];
-        auto count = IntegerValue::make((int)prev_count.cast<IntegerValue>() + 1);
-        return {count};
     } else if (op.is<CreateTensor>()) {
         return imperative::apply(op, inputs);
     } else if (auto* attach_grad = op.as<AttachGrad>()) {
@@ -532,13 +514,6 @@ ValueRefList GradTransformation::apply_transformation(
             }
         }
         return imperative::apply(op, inputs);
-    } else if (op.is<GetGradSlot>()) {
-        mgb_assert(inputs.size() == 1);
-        if (auto&& grad_value = as_grad_value(inputs[0])) {
-            return {GradSlotValue::make(grad_value->slot())};
-        } else {
-            return {};
-        }
     } else if (op.kind() == Operator::IdentityLike) {
         mgb_assert(inputs.size() == 1);
         if (auto&& grad_value = as_grad_value(inputs[0])) {

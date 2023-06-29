@@ -105,10 +105,6 @@ std::string IsScalar::to_string() const {
     return "IsScalar";
 }
 
-std::string GetId::to_string() const {
-    return "GetId";
-}
-
 std::string GetFormat::to_string() const {
     return "GetFormat{}";
 }

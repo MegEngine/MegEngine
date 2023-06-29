@@ -15,10 +15,6 @@ std::string BoolValue::to_string() const {
     return (*this) ? "true" : "false";
 }
 
-std::string IntegerValue::to_string() const {
-    return std::to_string((int)*this);
-}
-
 std::string HostStorage::to_string() const {
     return ssprintf("HostStorage{device=%s}", comp_node().to_string().c_str());
 }

@@ -80,8 +80,6 @@ public:
 
     const std::string make_name() const;
 
-    virtual const std::string type_name() const;
-
     void set_scope(const std::string& scope);
 
     virtual size_t hash() const;

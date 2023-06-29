@@ -18,13 +18,7 @@ from megengine.core.ops import builtin as ops
 from megengine.core.ops.builtin import Elemwise
 from megengine.core.tensor.utils import isscalar
 from megengine.functional import exp, log
-from megengine.jit import (
-    GraphOptimizationConfig,
-    TraceError,
-    exclude_from_trace,
-    partial_trace,
-    trace,
-)
+from megengine.jit import GraphOptimizationConfig, TraceError, exclude_from_trace, trace
 from megengine.module import Module
 from megengine.random import normal, uniform
 from megengine.utils.naming import AutoNaming
@@ -809,87 +803,3 @@ def test_dump_without_output_error():
             str(e)
             == "the traced function without return values cannot be dumped, the traced function should return List[Tensor] or Dict[str, Tensor]"
         )
-
-
-@pytest.mark.parametrize("trace_mode", [False, True])
-def test_trace_without_host(trace_mode):
-    @trace(symbolic=trace_mode, without_host=True)
-    def fwd(a, b, c):
-        x = a + b
-        y = a + c
-        z = x * y
-        z1 = x / y
-        return [z, z1]
-
-    a = tensor([1.0])
-    b = tensor([2.0])
-    c = tensor([3.0])
-    rst = fwd(a, b, c)
-    for _ in range(2):
-        trace_rst = fwd(a, b, c)
-    np.testing.assert_equal(rst[0], trace_rst[0])
-    np.testing.assert_equal(rst[1], trace_rst[1])
-
-
-def test_trace_without_error():
-    const = tensor([8.0])
-
-    @trace(symbolic=False, without_host=True)
-    def fwd(a, b, c):
-        x = a + b
-        y = a + c
-        z = x * y
-        z1 = x / y + const
-        return [z, z1]
-
-    try:
-        a = tensor([1.0])
-        b = tensor([2.0])
-        c = tensor([3.0])
-        fwd(a, b, c)
-    except Exception as e:
-        assert str(e) == "have some unknown input tensors in trace result"
-    else:
-        assert False
-
-
-def test_partial_trace_fwd_bwd():
-    class Simple(Module):
-        def __init__(self):
-            super().__init__()
-            self.a = Parameter([1.0], dtype=np.float32)
-            self.b = Parameter([2.0], dtype=np.float32)
-
-        @partial_trace
-        def forward(self, x):
-            x = x * self.a + x / self.b
-            x = F.exp(x)
-            return x
-
-        def clear_grad(self):
-            self.a.grad = None
-            self.b.grad = None
-
-    @partial_trace
-    def fwd_only(a, b):
-        return a * b + a / b
-
-    m = Simple()
-    gm = GradManager()
-    gm.attach(m.parameters())
-
-    def func(x):
-        with gm:
-            x = x * 3
-            x = m(x)
-            x = x * 2
-            gm.backward(x)
-        a = m.a.grad
-        b = m.b.grad
-        m.clear_grad()
-        return fwd_only(a, b) + a + b
-
-    gt = func(tensor(1.0))
-    for _ in range(3):
-        out = func(tensor(1.0))
-    np.testing.assert_equal(gt.numpy(), out.numpy())

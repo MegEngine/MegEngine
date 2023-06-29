@@ -74,7 +74,6 @@ public:
     inline ValueRef data() const { return m_data.unwrap(); }
     bool is_scalar() { return data().is_scalar(); }
     inline std::string name() { return m_name; }
-    inline size_t value_id() { return m_data.id(); }
     inline void set_name(std::string name) {
         m_name = name;
         if (!name.empty()) {
@@ -129,7 +128,6 @@ public:
     void reset(PyObject*);
     PyObject* detach();
     PyObject* isscalar();
-    PyObject* value_id();
     PyObject* _dev_tensor();
     void _drop();
     PyObject* varnode();

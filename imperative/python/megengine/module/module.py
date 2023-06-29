@@ -49,8 +49,6 @@ def _access_structure(obj, key, callback=None):
             cur = cur[k]
         else:
             cur = getattr(cur, k)
-    if callable is None:
-        return cur
     return callback(parent, k, cur)
 
 

@@ -48,25 +48,6 @@ public:
     std::string to_string() const override;
 };
 
-class Integer {
-private:
-    int64_t m_value;
-
-public:
-    Integer() = default;
-    Integer(int64_t value) : m_value(value) {}
-
-    operator int64_t() const { return m_value; }
-};
-
-// TODO: override factory method
-class IntegerValue final : public PrimitiveValue<IntegerValue, Integer> {
-public:
-    using PrimitiveValue::PrimitiveValue;
-
-    std::string to_string() const override;
-};
-
 class HostStorage final : public PrimitiveValue<HostStorage, HostTensorStorage> {
 public:
     using PrimitiveValue::PrimitiveValue;

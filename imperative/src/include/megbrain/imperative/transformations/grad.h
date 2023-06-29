@@ -107,7 +107,7 @@ private:
 
 public:
     std::string to_string() const;
-    ValueRef grad() const { return m_grad; }
+
     friend class GradKey;
     friend class GradSlotProducerPtr;
     friend class GradTransformation;
@@ -224,7 +224,6 @@ public:
 class GradKey : public std::enable_shared_from_this<GradKey> {
 private:
     std::string m_name;
-    std::vector<LocalPtr<GradFn>> m_side_effects;
     std::vector<std::pair<LocalWeakPtr<GradFn>, std::shared_ptr<OpDef>>> m_tape;
     std::vector<std::pair<LocalPtr<GradFn>, std::shared_ptr<OpDef>>> m_frozen_tape;
     bool m_frozen = false;
@@ -252,13 +251,6 @@ public:
     std::string to_string() const override {
         return ssprintf("GradKey{%s}", (*this)->name().c_str());
     }
-};
-
-class GradSlotValue final : public PrimitiveValue<GradSlotValue, GradSlotPtr> {
-public:
-    using PrimitiveValue::PrimitiveValue;
-
-    std::string to_string() const override { return ssprintf("GradSlot{}"); }
 };
 
 class GradTransformation final : public Transformation {
@@ -412,28 +404,6 @@ public:
     ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
 };
 
-class GetGradSlot : public OperatorImpl<GetGradSlot, Operator::GetAttrLike> {
-public:
-    GetGradSlot() = default;
-
-    std::string to_string() const override { return ssprintf("GetGradSlot{}"); }
-    std::string raw_type() const { return "GetGradSlot"; };
-    ValueRefList fallback(Span<ValueRef> inputs) const override { return {}; }
-};
-
-class InsertGradCallback : public OperatorImpl<InsertGradCallback, Operator::Other> {
-public:
-    GenericFunction m_callback;
-
-public:
-    InsertGradCallback(GenericFunction callback) : m_callback(callback) {}
-
-    GenericFunction callback() const { return m_callback; }
-
-    std::string to_string() const override { return ssprintf("InsertGradCallback{}"); }
-    std::string raw_type() const { return "InsertGradCallback"; }
-};
-
 class GetBackwardColsure
         : public OperatorImpl<GetBackwardColsure, Operator::GetAttrLike> {
 private:
@@ -448,21 +418,6 @@ public:
         return ssprintf("GetBackwardClosure{key=%s}", m_key->name().c_str());
     }
     std::string raw_type() const { return "GetBackwardClosure"; }
-};
-
-class GradTransformationGuard final : public Transformation {
-    ValueRefList apply_transformation(
-            const Operator& op, Span<ValueRef> inputs) override {
-        if (auto* igc = op.as<InsertGradCallback>()) {
-            auto count = IntegerValue::make(0);
-            return {count};
-        }
-        return imperative::apply(op, inputs);
-    }
-
-    ValueRef unwrap(ValueRef value) override { return value; };
-
-    std::string name() const override { return "GradTransformationGuard"; };
 };
 
 }  // namespace mgb::imperative

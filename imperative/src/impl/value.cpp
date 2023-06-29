@@ -127,10 +127,6 @@ bool ValueRef::watching() const {
     return this->storage()->m_watching;
 }
 
-int ValueRef::handle_id() const {
-    return imperative::apply(GetId(), *this)[0].cast<IntegerValue>();
-}
-
 ValueRef ValueRef::make(ValueRef::storage_t storage) {
     if (recording_values) {
         recorded_values.push_back({storage});

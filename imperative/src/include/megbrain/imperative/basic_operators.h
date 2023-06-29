@@ -141,14 +141,6 @@ public:
     ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
 };
 
-class GetId final : public OperatorImpl<GetId, Operator::GetAttrLike> {
-public:
-    std::string to_string() const override;
-    std::string raw_type() const { return "GetId"; }
-
-    ValueRefList fallback(Span<ValueRef> inputs) const override { return {ValueRef()}; }
-};
-
 /**
  * \brief return a value with new name
  *
