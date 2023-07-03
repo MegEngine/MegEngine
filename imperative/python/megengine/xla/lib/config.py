@@ -5,9 +5,12 @@ import logging
 import os
 import sys
 import threading
+import warnings
 from typing import Any, Callable, Hashable, Iterator, List, NamedTuple, Optional
 
-import jaxlib.xla_client as xla_client
+import mge_xlalib.xla_client as xla_client
+
+from . import jax_jit as libjax_jit
 
 jax_jit = xla_client._xla.jax_jit
 transfer_guard_lib = xla_client._xla.transfer_guard_lib
@@ -17,6 +20,16 @@ logger = logging.getLogger(__name__)
 
 
 def bool_env(varname: str, default: bool) -> bool:
+    """Read an environment variable and interpret it as a boolean.
+
+    True values are (case insensitive): 'y', 'yes', 't', 'true', 'on', and '1';
+    false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+
+    Args:
+        varname: the name of the variable
+        default: the default boolean value
+    Raises: ValueError if the environment variable is anything else.
+    """
     val = os.getenv(varname, str(default))
     val = val.lower()
     if val in ("y", "yes", "t", "true", "on", "1"):
@@ -28,7 +41,18 @@ def bool_env(varname: str, default: bool) -> bool:
 
 
 def int_env(varname: str, default: int) -> int:
+    """Read an environment variable and interpret it as an integer."""
     return int(os.getenv(varname, str(default)))
+
+
+UPGRADE_BOOL_HELP = (
+    " This will be enabled by default in future versions of JAX, at which "
+    "point all uses of the flag will be considered deprecated (following "
+    "the `API compatibility policy "
+    "<https://jax.readthedocs.io/en/latest/api_compatibility.html>`_)."
+)
+
+UPGRADE_BOOL_EXTRA_DESC = " (transient)"
 
 
 class Config:
@@ -67,7 +91,13 @@ class Config:
             raise AttributeError(f"Unrecognized config option: {name}")
 
     def add_option(
-        self, name, default, opt_type, meta_args, meta_kwargs, update_hook=None
+        self,
+        name,
+        default,
+        opt_type,
+        meta_args,
+        meta_kwargs,
+        update_hook: Optional[Callable[[Any], None]] = None,
     ):
         if name in self.values:
             raise Exception(f"Config option {name} already defined")
@@ -101,47 +131,11 @@ class Config:
         update_hook = kwargs.pop("update_hook", None)
         self.add_option(name, default, "enum", args, kwargs, update_hook=update_hook)
 
-    def config_with_absl(self):
-        # Run this before calling `app.run(main)` etc
-        import absl.flags as absl_FLAGS  # noqa: F401
-        from absl import app, flags as absl_flags
-
-        self.use_absl = True
-        self.absl_flags = absl_flags
-        absl_defs = {
-            bool: absl_flags.DEFINE_bool,
-            int: absl_flags.DEFINE_integer,
-            float: absl_flags.DEFINE_float,
-            str: absl_flags.DEFINE_string,
-            "enum": absl_flags.DEFINE_enum,
-        }
-
-        for name, val in self.values.items():
-            flag_type, meta_args, meta_kwargs = self.meta[name]
-            absl_defs[flag_type](name, val, *meta_args, **meta_kwargs)
-        app.call_after_init(lambda: self.complete_absl_config(absl_flags))
-
     def complete_absl_config(self, absl_flags):
         for name, _ in self.values.items():
             flag = absl_flags.FLAGS[name]
             if flag.present:
                 self.update(name, flag.value)
-
-    def parse_flags_with_absl(self):
-        global already_configured_with_absl
-        if not already_configured_with_absl:
-            # Extract just the --jax... flags (before the first --) from argv. In some
-            # environments (e.g. ipython/colab) argv might be a mess of things
-            # parseable by absl and other junk.
-            jax_argv = itertools.takewhile(lambda a: a != "--", sys.argv)
-            jax_argv = ["", *(a for a in jax_argv if a.startswith("--jax"))]
-
-            import absl.flags
-
-            self.config_with_absl()
-            absl.flags.FLAGS(jax_argv, known_only=True)
-            self.complete_absl_config(absl.flags)
-            already_configured_with_absl = True
 
     def define_bool_state(
         self,
@@ -206,6 +200,9 @@ class Config:
 
         """
         name = name.lower()
+        if upgrade:
+            help += " " + UPGRADE_BOOL_HELP
+            extra_description += UPGRADE_BOOL_EXTRA_DESC
         self.DEFINE_bool(
             name, bool_env(name.upper(), default), help, update_hook=update_global_hook
         )
@@ -470,11 +467,15 @@ class Config:
         the C++ JIT state, which is handled separately."""
         tls = jax_jit.thread_local_state()
         axis_env_state = ()
+        mesh_context_manager = ()
         context = tls.extra_jit_context
         if context and context.axis_env_state is not None:
             axis_env_state = context.axis_env_state
+        if context and context.mesh_context_manager:
+            mesh_context_manager = context.mesh_context_manager
         return (
             axis_env_state,
+            mesh_context_manager,
             self.x64_enabled,
             self.jax_numpy_rank_promotion,
             self.jax_default_matmul_precision,
@@ -483,6 +484,8 @@ class Config:
             self.jax_default_device,
             self.jax_array,
             self.jax_threefry_partitionable,
+            # Technically this affects jaxpr->MHLO lowering, not tracing.
+            self.jax_hlo_source_file_canonicalization_regex,
         )
 
 
@@ -613,6 +616,7 @@ class _ThreadLocalExtraJitContext(NamedTuple):
 
     dynamic_trace_state: Optional[Any] = None
     axis_env_state: Hashable = ()
+    mesh_context_manager: Hashable = ()
     numpy_rank_promotion: Optional[str] = None
     numpy_dtype_promotion: Optional[str] = None
     default_matmul_precision: Optional[Any] = None
@@ -640,7 +644,6 @@ def update_thread_local_jit_state(**kw):
     tls = jax_jit.thread_local_state()
     # After xla_client._version >= 70, the thread_local object will necessarily
     # be initialized when accessed. The following line can be removed when the
-    # minimum  jaxlib version is past version 70
     context = tls.extra_jit_context or _ThreadLocalExtraJitContext()
     tmp = context._replace(**kw)
     tls.extra_jit_context = _thread_local_state_cache.canonicalize(tmp)
@@ -693,40 +696,39 @@ flags.DEFINE_bool(
     ),
 )
 
-# # TODO: remove flag when XLA:CPU is improved.
-# jax2tf_associative_scan_reductions = config.define_bool_state(
-#     name="jax2tf_associative_scan_reductions",
-#     default=False,
-#     help=(
-#         "JAX has two separate lowering rules for the cumulative reduction "
-#         "primitives (cumsum, cumprod, cummax, cummin). On CPUs and GPUs it uses "
-#         "a lax.associative_scan, while for TPUs it uses the HLO ReduceWindow. "
-#         "The latter has a slow implementation on CPUs and GPUs. "
-#         "By default, jax2tf uses the TPU lowering. Set this flag to True to "
-#         "use the associative scan lowering usage, and only if it makes a difference "
-#         "for your application. "
-#         "See the jax2tf README.md for more details."
-#     ),
-# )
+# TODO: remove flag when XLA:CPU is improved.
+jax2tf_associative_scan_reductions = config.define_bool_state(
+    name="jax2tf_associative_scan_reductions",
+    default=False,
+    help=(
+        "JAX has two separate lowering rules for the cumulative reduction "
+        "primitives (cumsum, cumprod, cummax, cummin). On CPUs and GPUs it uses "
+        "a lax.associative_scan, while for TPUs it uses the HLO ReduceWindow. "
+        "The latter has a slow implementation on CPUs and GPUs. "
+        "By default, jax2tf uses the TPU lowering. Set this flag to True to "
+        "use the associative scan lowering usage, and only if it makes a difference "
+        "for your application. "
+        "See the jax2tf README.md for more details."
+    ),
+)
 
-# jax2tf_default_experimental_native_lowering = config.define_bool_state(
-#     name="jax2tf_default_experimental_native_lowering",
-#     default=bool_env("JAX2TF_DEFAULT_EXPERIMENTAL_NATIVE_LOWERING", False),
-#     help=(
-#         "DO NOT USE, highly experimental. Sets the default value of the "
-#         "experimental_native_lowering parameter to jax2tf.convert."
-#     ),
-# )
+jax2tf_default_native_serialization = config.define_bool_state(
+    name="jax2tf_default_native_serialization",
+    default=bool_env("JAX2TF_DEFAULT_NATIVE_SERIALIZATION", False),
+    help=(
+        "Sets the default value of the native_serialization parameter to "
+        "jax2tf.convert. Prefer using the parameter instead of the flag, the "
+        "flag may be removed in the future."
+    ),
+)
 
-# jax2tf_use_stablehlo = config.define_bool_state(
-#     name="jax2tf_use_stablehlo",
-#     default=bool_env("JAX2TF_USE_STABLEHLO", True),
-#     help=(
-#         "DO NOT USE, highly experimental. Use in conjunction with jax2tf "
-#         "experimental_native_lowering, to use StableHLO instead of MHLO as "
-#         "the serialization format."
-#     ),
-# )
+# TODO: remove jax2tf_default_experimental_native_lowering
+jax2tf_default_experimental_native_lowering = config.define_bool_state(
+    name="jax2tf_default_experimental_native_lowering",
+    default=bool_env("JAX2TF_DEFAULT_EXPERIMENTAL_NATIVE_LOWERING", False),
+    help=("DO NOT USE, deprecated in favor of jax2tf_default_native_serialization."),
+)
+
 
 jax_platforms = config.define_string_state(
     name="jax_platforms",
@@ -745,253 +747,261 @@ jax_platforms = config.define_string_state(
     ),
 )
 
-# enable_checks = config.define_bool_state(
-#     name="jax_enable_checks",
-#     default=False,
-#     help="Turn on invariant checking for JAX internals. Makes things slower.",
-# )
+enable_checks = config.define_bool_state(
+    name="jax_enable_checks",
+    default=False,
+    help="Turn on invariant checking for JAX internals. Makes things slower.",
+)
 
-# check_tracer_leaks = config.define_bool_state(
-#     name="jax_check_tracer_leaks",
-#     default=False,
-#     help=(
-#         "Turn on checking for leaked tracers as soon as a trace completes. "
-#         "Enabling leak checking may have performance impacts: some caching "
-#         "is disabled, and other overheads may be added. Additionally, be aware "
-#         "that some Python debuggers can cause false positives, so it is recommended "
-#         "to disable any debuggers while leak checking is enabled."
-#     ),
-# )
-# checking_leaks = functools.partial(check_tracer_leaks, True)
+check_tracer_leaks = config.define_bool_state(
+    name="jax_check_tracer_leaks",
+    default=False,
+    help=(
+        "Turn on checking for leaked tracers as soon as a trace completes. "
+        "Enabling leak checking may have performance impacts: some caching "
+        "is disabled, and other overheads may be added. Additionally, be aware "
+        "that some Python debuggers can cause false positives, so it is recommended "
+        "to disable any debuggers while leak checking is enabled."
+    ),
+)
+checking_leaks = functools.partial(check_tracer_leaks, True)
 
-# debug_nans = config.define_bool_state(
-#     name="jax_debug_nans",
-#     default=False,
-#     help=(
-#         "Add nan checks to every operation. When a nan is detected on the "
-#         "output of a jit-compiled computation, call into the un-compiled "
-#         "version in an attempt to more precisely identify the operation "
-#         "which produced the nan."
-#     ),
-# )
+debug_nans = config.define_bool_state(
+    name="jax_debug_nans",
+    default=False,
+    help=(
+        "Add nan checks to every operation. When a nan is detected on the "
+        "output of a jit-compiled computation, call into the un-compiled "
+        "version in an attempt to more precisely identify the operation "
+        "which produced the nan."
+    ),
+)
 
-# debug_infs = config.define_bool_state(
-#     name="jax_debug_infs",
-#     default=False,
-#     help=(
-#         "Add inf checks to every operation. When an inf is detected on the "
-#         "output of a jit-compiled computation, call into the un-compiled "
-#         "version in an attempt to more precisely identify the operation "
-#         "which produced the inf."
-#     ),
-# )
+debug_infs = config.define_bool_state(
+    name="jax_debug_infs",
+    default=False,
+    help=(
+        "Add inf checks to every operation. When an inf is detected on the "
+        "output of a jit-compiled computation, call into the un-compiled "
+        "version in an attempt to more precisely identify the operation "
+        "which produced the inf."
+    ),
+)
 
-# log_compiles = config.define_bool_state(
-#     name="jax_log_compiles",
-#     default=False,
-#     help=(
-#         "Log a message each time every time `jit` or `pmap` compiles an XLA "
-#         "computation. Logging is performed with `logging`. When this "
-#         "option is set, the log level is WARNING; otherwise the level is "
-#         "DEBUG."
-#     ),
-# )
+log_compiles = config.define_bool_state(
+    name="jax_log_compiles",
+    default=False,
+    help=(
+        "Log a message each time every time `jit` or `pmap` compiles an XLA "
+        "computation. Logging is performed with `logging`. When this "
+        "option is set, the log level is WARNING; otherwise the level is "
+        "DEBUG."
+    ),
+)
 
-# parallel_functions_output_gda = config.define_bool_state(
-#     name="jax_parallel_functions_output_gda",
-#     default=False,
-#     help="If True, pjit will output GDAs.",
-# )
+log_compiles = config.define_bool_state(
+    name="jax_log_checkpoint_residuals",
+    default=False,
+    help=(
+        "Log a message every time jax.checkpoint (aka jax.remat) is "
+        "partially evaluated (e.g. for autodiff), printing what residuals "
+        "are saved."
+    ),
+)
 
-
-# def _update_jax_array_global(val):
-#     if val is not None and not val:
-#         raise ValueError(
-#             "jax.config.jax_array cannot be disabled after jax 0.4.7 release."
-#             " Please downgrade to jax and jaxlib 0.4.6 if you want to disable"
-#             " jax.config.jax_array."
-#         )
-
-
-# def _update_jax_array_thread_local(val):
-#     if val is not None and not val:
-#         raise ValueError(
-#             "jax.config.jax_array cannot be disabled after jax 0.4.7 release."
-#             " Please downgrade to jax and jaxlib 0.4.6 if you want to disable"
-#             " jax.config.jax_array."
-#         )
+parallel_functions_output_gda = config.define_bool_state(
+    name="jax_parallel_functions_output_gda",
+    default=False,
+    help="If True, pjit will output GDAs.",
+)
 
 
-# jax_array = config.define_bool_state(
-#     name="jax_array",
-#     default=True,
-#     upgrade=True,
-#     update_global_hook=_update_jax_array_global,
-#     update_thread_local_hook=_update_jax_array_thread_local,
-#     help=(
-#         "If True, new pjit behavior will be enabled and `jax.Array` will be " "used."
-#     ),
-# )
+def _update_jax_array_global(val):
+    if val is not None and not val:
+        raise ValueError("not supported in current version, please downgrad")
 
 
-# jit_pjit_api_merge = config.define_bool_state(
-#     name="jax_jit_pjit_api_merge",
-#     default=False,
-#     upgrade=True,
-#     help=("If True, jit and pjit API will be merged."),
-# )
+def _update_jax_array_thread_local(val):
+    if val is not None and not val:
+        raise ValueError("not supported in current version, please downgrad")
 
 
-# spmd_mode = config.define_enum_state(
-#     name="jax_spmd_mode",
-#     enum_values=["allow_all", "allow_jit", "allow_pjit"],
-#     # TODO: Default to `allow_jit` when the training wheels come
-#     # off.
-#     default="allow_pjit",
-#     help=(
-#         "Decides whether Math on `jax.Array`'s that are not fully addressable "
-#         "(i.e. spans across multiple processes) is allowed. The options are: "
-#         "* allow_pjit: Default, only `pjit` computations are allowed to "
-#         "    execute on non-fully addressable `jax.Array`s\n"
-#         "* allow_jit: `pjit` and `jax.jit` computations are allowed to "
-#         "    execute on non-fully addressable `jax.Array`s\n"
-#         "* allow_all: `jnp`, normal math (like `a + b`, etc), `pjit`, "
-#         "     `jax.jit` and all other operations are allowed to "
-#         "     execute on non-fully addresable `jax.Array`s."
-#     ),
-# )
+jax_array = config.define_bool_state(
+    name="jax_array",
+    default=True,
+    upgrade=True,
+    update_global_hook=_update_jax_array_global,
+    update_thread_local_hook=_update_jax_array_thread_local,
+    help=(
+        "If True, new pjit behavior will be enabled and `jax.Array` will be " "used."
+    ),
+)
 
 
-# distributed_debug = config.define_bool_state(
-#     name="jax_distributed_debug",
-#     default=False,
-#     help=(
-#         "Enable logging useful for debugging multi-process distributed "
-#         "computations. Logging is performed with `logging` at WARNING "
-#         "level."
-#     ),
-# )
+jit_pjit_api_merge = config.define_bool_state(
+    name="jax_jit_pjit_api_merge",
+    default=True,
+    upgrade=True,
+    help=(
+        "If True, jit and pjit API will be merged. You can only disable it via "
+        "the environment variable i.e. `os.environ['JAX_JIT_PJIT_API_MERGE'] = '0'`. "
+        "The merge must be disabled via an environment variable since it "
+        "affects JAX at import time so it needs to be disabled before jax is "
+        "imported."
+    ),
+)
 
 
-# enable_custom_prng = config.define_bool_state(
-#     name="jax_enable_custom_prng",
-#     default=False,
-#     upgrade=True,
-#     help=(
-#         "Enables an internal upgrade that allows one to define custom "
-#         "pseudo-random number generator implementations."
-#     ),
-# )
+spmd_mode = config.define_enum_state(
+    name="jax_spmd_mode",
+    enum_values=["allow_all", "allow_jit", "allow_pjit"],
+    # TODO: Default to `allow_jit` when the training wheels come
+    # off.
+    default="allow_pjit",
+    help=(
+        "Decides whether Math on `jax.Array`'s that are not fully addressable "
+        "(i.e. spans across multiple processes) is allowed. The options are: "
+        "* allow_pjit: Default, only `pjit` computations are allowed to "
+        "    execute on non-fully addressable `jax.Array`s\n"
+        "* allow_jit: `pjit` and `jax.jit` computations are allowed to "
+        "    execute on non-fully addressable `jax.Array`s\n"
+        "* allow_all: `jnp`, normal math (like `a + b`, etc), `pjit`, "
+        "     `jax.jit` and all other operations are allowed to "
+        "     execute on non-fully addresable `jax.Array`s."
+    ),
+)
 
-# default_prng_impl = config.define_enum_state(
-#     name="jax_default_prng_impl",
-#     enum_values=["threefry2x32", "rbg", "unsafe_rbg"],
-#     default="threefry2x32",
-#     help=(
-#         "Select the default PRNG implementation, used when one is not "
-#         "explicitly provided at seeding time."
-#     ),
-# )
 
-# threefry_partitionable = config.define_bool_state(
-#     name="jax_threefry_partitionable",
-#     default=False,
-#     upgrade=True,
-#     help=(
-#         "Enables internal threefry PRNG implementation changes that "
-#         "render it automatically partitionable in some cases. For use "
-#         "with pjit and/or jax_array=True. Without this flag, using the "
-#         "standard jax.random pseudo-random number generation may result "
-#         "in extraneous communication and/or redundant distributed "
-#         "computation. With this flag, the communication overheads disappear "
-#         "in some cases."
-#     ),
-#     update_global_hook=lambda val: _update_global_jit_state(threefry_partitionable=val),
-#     update_thread_local_hook=lambda val: update_thread_local_jit_state(
-#         threefry_partitionable=val
-#     ),
-# )
+distributed_debug = config.define_bool_state(
+    name="jax_distributed_debug",
+    default=False,
+    help=(
+        "Enable logging useful for debugging multi-process distributed "
+        "computations. Logging is performed with `logging` at WARNING "
+        "level."
+    ),
+)
 
-# enable_custom_vjp_by_custom_transpose = config.define_bool_state(
-#     name="jax_enable_custom_vjp_by_custom_transpose",
-#     default=False,
-#     upgrade=True,
-#     help=(
-#         "Enables an internal upgrade that implements `jax.custom_vjp` by "
-#         "reduction to `jax.custom_jvp` and `jax.custom_transpose`."
-#     ),
-# )
 
-# raise_persistent_cache_errors = config.define_bool_state(
-#     name="jax_raise_persistent_cache_errors",
-#     default=False,
-#     help=(
-#         "If true, exceptions raised when reading or writing to the "
-#         "persistent compilation cache will be allowed through, halting "
-#         "program execution if not manually caught. If false, exceptions are "
-#         "caught and raised as warnings, allowing program execution to "
-#         "continue. Defaults to false so cache bugs or intermittent issues "
-#         "are non-fatal."
-#     ),
-# )
+enable_custom_prng = config.define_bool_state(
+    name="jax_enable_custom_prng",
+    default=False,
+    upgrade=True,
+    help=(
+        "Enables an internal upgrade that allows one to define custom "
+        "pseudo-random number generator implementations."
+    ),
+)
 
-# persistent_cache_min_compile_time_secs = config.define_float_state(
-#     name="jax_persistent_cache_min_compile_time_secs",
-#     default=1,
-#     help=(
-#         "The minimum compile time of a computation to be written to the "
-#         "persistent compilation cache. This threshold can be raised to "
-#         "decrease the number of entries written to the cache."
-#     ),
-# )
+default_prng_impl = config.define_enum_state(
+    name="jax_default_prng_impl",
+    enum_values=["threefry2x32", "rbg", "unsafe_rbg"],
+    default="threefry2x32",
+    help=(
+        "Select the default PRNG implementation, used when one is not "
+        "explicitly provided at seeding time."
+    ),
+)
 
-# hlo_source_file_canonicalization_regex = config.define_string_state(
-#     name="jax_hlo_source_file_canonicalization_regex",
-#     default=None,
-#     help=(
-#         "Used to canonicalize the source_path metadata of HLO instructions "
-#         "by removing the given regex. If set, re.sub() is called on each "
-#         "source_file with the given regex, and all matches are removed. "
-#         "This can be used to avoid spurious cache misses when using the "
-#         "persistent compilation cache, which includes HLO metadata in the "
-#         "cache key."
-#     ),
-# )
+threefry_partitionable = config.define_bool_state(
+    name="jax_threefry_partitionable",
+    default=False,
+    upgrade=True,
+    help=(
+        "Enables internal threefry PRNG implementation changes that "
+        "render it automatically partitionable in some cases. For use "
+        "with pjit and/or jax_array=True. Without this flag, using the "
+        "standard jax.random pseudo-random number generation may result "
+        "in extraneous communication and/or redundant distributed "
+        "computation. With this flag, the communication overheads disappear "
+        "in some cases."
+    ),
+    update_global_hook=lambda val: _update_global_jit_state(threefry_partitionable=val),
+    update_thread_local_hook=lambda val: update_thread_local_jit_state(
+        threefry_partitionable=val
+    ),
+)
 
-# config.define_enum_state(
-#     name="jax_default_dtype_bits",
-#     enum_values=["32", "64"],
-#     default="64",
-#     help=(
-#         "Specify bit width of default dtypes, either 32-bit or 64-bit. "
-#         "This is a temporary flag that will be used during the process "
-#         "of deprecating the ``jax_enable_x64`` flag."
-#     ),
-# )
+enable_custom_vjp_by_custom_transpose = config.define_bool_state(
+    name="jax_enable_custom_vjp_by_custom_transpose",
+    default=False,
+    upgrade=True,
+    help=(
+        "Enables an internal upgrade that implements `jax.custom_vjp` by "
+        "reduction to `jax.custom_jvp` and `jax.custom_transpose`."
+    ),
+)
 
-# numpy_dtype_promotion = config.define_enum_state(
-#     name="jax_numpy_dtype_promotion",
-#     enum_values=["standard", "strict"],
-#     default="standard",
-#     help=(
-#         "Specify the rules used for implicit type promotion in operations "
-#         'between arrays. Options are "standard" or "strict"; in strict-mode, '
-#         "binary operations between arrays of differing strongly-specified "
-#         "dtypes will result in an error."
-#     ),
-#     update_global_hook=lambda val: _update_global_jit_state(numpy_dtype_promotion=val),
-#     update_thread_local_hook=lambda val: update_thread_local_jit_state(
-#         numpy_dtype_promotion=val
-#     ),
-# )
+raise_persistent_cache_errors = config.define_bool_state(
+    name="jax_raise_persistent_cache_errors",
+    default=False,
+    help=(
+        "If true, exceptions raised when reading or writing to the "
+        "persistent compilation cache will be allowed through, halting "
+        "program execution if not manually caught. If false, exceptions are "
+        "caught and raised as warnings, allowing program execution to "
+        "continue. Defaults to false so cache bugs or intermittent issues "
+        "are non-fatal."
+    ),
+)
+
+persistent_cache_min_compile_time_secs = config.define_float_state(
+    name="jax_persistent_cache_min_compile_time_secs",
+    default=1,
+    help=(
+        "The minimum compile time of a computation to be written to the "
+        "persistent compilation cache. This threshold can be raised to "
+        "decrease the number of entries written to the cache."
+    ),
+)
+
+hlo_source_file_canonicalization_regex = config.define_string_state(
+    name="jax_hlo_source_file_canonicalization_regex",
+    default=None,
+    help=(
+        "Used to canonicalize the source_path metadata of HLO instructions "
+        "by removing the given regex. If set, re.sub() is called on each "
+        "source_file with the given regex, and all matches are removed. "
+        "This can be used to avoid spurious cache misses when using the "
+        "persistent compilation cache, which includes HLO metadata in the "
+        "cache key."
+    ),
+)
+
+config.define_enum_state(
+    name="jax_default_dtype_bits",
+    enum_values=["32", "64"],
+    default="64",
+    help=(
+        "Specify bit width of default dtypes, either 32-bit or 64-bit. "
+        "This is a temporary flag that will be used during the process "
+        "of deprecating the ``jax_enable_x64`` flag."
+    ),
+)
+
+numpy_dtype_promotion = config.define_enum_state(
+    name="jax_numpy_dtype_promotion",
+    enum_values=["standard", "strict"],
+    default="standard",
+    help=(
+        "Specify the rules used for implicit type promotion in operations "
+        'between arrays. Options are "standard" or "strict"; in strict-mode, '
+        "binary operations between arrays of differing strongly-specified "
+        "dtypes will result in an error."
+    ),
+    update_global_hook=lambda val: _update_global_jit_state(numpy_dtype_promotion=val),
+    update_thread_local_hook=lambda val: update_thread_local_jit_state(
+        numpy_dtype_promotion=val
+    ),
+)
 
 
 def _update_x64_global(val):
-    jax_jit.global_state().enable_x64 = val
+    libjax_jit.global_state().enable_x64 = val
 
 
 def _update_x64_thread_local(val):
-    jax_jit.thread_local_state().enable_x64 = val
+    libjax_jit.thread_local_state().enable_x64 = val
 
 
 enable_x64 = config.define_bool_state(
@@ -1009,11 +1019,11 @@ Config.x64_enabled = Config.jax_enable_x64  # type: ignore
 
 
 def _update_default_device_global(val):
-    jax_jit.global_state().default_device = val
+    libjax_jit.global_state().default_device = val
 
 
 def _update_default_device_thread_local(val):
-    jax_jit.thread_local_state().default_device = val
+    libjax_jit.thread_local_state().default_device = val
 
 
 def _validate_default_device(val):
@@ -1053,11 +1063,11 @@ default_device = config.define_string_or_object_state(
 
 
 def _update_disable_jit_global(val):
-    jax_jit.global_state().disable_jit = val
+    libjax_jit.global_state().disable_jit = val
 
 
 def _update_disable_jit_thread_local(val):
-    jax_jit.thread_local_state().disable_jit = val
+    libjax_jit.thread_local_state().disable_jit = val
 
 
 disable_jit = config.define_bool_state(
@@ -1150,6 +1160,14 @@ config.define_bool_state(
     ),
 )
 
+# This flag is temporary during rollout of the remat barrier.
+# TODO: Remove if there are no complaints.
+config.define_bool_state(
+    name="jax_remat_opt_barrier",
+    default=True,
+    help=("Enables using optimization-barrier op for lowering remat."),
+)
+
 # TODO: Remove flag once coordination service has rolled out.
 config.define_bool_state(
     name="jax_coordination_service",
@@ -1158,12 +1176,6 @@ config.define_bool_state(
         "Use coordination service (experimental) instead of the default PjRT "
         "distributed runtime."
     ),
-)
-
-config.define_bool_state(
-    name="jax_experimental_subjaxpr_lowering_cache",
-    default=False,
-    help="Enable using a cache for lowering subjaxprs.",
 )
 
 # TODO: set default to True, then remove
@@ -1309,19 +1321,9 @@ _transfer_guard = config.define_enum_state(
 )
 
 
+# A contextmanager to control the transfer guard level for all transfers
 @contextlib.contextmanager
 def transfer_guard(new_val: str) -> Iterator[None]:
-    """A contextmanager to control the transfer guard level for all transfers.
-
-    For more information, see
-    https://jax.readthedocs.io/en/latest/transfer_guard.html
-
-    Args:
-        new_val: The new thread-local transfer guard level for all transfers.
-
-    Yields:
-        None.
-    """
     with contextlib.ExitStack() as stack:
         stack.enter_context(transfer_guard_host_to_device(new_val))
         stack.enter_context(transfer_guard_device_to_device(new_val))

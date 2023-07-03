@@ -7,6 +7,7 @@ from ...core._imperative_rt import ops as mops
 from .. import ir_utils
 from ..lib.mlir import ir
 from ..lib.mlir.dialects import hlo
+from .elemwise import exp
 from .hlotensor import HLOTensor
 from .indexing import index_with_slices
 from .reduction import _get_max_identity, _get_sum_identity
@@ -639,7 +640,7 @@ def pooling_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         opr.format,
     )
 
-    oshape, odtype = ctx.vars_out[0].shape, ctx.vars_out[0].dtype
+    oshape, _ = ctx.vars_out[0].shape, ctx.vars_out[0].dtype
     if opr.mode == mops.AdaptivePooling.Mode.AVERAGE:
         return avgpooling(
             args[0], stride, kernel, padding, count_include_pad=True, oshape=oshape
@@ -679,3 +680,35 @@ def pooling_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
             mops.AdaptivePooling.Mode.MAX
         ), f"unknown adaptive pooling mode {pool_mode}"
         return maxpooling_grad(x, dy, kernel, stride, padding)
+
+
+def softmax(x: HLOTensor, axis: int = -1):
+    assert isinstance(axis, int), f"axis should be int, but get {axis}({type(axis)})"
+    x_exp = exp(x)
+    x_exp_sum = x_exp.sum(axis=axis, keepdims=True)
+    y = x_exp / x_exp_sum
+    return y
+
+
+def softmax_grad(y: HLOTensor, dy: HLOTensor, axis: int = -1):
+    assert isinstance(axis, int), f"axis should be int, but get {axis}({type(axis)})"
+    ydy = y * dy
+    ydy_sum = ydy.sum(axis=axis, keepdims=True)
+    dx = ydy - y * ydy_sum
+    return dx
+
+
+@register_lower_rule(mops.Softmax)
+def softmax_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 1 and len(ctx.vars_in) == 1 and len(ctx.vars_out) == 1
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    return softmax(args[0], ctx.op.axis)
+
+
+@register_lower_rule("SoftmaxBackward")
+def softmax_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 2 and len(ctx.vars_in) == 2 and len(ctx.vars_out) == 1
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    return softmax_grad(args[0], args[1], ctx.param["axis"])

@@ -1,11 +1,18 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
+from megengine import is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_broadcast_to():
     def tester(ishape, tgtshape):
         dtype = None
@@ -15,7 +22,7 @@ def test_broadcast_to():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inp, dout):
             gm.attach([inp])
             with gm:
@@ -40,6 +47,9 @@ def test_broadcast_to():
     tester((4, 5, 3, 7), (4, 5, 3, 7))
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_reshape():
     def tester(ishape, tgt_shape, dtype=None):
         dtype = dtype or np.float32
@@ -49,7 +59,7 @@ def test_reshape():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inp, dout):
             gm.attach([inp])
             with gm:
@@ -72,6 +82,9 @@ def test_reshape():
     tester((2, 1, 4), (-1, 2))
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_transpose():
     def tester(ishape, permutation, dtype=None):
         dtype = dtype or np.float32
@@ -81,7 +94,7 @@ def test_transpose():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inp, dout):
             gm.attach([inp])
             with gm:
@@ -101,6 +114,9 @@ def test_transpose():
     tester((2, 3, 1, 4), (3, 1, 0, 2))
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_expand_dims():
     def tester(ishape, axis, dtype=None):
         dtype = dtype or np.float32
@@ -110,7 +126,7 @@ def test_expand_dims():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inp, dout):
             gm.attach([inp])
             with gm:
@@ -128,6 +144,9 @@ def test_expand_dims():
     tester((2, 3, 4, 5), -1)
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_concat():
     def tester(*ishapes, axis, dtype=None):
         dtype = dtype or np.float32
@@ -137,7 +156,7 @@ def test_concat():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(*inps, dout):
             gm.attach(inps)
             with gm:
@@ -158,6 +177,9 @@ def test_concat():
     tester((6, 5, 1), axis=-1)
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_split():
     def tester(ishape, axis, nsplit_or_sections, dtype=None):
         dtype = dtype or np.float32
@@ -167,7 +189,7 @@ def test_split():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inp, douts):
             gm.attach([inp])
             with gm:
@@ -187,12 +209,15 @@ def test_split():
     tester((32, 16, 8), 1, 16)
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_fill_and_fill_like():
     def tester(ref_shape, value, dtype=None):
         dtype = dtype or np.float32
         ref = tensor(np.random.randn(*ref_shape), dtype=dtype)
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(ref):
             return (
                 F.full_like(ref, value),
@@ -214,13 +239,3 @@ def test_fill_and_fill_like():
     tester((32, 16), 0.1)
     tester((32, 16), 0)
     tester((1, 1, 16), 1)
-
-
-if __name__ == "__main__":
-    test_broadcast_to()
-    test_reshape()
-    test_transpose()
-    test_expand_dims()
-    test_concat()
-    test_split()
-    test_fill_and_fill_like()

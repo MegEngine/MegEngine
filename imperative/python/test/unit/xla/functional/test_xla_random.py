@@ -1,11 +1,18 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
+from megengine import is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_dropout():
     def check_dropout(mge_val, xla_val, drop_prob):
         nr_zero = np.sum(np.array(xla_val == 0, np.uint32))
@@ -28,7 +35,7 @@ def test_dropout():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(x, dy):
             gm.attach([x])
             with gm:
@@ -46,7 +53,3 @@ def test_dropout():
     tester((32, 128, 128, 1, 16), 0.3)
     tester((32, 128, 128, 1, 16), 0.5)
     tester((32, 128, 128, 1, 16), 0.9)
-
-
-if __name__ == "__main__":
-    test_dropout()

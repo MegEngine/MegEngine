@@ -1,12 +1,18 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
-from megengine import autodiff
+from megengine import autodiff, is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_layer_norm():
     def tester(x_shape, normalized_shape, w_shape, b_shape, eps=1e-5, dtype=None):
         dtype = dtype or np.float32
@@ -27,7 +33,7 @@ def test_layer_norm():
 
         if b is not None:
 
-            @jit.trace(without_host=True, use_xla=True)
+            @jit.xla_trace(without_host=True)
             def func(x, w, b, dy):
                 gm.attach([x, w, b])
                 with gm:
@@ -46,7 +52,7 @@ def test_layer_norm():
             xla_rsts = func(x, w, b, dy)
         else:
 
-            @jit.trace(without_host=True, use_xla=True)
+            @jit.xla_trace(without_host=True)
             def func(x, dy):
                 gm.attach([x])
                 with gm:
@@ -68,6 +74,9 @@ def test_layer_norm():
     tester((4, 16, 24, 28), (28,), None, None)
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_batch_norm():
     def tester(ishape, training, momentum, eps, inplace, dtype=None):
         dtype = dtype or np.float32
@@ -80,7 +89,7 @@ def test_batch_norm():
 
         gm = autodiff.GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(x, rmean, rvar, weight, bias, dy):
             gm.attach([x, weight, bias])
             with gm:
@@ -114,8 +123,3 @@ def test_batch_norm():
     tester((32, 16, 8, 8), True, 0.9, 1e-5, True)
     tester((1, 16, 17, 128), True, 0.7, 1e-5, False)
     tester((32, 16, 64, 5), False, 0.8, 1e-5, True)
-
-
-if __name__ == "__main__":
-    test_layer_norm()
-    test_batch_norm()

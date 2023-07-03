@@ -1,1 +1,1 @@
-import jaxlib.mlir.ir as ir
+import mge_xlalib.mlir.ir as ir

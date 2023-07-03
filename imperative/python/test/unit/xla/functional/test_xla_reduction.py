@@ -1,12 +1,19 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine as mge
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
+from megengine import is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_reduce():
     np.random.seed(123)
     mge.random.seed(123)
@@ -21,7 +28,7 @@ def test_reduce():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inp, doup):
             gm.attach([inp])
             with gm:
@@ -42,7 +49,3 @@ def test_reduce():
     tester(F.prod, (2, 4, 8, 16), [0, 1, 2, 3], keepdim=False, backward=True)
     tester(F.min, (2, 4, 8, 16), 0, keepdim=True, backward=False)
     tester(F.max, (2, 4, 8, 16), [-2], keepdim=False, backward=False)
-
-
-if __name__ == "__main__":
-    test_reduce()

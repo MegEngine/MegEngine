@@ -1,11 +1,18 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
+from megengine import is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_matmul():
     def tester(lhs_shape, rhs_shape, lhs_transpose, rhs_transpose, dtype=None):
         lhs = tensor(0.1 * np.random.randn(*lhs_shape), dtype=dtype)
@@ -15,7 +22,7 @@ def test_matmul():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(lhs, rhs, dout):
             gm.attach([lhs, rhs])
             with gm:
@@ -72,7 +79,3 @@ def test_matmul():
     tester((1, 2, 8, 7), (4, 2, 2, 9, 8), True, True)
     tester((1, 8, 7), (4, 3, 2, 8, 9), True, False)
     tester((1, 8, 7), (4, 3, 1, 9, 8), True, True)
-
-
-if __name__ == "__main__":
-    test_matmul()

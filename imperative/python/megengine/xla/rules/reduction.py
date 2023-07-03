@@ -52,8 +52,9 @@ def _get_bitwise_or_identity(dtype) -> np.ndarray:
 
 
 def _infer_reduce_shape(ishape, axes, keepdims=False):
-    if axes is None:
-        axes = list(range(len(ishape)))
+    axes = list(range(len(ishape))) if axes is None else axes
+    axes = [axes] if isinstance(axes, int) else axes
+    axes = [axis if axis >= 0 else axis + len(ishape) for axis in axes]
 
     reduced_shape = []
 
@@ -70,7 +71,6 @@ def _reduce(
     reducer, fidentity, inp, axes=None, keepdims=False, oshape=None, odtype=None
 ):
     def _reduce_nokeepdim(reducer, fidentity, inp, axes=None, oshape=None, odtype=None):
-        axes = [axis if axis >= 0 else axis + inp.ndim for axis in axes]
         reduced_shape = _infer_reduce_shape(inp.shape, axes)
 
         _check_shape(reduced_shape, oshape)
@@ -90,7 +90,7 @@ def _reduce(
         return HLOTensor(reduce_op.result)
 
     axes = [axes] if isinstance(axes, int) else axes
-
+    axes = [axis if axis >= 0 else axis + inp.ndim for axis in axes]
     maykeepdim_shape = _infer_reduce_shape(inp.shape, axes, keepdims)
     _check_shape(maykeepdim_shape, oshape)
 

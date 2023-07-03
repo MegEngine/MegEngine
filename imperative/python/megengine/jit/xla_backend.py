@@ -4,13 +4,9 @@ from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._trace_option import set_use_xla_backend
 from ..device import get_default_device
+from ..distributed import get_mm_server_addr, is_distributed
 from ..utils.dlpack import from_dlpack, to_dlpack
 from .tracing import trace
-
-try:
-    from ..xla.lib import xla_client as xc
-except ImportError:
-    pass
 
 
 class xla_trace(trace):
@@ -79,7 +75,11 @@ class xla_trace(trace):
             for tensor, _ in self.opt_param_dict.items():
                 tensor._reset(tensor.to("cpux"))
         self.xla_exec, self.inp_ids, self.out_ids = build_xla(
-            self, return_with_io=True, return_device_array=True
+            self,
+            return_with_io=True,
+            return_device_array=True,
+            ip=get_mm_server_addr()[0] if is_distributed() else None,
+            port=get_mm_server_addr()[1] + 1 if is_distributed() else None,
         )
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
@@ -137,6 +137,8 @@ class xla_trace(trace):
         return inp_list
 
     def to_dlpack(self, x, take_ownership: bool = True):
+        from ..xla.lib import xla_client as xc
+
         return xc._xla.buffer_to_dlpack_managed_tensor(x, take_ownership=take_ownership)
 
     def execute(self, *args, **kwargs):

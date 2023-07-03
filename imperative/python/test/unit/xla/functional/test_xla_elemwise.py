@@ -1,12 +1,19 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine as mge
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
+from megengine import is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_elemwise():
     np.random.seed(123)
     mge.random.seed(123)
@@ -21,7 +28,7 @@ def test_elemwise():
 
         gm = GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(inps, doup):
             gm.attach(inps)
             with gm:
@@ -102,7 +109,3 @@ def test_elemwise():
         dtype=np.float32,
         atol=1e-5,
     )
-
-
-if __name__ == "__main__":
-    test_elemwise()

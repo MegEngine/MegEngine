@@ -1,5 +1,4 @@
 import dataclasses
-import itertools
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np

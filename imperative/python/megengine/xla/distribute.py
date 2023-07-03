@@ -1,4 +1,5 @@
 import atexit
+import warnings
 from typing import Any, Optional, Sequence, Union
 
 from .lib import xla_client as xc
@@ -9,6 +10,8 @@ xe = xla_extention
 
 class State:
     process_id: int = 0
+    ip: str = None
+    port: int = None
     service: Optional[Any] = None
     client: Optional[Any] = None
     preemption_sync_manager: Optional[Any] = None
@@ -16,11 +19,13 @@ class State:
 
     def initialize(
         self,
-        coordinator_address: str,
+        ip: str,
+        port: int,
         num_processes: int,
         process_id: int,
         local_device_ids: Optional[Union[int, Sequence[int]]] = None,
     ):
+        coordinator_address = ip + ":" + str(port)
         if local_device_ids is None:
             local_device_ids = [process_id]
         elif isinstance(local_device_ids, int):
@@ -30,6 +35,8 @@ class State:
 
         assert local_device_ids == [process_id], f"{local_device_ids} .vs {process_id}"
 
+        self.ip = ip
+        self.port = port
         self.visible_devices = ",".join(str(x) for x in local_device_ids)
         self.process_id = process_id
 
@@ -76,15 +83,28 @@ global_state = State()
 
 
 def initialize(
-    coordinator_address: str,
+    ip: str,
+    port: int,
     num_processes: int,
     process_id: int,
     local_device_ids: Optional[Union[int, Sequence[int]]] = None,
 ):
-    global_state.initialize(
-        coordinator_address, num_processes, process_id, local_device_ids
-    )
-    atexit.register(shutdown)
+    ip = "127.0.0.1" if ip == "localhost" else ip
+    if global_state.service == None and global_state.client == None:
+        global_state.initialize(ip, port, num_processes, process_id, local_device_ids)
+        atexit.register(shutdown)
+    else:
+        assert (
+            global_state.client != None
+        ), "global_state.client should not be None if server is created"
+        if global_state.ip == ip and global_state.port == port:
+            return
+        else:
+            msg = (
+                f"xla distribute server/client have been created on {global_state.ip}:{global_state.port}. "
+                f"so ignore the request to create on {ip}:{port}"
+            )
+            warnings.warn(msg, category=RuntimeWarning)
 
 
 def shutdown():

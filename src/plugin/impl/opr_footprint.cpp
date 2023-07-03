@@ -11,6 +11,7 @@
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
+#include "megbrain/opr/dnn/softmax.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/indexing.h"
 #include "megbrain/opr/internal/indexing_helper.h"
@@ -562,6 +563,7 @@ REGISTE_PARAM_JSON_FUNC(CvtColor)
 REGISTE_PARAM_JSON_FUNC(LayerNormBackward)
 REGISTE_PARAM_JSON_FUNC(AdaptivePoolingBackward)
 REGISTE_PARAM_JSON_FUNC(DropoutBackward)
+REGISTE_PARAM_JSON_FUNC(SoftmaxBackward)
 
 std::shared_ptr<json::Value> dimshuffle_param2json(
         const opr::Dimshuffle::Param& param) {
@@ -859,6 +861,7 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::LayerNormBackward>();
     add_single_param_json<opr::AdaptivePoolingBackward>();
     add_single_param_json<opr::DropoutBackward>();
+    add_single_param_json<opr::SoftmaxBackward>();
 
 #endif
 }

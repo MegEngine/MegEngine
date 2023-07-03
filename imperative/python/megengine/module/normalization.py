@@ -224,11 +224,11 @@ class GeneralNorm(Module):
     Examples:
         >>> import numpy as np
         >>> inp = Tensor(np.arange(2 * 3 * 4 * 4).astype(np.float32).reshape(2, 3, 4, 4))
-        >>> m = M.GeneralNorm((2, 4), (0, 2))
+        >>> m = M.GeneralNorm((2, 3), (0, 1))
         >>> out = m(inp)
         >>> out.numpy().shape
         (2, 3, 4, 4)
-        >>> m = M.GeneralNorm((3, 4), (1, -1)) # Please be careful.
+        >>> m = M.GeneralNorm((3, 4), (1, -2)) # Please be careful.
         >>> out = m(inp)
         >>> out.numpy().shape
         (2, 3, 4, 4)

@@ -24,6 +24,8 @@ def build_xla(
     verbose=int(os.environ.get("MGE_VERBOSE_XLA_IR", "0")),
     return_with_io=False,
     return_device_array=False,
+    ip: str = None,
+    port: int = None,
 ):
     assert device == None, "cannot specify device now"
     assert keep_unused == True, "keep_unused error"
@@ -43,7 +45,7 @@ def build_xla(
 
     # init for xla distributed and setup device
     if is_distributed():
-        initialize("127.0.0.1:12345", get_world_size(), get_rank(), [get_rank()])
+        initialize(ip, port, get_world_size(), get_rank(), [get_rank()])
     backend, device_assignment, platform = get_xla_backend_and_device(device)
 
     module, keepalive, host_callbacks = lower(

@@ -7,15 +7,13 @@ from functools import lru_cache, partial
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
-from jaxlib import xla_client
+from mge_xlalib import xla_client
 
 from ..lib import cuda_path
 from .config import bool_env, config, flags, int_env
 
 XlaBackend = xla_client._xla.Client
-
 ShardedBuffer = Any
-
 FLAGS = flags.FLAGS
 
 logger = logging.getLogger(__name__)
@@ -28,7 +26,6 @@ flags.DEFINE_string(
     os.getenv("JAX_BACKEND_TARGET", "").lower(),
     'Either "local" or "rpc:address" to connect to a remote service target.',
 )
-# TODO: warn when this is used once we test out --jax_platforms a bit
 flags.DEFINE_string(
     "jax_platform_name",
     os.getenv("JAX_PLATFORM_NAME", "").lower(),
@@ -72,22 +69,22 @@ def get_compile_options(
 ) -> xla_client.CompileOptions:
     """Returns the compile options to use, as derived from flag values.
 
-    Args:
-        num_replicas: Number of replicas for which to compile.
-        num_partitions: Number of partitions for which to compile.
-        device_assignment: Optional ndarray of jax devices indicating the assignment
-        of logical replicas to physical devices (default inherited from
-        xla_client.CompileOptions). Must be consistent with `num_replicas` and
-        `num_partitions`.
-        use_spmd_partitioning: boolean indicating whether to enable SPMD or MPMD
-        partitioning in XLA.
-        use_auto_spmd_partitioning: boolean indicating whether to automatically
-        generate XLA shardings for SPMD partitioner.
-        auto_spmd_partitioning_mesh_shape: device mesh shape used to create
-        auto_spmd_partitioning search space.
-        auto_spmd_partitioning_mesh_ids: device ids used to create
-        auto_spmd_partitioning search space.
-    """
+  Args:
+    num_replicas: Number of replicas for which to compile.
+    num_partitions: Number of partitions for which to compile.
+    device_assignment: Optional ndarray of jax devices indicating the assignment
+      of logical replicas to physical devices (default inherited from
+      xla_client.CompileOptions). Must be consistent with `num_replicas` and
+      `num_partitions`.
+    use_spmd_partitioning: boolean indicating whether to enable SPMD or MPMD
+      partitioning in XLA.
+    use_auto_spmd_partitioning: boolean indicating whether to automatically
+      generate XLA shardings for SPMD partitioner.
+    auto_spmd_partitioning_mesh_shape: device mesh shape used to create
+      auto_spmd_partitioning search space.
+    auto_spmd_partitioning_mesh_ids: device ids used to create
+      auto_spmd_partitioning search space.
+  """
     compile_options = xla_client.CompileOptions()
     compile_options.num_replicas = num_replicas
     compile_options.num_partitions = num_partitions
@@ -232,11 +229,11 @@ def is_known_platform(platform: str):
 def canonicalize_platform(platform: str) -> str:
     """Replaces platform aliases with their concrete equivalent.
 
-    In particular, replaces "gpu" with either "cuda" or "rocm", depending on which
-    hardware is actually present. We want to distinguish "cuda" and "rocm" for
-    purposes such as MLIR lowering rules, but in many cases we don't want to
-    force users to care.
-    """
+  In particular, replaces "gpu" with either "cuda" or "rocm", depending on which
+  hardware is actually present. We want to distinguish "cuda" and "rocm" for
+  purposes such as MLIR lowering rules, but in many cases we don't want to
+  force users to care.
+  """
     platforms = _alias_to_platforms.get(platform, None)
     if platforms is None:
         return platform
@@ -255,9 +252,9 @@ def canonicalize_platform(platform: str) -> str:
 def expand_platform_alias(platform: str) -> List[str]:
     """Expands, e.g., "gpu" to ["cuda", "rocm"].
 
-    This is used for convenience reasons: we expect cuda and rocm to act similarly
-    in many respects since they share most of the same code.
-    """
+  This is used for convenience reasons: we expect cuda and rocm to act similarly
+  in many respects since they share most of the same code.
+  """
     return _alias_to_platforms.get(platform, [platform])
 
 
@@ -348,16 +345,24 @@ def _init_backend(platform):
 
     logger.debug("Initializing backend '%s'", platform)
     backend = factory()
-
+    # TODO: consider raising more descriptive errors directly from backend
+    # factories instead of returning None.
     if backend is None:
         raise RuntimeError(f"Could not initialize backend '{platform}'")
     if backend.device_count() == 0:
         raise RuntimeError(f"Backend '{platform}' provides no devices.")
+    # ccq: disable distributed_debug_log
+    # util.distributed_debug_log(("Initialized backend", backend.platform),
+    #                            ("process_index", backend.process_index()),
+    #                            ("device_count", backend.device_count()),
+    #                            ("local_devices", backend.local_devices()))
     logger.debug("Backend '%s' initialized", platform)
     return backend
 
 
 def _get_backend_uncached(platform=None):
+    # TODO: remove this input polymorphism after we clean up how
+    # 'backend' values are handled
     if not isinstance(platform, (type(None), str)):
         return platform
 
@@ -420,8 +425,6 @@ def devices(
     backend: Optional[Union[str, XlaBackend]] = None
 ) -> List[xla_client.Device]:
     """Returns a list of all devices for a given backend.
-
-    .. currentmodule:: jaxlib.xla_extension
 
     Each device is represented by a subclass of :class:`Device` (e.g.
     :class:`CpuDevice`, :class:`GpuDevice`). The length of the returned list is
@@ -499,6 +502,34 @@ def process_index(backend: Optional[Union[str, XlaBackend]] = None) -> int:
     return get_backend(backend).process_index()
 
 
-# returns the number of mge processes associated with the backend
+# TODO: remove this sometime after jax 0.2.13 is released
+def host_id(backend=None):
+    warnings.warn(
+        "jax.host_id has been renamed to jax.process_index. This alias "
+        "will eventually be removed; please update your code."
+    )
+    return process_index(backend)
+
+
 def process_count(backend: Optional[Union[str, XlaBackend]] = None) -> int:
+    """Returns the number of JAX processes associated with the backend."""
     return max(d.process_index for d in devices(backend)) + 1
+
+
+# TODO: remove this sometime after jax 0.2.13 is released
+def host_count(backend=None):
+    warnings.warn(
+        "jax.host_count has been renamed to jax.process_count. This alias "
+        "will eventually be removed; please update your code."
+    )
+    return process_count(backend)
+
+
+# TODO: remove this sometime after jax 0.2.13 is released
+def host_ids(backend=None):
+    warnings.warn(
+        "jax.host_ids has been deprecated; please use range(jax.process_count()) "
+        "instead. jax.host_ids will eventually be removed; please update your "
+        "code."
+    )
+    return list(range(process_count(backend)))

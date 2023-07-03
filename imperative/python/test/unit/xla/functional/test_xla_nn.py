@@ -1,13 +1,19 @@
+import platform
+
 import numpy as np
+import pytest
 
 import megengine as mge
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
-from megengine import autodiff
+from megengine import autodiff, is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_conv2d():
     np.random.seed(123)
     mge.random.seed(123)
@@ -24,7 +30,7 @@ def test_conv2d():
 
         if b is not None:
 
-            @jit.trace(without_host=True, use_xla=True)
+            @jit.xla_trace(without_host=True)
             def func(x, w, b, dy):
                 gm.attach([x, w, b])
                 with gm:
@@ -36,7 +42,7 @@ def test_conv2d():
             xla_rsts = func(x, w, b, dy)
         else:
 
-            @jit.trace(without_host=True, use_xla=True)
+            @jit.xla_trace(without_host=True)
             def func(x, w, dy):
                 gm.attach([x, w])
                 with gm:
@@ -89,6 +95,9 @@ def test_conv2d():
     )
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_adaptive_pooling():
     def tester(fpool, ishape, oshape, dtype=None):
         oshape = (oshape, oshape) if isinstance(oshape, int) else oshape
@@ -98,7 +107,7 @@ def test_adaptive_pooling():
         dy = tensor(np.random.randn(*ishape[:-2], *oshape), dtype=dtype)
         gm = autodiff.GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(x, dy):
             gm.attach([x])
             with gm:
@@ -118,6 +127,9 @@ def test_adaptive_pooling():
             tester(fpool, (32, 16, 17, 13), oshape)
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_pooling():
     def tester(fpool, ishape, kernel, stride, padding, dtype=None, **kwargs):
         oshape = fpool(
@@ -128,7 +140,7 @@ def test_pooling():
 
         gm = autodiff.GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(x, dy):
             gm.attach([x])
             with gm:
@@ -147,6 +159,9 @@ def test_pooling():
     tester(F.avg_pool2d, [32, 16, 8, 2], (3, 3), 2, 1)
 
 
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_softmax():
     def tester(ishape, axis, dtype=None):
         dtype = dtype or np.float32
@@ -155,7 +170,7 @@ def test_softmax():
 
         gm = autodiff.GradManager()
 
-        @jit.trace(without_host=True, use_xla=True)
+        @jit.xla_trace(without_host=True)
         def func(x, dy):
             gm.attach([x])
             with gm:
@@ -175,10 +190,3 @@ def test_softmax():
     tester((32, 16, 5), 0)
     tester((1, 16, 5), -1)
     tester((14, 1, 13, 5), 1)
-
-
-if __name__ == "__main__":
-    test_conv2d()
-    test_adaptive_pooling()
-    test_pooling()
-    test_softmax()

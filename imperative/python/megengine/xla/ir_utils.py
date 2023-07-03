@@ -83,7 +83,7 @@ class RngKeyAdder(Pass):
             inputs, outputs = list(eqn.inputs), list(eqn.outputs)
             inputs.append(inp_rng_state_var.id)
             outputs.append(oup_rng_state_var.id)
-            new_eqn = OpInfo(eqn.op, inputs, outputs, eqn.id, eqn.kind)
+            new_eqn = OpInfo(eqn.op, inputs, outputs, eqn.kind)
             new_eqns.append(new_eqn)
             inp_rng_state_var = oup_rng_state_var
 

@@ -1,9 +1,7 @@
 import dataclasses
 import os
-from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Set, Union
 
-import jaxlib
 import numpy as np
 
 from ..distributed import is_distributed
@@ -12,7 +10,6 @@ from . import ir_utils
 from .lib import xla_bridge as xb
 from .lib import xla_client as xc
 from .lib.mlir import ir
-from .lib.mlir.dialects import use_stablehlo
 from .sharding import (
     _get_normalized_avals_and_shardings,
     _get_op_sharding_shardings_from_executable,
@@ -59,7 +56,7 @@ class InputsHandler:
     __slots__ = ("handler", "local_devices", "in_shardings", "input_indices")
 
     def __init__(self, local_devices, in_shardings, input_indices):
-        self.handler = shard_args  # partial(shard_args, local_devices, input_indices)
+        self.handler = shard_args
         self.local_devices = local_devices
         self.in_shardings = in_shardings
         self.input_indices = input_indices
@@ -71,18 +68,9 @@ class InputsHandler:
 
     def __call__(self, input_buffers):
         rst = []
-        for idx, i in enumerate(input_buffers):
-            capsule = to_dlpack(i)
+        for ibuf in input_buffers:
+            capsule = to_dlpack(ibuf)
             xla_array = self.from_dlpack(capsule)
-
-            # if hasattr(i, "xla_array"):
-            #     rst.append([i.xla_array])
-            # else:
-            #     r = self.handler(self.local_devices, [self.input_indices[idx],], [i,])[
-            #         0
-            #     ]
-            #     rst.append(r)
-            #     i.xla_array = r[0]
             rst.append([xla_array])
         return rst
 
@@ -187,7 +175,7 @@ class XlaExecutable(Executable):
         err_msg = (
             "cost analysis unsupported on current XLA backend: " f"{type(xla_ext_exe)}"
         )
-        # TODO: Unify/merge the two cost_analysis calls below.
+
         if hasattr(xla_ext_exe, "client"):
             try:
                 return [
@@ -557,32 +545,22 @@ class XlaLowering(Lowering):
 
     # Return an MHLO IR of computation
     def mhlo(self) -> ir.Module:
-        if use_stablehlo:
-            module_str = xla_extension.mlir.stablehlo_to_mhlo(
-                ir_utils.module_to_bytecode(self.stablehlo())
-            )
-            with self.stablehlo().context:
-                return ir.Module.parse(module_str)
-        else:
-            raise NotImplementedError("must override")
+        module_str = xla_extension.mlir.stablehlo_to_mhlo(
+            ir_utils.module_to_bytecode(self.stablehlo())
+        )
+        with self.stablehlo().context:
+            return ir.Module.parse(module_str)
 
     # Return a StableHLO IR of computation
     def stablehlo(self) -> ir.Module:
-        if use_stablehlo:
-            raise NotImplementedError("must override")
-        else:
-            module_str = xla_extension.mlir.mhlo_to_stablehlo(
-                ir_utils.module_to_bytecode(self.mhlo())
-            )
-            with self.mhlo().context:
-                return ir.Module.parse(module_str)
+        raise NotImplementedError("must override")
 
     def compile(self) -> Executable:
         raise NotImplementedError("must override")
 
     def as_text(self, dialect: Optional[str] = None) -> str:
         if dialect is None:
-            dialect = "stablehlo" if use_stablehlo else "mhlo"
+            dialect = "stablehlo"
         if dialect == "mhlo":
             return str(self.mhlo())
         elif dialect == "stablehlo":
@@ -594,7 +572,7 @@ class XlaLowering(Lowering):
 
     def compiler_ir(self, dialect: Optional[str] = None) -> Any:
         if dialect is None:
-            dialect = "stablehlo" if use_stablehlo else "mhlo"
+            dialect = "stablehlo"
         if dialect == "mhlo":
             return self.mhlo()
         elif dialect == "stablehlo":
@@ -642,16 +620,10 @@ class MeshComputation(XlaLowering):
         )
 
     def mhlo(self) -> ir.Module:
-        if use_stablehlo:
-            return super().mhlo()
-        else:
-            return self._hlo
+        return super().mhlo()
 
     def stablehlo(self) -> ir.Module:
-        if use_stablehlo:
-            return self._hlo
-        else:
-            return super().stablehlo()
+        return self._hlo
 
     def compile(
         self,
