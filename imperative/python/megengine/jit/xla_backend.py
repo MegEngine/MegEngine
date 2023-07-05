@@ -91,13 +91,13 @@ class xla_trace(trace):
         set_use_xla_backend(self.orig_use_xla)
 
     def convert_params_to_xla(self):
-        from ..device import coalesce_free_memory
         from ..utils.module_utils import get_expand_structure
         from ..tensor import Tensor
 
         backend = self.xla_exec.backend
         devices = backend.local_devices()
-        _, device_id, _ = CompNode(get_default_device()).physical_locator
+        default_cn = CompNode(get_default_device())
+        _, device_id, _ = default_cn.physical_locator
         device_index = (
             0 if len(devices) == 0 else [d.id for d in devices].index(device_id)
         )
@@ -114,7 +114,7 @@ class xla_trace(trace):
             if np_array.shape == ():
                 np_array = np_array[np.newaxis]
             xla_array = backend.buffer_from_pyval(np_array, device)
-            tensor._reset(Tensor(xla_array))
+            tensor._reset(Tensor(xla_array, device=default_cn))
 
         for attr, _ in self.attr_to_key.items():
             param = get_expand_structure(attr[0], attr[1])
@@ -232,7 +232,7 @@ class xla_trace(trace):
                 return_vals.append(outputs[self.outkey2idx[i]])
         keeped_features = []
         for i in self.keeped_activation:
-            keeped_features.append(outputs[self.outkey2idx[i]])
+            keeped_features.append(tensor(outputs[self.outkey2idx[i]], device=cn))
         out_tensors = []
         for array in return_vals:
             if array is not None:

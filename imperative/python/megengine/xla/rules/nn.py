@@ -49,15 +49,16 @@ def convolution_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     if opr.sparse == mops.BatchConvBias.Sparse.DENSE:
         feature_group_count, batch_group_count = 1, 1
     else:
-        assert ic == oc, "dwconv only support ic == oc"
         assert len(weight.shape) == 5, "mge dpconv weight dim is 5"
-        feature_group_count, batch_group_count = ic, 1
+        feature_group_count, batch_group_count = weight.shape[0], 1
 
         if opr.format == mops.AdaptivePooling.Format.NCHW:
-            assert (
-                weight.shape[1] == 1 and weight.shape[2] == 1
-            ), f"weight shape error: {weight.shape}"
-            xla_weight_shape = [weight.shape[i] for i in [0, 2, 3, 4]]
+            xla_weight_shape = xla_weight_shape = [
+                weight.shape[0] * weight.shape[1],
+                weight.shape[2],
+                weight.shape[3],
+                weight.shape[4],
+            ]
         weight = reshape(weight, xla_weight_shape)
 
     feature_group_count = ir_utils.i64_attr(feature_group_count)
@@ -159,14 +160,16 @@ def _conv_general_vjp_rhs_padding(
     return list(zip(pads_lo, pads_hi))
 
 
-@register_lower_rule("ConvolutionBackwardDataV2")
+@register_lower_rule("ConvolutionBackwardDataV2", mops.ConvolutionBackwardData)
 def conv_backward_data_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
-    assert len(args) == 3 and len(ctx.vars_out) == 1 and len(ctx.vars_in) == 3
     assert (
         ctx.param["dilate_h"] == 1 and ctx.param["dilate_w"] == 1
     ), "dilate_conv is not support now"
 
-    weight, dout, inp = args[0], args[1], args[2]
+    if len(args) == 3:
+        weight, dout, inp = args[0], args[1], args[2]
+    else:
+        weight, dout, inp = args[0], args[1], None
     if ctx.param["format"] == mops.AdaptivePooling.Format.NCHW:
         dnums = ((0, 1, 2, 3), (0, 1, 2, 3), (0, 1, 2, 3))
         inp_spec, weight_spec, out_spec = dnums
@@ -177,8 +180,8 @@ def conv_backward_data_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         ph, pw = ctx.param["pad_h"], ctx.param["pad_w"]
         padding = ((ph, ph), (pw, pw))
         weight_shape = weight.shape
-        inp_shape = inp.shape
-        ic = inp.shape[1]  # NCHW
+        inp_shape = inp.shape if inp else ctx.vars_out[0].shape
+        ic = inp_shape[1]  # NCHW
         oc = weight.shape[0]  # OIHW or O11HW for dwconv
         t_weight_spec = (weight_spec[1], weight_spec[0]) + weight_spec[2:]
         dnums = hlo.ConvDimensionNumbers.get(
@@ -196,11 +199,23 @@ def conv_backward_data_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         if ctx.param["sparse"] == mops.BatchConvBias.Sparse.DENSE:
             feature_group_count, batch_group_count = 1, 1
         else:
-            assert ic == oc, "only support dpwise conv currently"
-            assert len(weight.shape) == 5, "mge dpconv weight dim is 5"
-            feature_group_count, batch_group_count = ic, 1
-            weight_shape = [weight.shape[i] for i in [2, 0, 3, 4]]
+            weight_shape = weight.shape
+            assert len(weight_shape) == 5, "mge dpconv weight dim is 5"
+            feature_group_count, batch_group_count = weight.shape[0], 1
+            weight_shape = [
+                weight.shape[1],
+                weight.shape[0] * weight.shape[2],
+                weight.shape[3],
+                weight.shape[4],
+            ]
+            weight = weight.transpose((1, 0, 2, 3, 4))
             weight = weight.reshape(weight_shape)
+            weight_shape = [
+                weight_shape[1],
+                weight_shape[0],
+                weight_shape[2],
+                weight_shape[3],
+            ]
 
         padding = _conv_general_vjp_lhs_padding(
             np.take(inp_shape, inp_hw),
@@ -262,11 +277,15 @@ def conv_backward_filter_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]
         if ctx.param["sparse"] == mops.BatchConvBias.Sparse.DENSE:
             feature_group_count, batch_group_count = 1, 1
         else:
-            assert ic == oc, "only support dpwise conv currently"
-            assert len(weight.shape) == 5, "mge dpconv weight dim is 5"
-            feature_group_count, batch_group_count = ic, 1
-            weight_shape = [weight.shape[i] for i in [2, 0, 3, 4]]
-
+            weight_shape = weight.shape
+            assert len(weight_shape) == 5, "mge dpconv weight dim is 5"
+            feature_group_count, batch_group_count = weight.shape[0], 1
+            weight_shape = [
+                weight_shape[2],
+                weight_shape[0] * weight_shape[1],
+                weight_shape[3],
+                weight_shape[4],
+            ]
         if batch_group_count > 1:
             feature_group_count = batch_group_count
             batch_group_count = 1

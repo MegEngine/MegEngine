@@ -138,7 +138,9 @@ def reduce_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
     else:
         assert len(args) == 2
         src_shape = args[0].shape
-        tgt_shape = list(ctx.module_context.get_value(ctx.vars_in[1]))
+        if src_shape == ctx.vars_out[0].shape:
+            return args[0]
+        tgt_shape = list(ctx.vars_out[0].shape)
         tgt_shape = [1,] * (len(src_shape) - len(tgt_shape)) + tgt_shape
         src_idx, tgt_idx, axes = 0, 0, []
         while src_idx < len(src_shape) and tgt_idx < len(tgt_shape):
