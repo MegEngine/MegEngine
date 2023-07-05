@@ -4,7 +4,6 @@ from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._trace_option import set_use_xla_backend
 from ..device import get_default_device
-from ..distributed import get_mm_server_addr, is_distributed
 from ..utils.dlpack import from_dlpack, to_dlpack
 from .tracing import trace
 
@@ -65,6 +64,7 @@ class xla_trace(trace):
         from ..utils.module_utils import get_expand_structure
         from ..xla.device import get_xla_backend_and_device
         from ..tensor import Tensor
+        from ..distributed import get_mm_server_addr, is_distributed
 
         assert self.traced
         if self.overall:
