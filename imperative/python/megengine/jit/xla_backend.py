@@ -1,6 +1,8 @@
 from collections import OrderedDict, defaultdict
 
-from .. import tensor
+import numpy as np
+
+from .. import _full_sync, tensor
 from ..core._imperative_rt import CompNode
 from ..core._imperative_rt.core2 import Tensor as RawTensor
 from ..core._imperative_rt.core2 import (
@@ -15,16 +17,11 @@ from ..device import get_default_device
 from ..utils.dlpack import from_dlpack, to_dlpack
 from .tracing import trace
 
-# try:
-#     from mge_xlalib.xla_extension import ArrayImpl
-
-#     from ..xla.lib import xla_client as xc
-# except ImportError:
-#     pass
-
-from mge_xlalib.xla_extension import ArrayImpl
-
-from ..xla.lib import xla_client as xc
+try:
+    from mge_xlalib.xla_extension import ArrayImpl
+    from ..xla.lib import xla_client as xc
+except ImportError as e:
+    pass
 
 xla_client_compute_stream = None
 
@@ -93,6 +90,39 @@ class xla_trace(trace):
     def unset_env(self):
         set_use_xla_backend(self.orig_use_xla)
 
+    def convert_params_to_xla(self):
+        from ..device import coalesce_free_memory
+        from ..utils.module_utils import get_expand_structure
+        from ..tensor import Tensor
+
+        backend = self.xla_exec.backend
+        devices = backend.local_devices()
+        _, device_id, _ = CompNode(get_default_device()).physical_locator
+        device_index = (
+            0 if len(devices) == 0 else [d.id for d in devices].index(device_id)
+        )
+        device = devices[device_index]
+        for attr, _ in self.attr_to_key.items():
+            param = get_expand_structure(attr[0], attr[1])
+            param._reset(param.to("cpux"))
+
+        for tensor, _ in self.opt_param_dict.items():
+            tensor._reset(tensor.to("cpux"))
+
+        def as_xla_array(tensor, backend, device):
+            np_array = tensor.numpy()
+            if np_array.shape == ():
+                np_array = np_array[np.newaxis]
+            xla_array = backend.buffer_from_pyval(np_array, device)
+            tensor._reset(Tensor(xla_array))
+
+        for attr, _ in self.attr_to_key.items():
+            param = get_expand_structure(attr[0], attr[1])
+            as_xla_array(param, backend, device)
+
+        for tensor, _ in self.opt_param_dict.items():
+            as_xla_array(tensor, backend, device)
+
     def compile(self):
         from ..xla import build_xla
         from ..traced_module.pytree import SUPPORTED_LEAF_TYPE, register_supported_type
@@ -102,13 +132,6 @@ class xla_trace(trace):
         from ..distributed import get_mm_server_addr, is_distributed
 
         assert self.traced
-        if self.overall:
-            for attr, _ in self.attr_to_key.items():
-                param = get_expand_structure(attr[0], attr[1])
-                param._reset(param.to("cpux"))
-
-            for tensor, _ in self.opt_param_dict.items():
-                tensor._reset(tensor.to("cpux"))
         self.xla_exec, self.inp_ids, self.out_ids = build_xla(
             self,
             return_with_io=True,
@@ -116,6 +139,8 @@ class xla_trace(trace):
             ip=get_mm_server_addr()[0] if is_distributed() else None,
             port=get_mm_server_addr()[1] + 1 if is_distributed() else None,
         )
+        if self.overall:
+            self.convert_params_to_xla()
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
         for idx, id in enumerate(self.inp_ids):

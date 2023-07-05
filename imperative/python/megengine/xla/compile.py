@@ -73,16 +73,9 @@ class InputsHandler:
             if i._is_external_value():
                 rst.append([i._external_obj()])
             else:
-                if "gpu" in i.device.physical_name:
-                    capsule = to_dlpack(i)
-                    xla_array = self.from_dlpack(capsule)
-                    rst.append([xla_array])
-                else:
-                    r = self.handler(
-                        self.local_devices, [self.input_indices[idx],], [i,]
-                    )[0]
-                    rst.append(r)
-                    i._reset(tensor(r[0]))
+                capsule = to_dlpack(i)
+                xla_array = self.from_dlpack(capsule)
+                rst.append([xla_array])
         return rst
 
     def __str__(self):
