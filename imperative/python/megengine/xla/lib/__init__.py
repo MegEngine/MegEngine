@@ -1,3 +1,5 @@
+# code of this directory is mainly from jax: https://github.com/google/jax
+
 try:
     import mge_xlalib as mge_xlalib
 except ModuleNotFoundError as err:
@@ -9,8 +11,10 @@ except ModuleNotFoundError as err:
     raise ModuleNotFoundError(msg)
 
 import gc
-import pathlib
+import os
 import platform
+import subprocess
+import sys
 import warnings
 from typing import Optional
 
@@ -43,7 +47,8 @@ cpu_feature_guard.check_cpu_features()
 
 xla_extension = xla_client._xla
 pytree = xla_client._xla.pytree
-jax_jit = xla_client._xla.jax_jit
+# we use some api in jaxlib
+xla_jit = xla_client._xla.jax_jit
 pmap_lib = xla_client._xla.pmap_lib
 
 
@@ -57,18 +62,29 @@ gc.callbacks.append(_xla_gc_callback)
 xla_extension_version: int = getattr(xla_client, "_version", 0)
 mlir_api_version = xla_client.mlir_api_version
 
+# Finds the CUDA install path
+def _find_cuda_root_dir() -> Optional[str]:
+    cuda_root_dir = os.environ.get("CUDA_ROOT_DIR")
+    if cuda_root_dir is None:
+        try:
+            which = "where" if sys.platform == "win32" else "which"
+            with open(os.devnull, "w") as devnull:
+                nvcc = (
+                    subprocess.check_output([which, "nvcc"], stderr=devnull)
+                    .decode()
+                    .rstrip("\r\n")
+                )
+                cuda_root_dir = os.path.dirname(os.path.dirname(nvcc))
+        except Exception:
+            if sys.platform == "win32":
+                assert False, "xla not supported on windows"
+            else:
+                cuda_root_dir = "/usr/local/cuda"
+            if not os.path.exists(cuda_root_dir):
+                cuda_root_dir = None
+    return cuda_root_dir
 
-def _cuda_path() -> Optional[str]:
-    _mgexlalib_path = pathlib.Path(mge_xlalib.__file__).parent
-    path = _mgexlalib_path.parent / "nvidia" / "cuda_nvcc"
-    if path.is_dir():
-        return str(path)
-    path = _mgexlalib_path / "cuda"
-    if path.is_dir():
-        return str(path)
-    return None
 
-
-cuda_path = _cuda_path()
+cuda_path = _find_cuda_root_dir()
 
 transfer_guard_lib = xla_client._xla.transfer_guard_lib
