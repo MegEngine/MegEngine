@@ -81,7 +81,7 @@ ValueRef make_empty_tensor(
     storage.ensure_size(dtype->size());
     std::memset(storage.ptr(), 0, dtype->size());
     auto t = imperative::apply(
-            CreateTensor(CreateTensor::Unique, *device, *dtype, ValueShape()),
+            CreateTensor(CreateTensor::Const, *device, *dtype, ValueShape()),
             HostStorage::make(storage))[0];
     auto res = broadcast_to(t, shape);
     return res;

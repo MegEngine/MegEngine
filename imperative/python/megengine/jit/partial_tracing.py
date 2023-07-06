@@ -75,7 +75,9 @@ def _process_fwd_bwd_trace_result(fwd, bwd, inp_grad_map, out_grad_map):
     def check_external(trace_obj):
         for var in trace_obj.vars:
             if var.kind == "external" and not var.inp_mark:
-                raise RuntimeError("have unknown input in trace result")
+                raise RuntimeError(
+                    "have unknown input in trace result, maybe you can set `capture_as_const=True` when trace"
+                )
 
     check_external(fwd)
     check_external(bwd)

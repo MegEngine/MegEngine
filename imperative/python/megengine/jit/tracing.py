@@ -579,7 +579,7 @@ class trace:
             if not self._trace.compiled():
                 outlist, self.outdef = tree_flatten(outputs)
                 for i, out in enumerate(outlist):
-                    assert isinstance(out, RawTensor)
+                    assert isinstance(out, RawTensor), f"get out of type {type(out)}"
                     outlist[i] = get_marked_output_tensor(self.output_num, out)
                     del out
                     self.out_list.append(self.output_num)

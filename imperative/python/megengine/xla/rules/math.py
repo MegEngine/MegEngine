@@ -1,8 +1,11 @@
 from typing import Sequence, Union
 
+import numpy as np
+
 from ...core._imperative_rt import ops as mops
 from .. import ir_utils
-from ..lib.mlir.dialects import hlo
+from ..ir_utils import i64_attr
+from ..lib.mlir.dialects import chlo, hlo
 from .hlotensor import HLOTensor
 from .utils import _can_broadcast_to, _shape_equal, register_lower_rule
 
@@ -236,3 +239,7 @@ def batched_matmul_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
             precision_config=ir_utils.precision_attr(lhs.dtype, rhs.dtype),
         ).result
     ).transpose(permutation)
+
+
+def topk(inp, k, descending=True, kth_only=False, no_sort=False):
+    return [HLOTensor(rst) for rst in chlo.TopKOp(inp.tensor, i64_attr(k)).results]

@@ -51,11 +51,15 @@ def _get_bitwise_or_identity(dtype) -> np.ndarray:
     return np.array(0, dtype)
 
 
-def _infer_reduce_shape(ishape, axes, keepdims=False):
+def _normalize_reduce_axes(ishape, axes):
     axes = list(range(len(ishape))) if axes is None else axes
     axes = [axes] if isinstance(axes, int) else axes
     axes = [axis if axis >= 0 else axis + len(ishape) for axis in axes]
+    return axes
 
+
+def _infer_reduce_shape(ishape, axes, keepdims=False):
+    axes = _normalize_reduce_axes(ishape, axes)
     reduced_shape = []
 
     for axis, length in enumerate(ishape):
@@ -89,8 +93,7 @@ def _reduce(
 
         return HLOTensor(reduce_op.result)
 
-    axes = [axes] if isinstance(axes, int) else axes
-    axes = [axis if axis >= 0 else axis + inp.ndim for axis in axes]
+    axes = _normalize_reduce_axes(inp.shape, axes)
     maykeepdim_shape = _infer_reduce_shape(inp.shape, axes, keepdims)
     _check_shape(maykeepdim_shape, oshape)
 
@@ -110,6 +113,7 @@ any = partial(_reduce, hlo.OrOp, _get_bitwise_or_identity)
 
 
 def mean(inp, axes=None, keepdims=False):
+    axes = _normalize_reduce_axes(inp.shape, axes)
     inp_sum = sum(inp, axes, keepdims)
     inp_shape = inp.shape
 

@@ -564,6 +564,7 @@ REGISTE_PARAM_JSON_FUNC(LayerNormBackward)
 REGISTE_PARAM_JSON_FUNC(AdaptivePoolingBackward)
 REGISTE_PARAM_JSON_FUNC(DropoutBackward)
 REGISTE_PARAM_JSON_FUNC(SoftmaxBackward)
+REGISTE_PARAM_JSON_FUNC(ArgsortBackward)
 
 std::shared_ptr<json::Value> dimshuffle_param2json(
         const opr::Dimshuffle::Param& param) {
@@ -862,6 +863,7 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::AdaptivePoolingBackward>();
     add_single_param_json<opr::DropoutBackward>();
     add_single_param_json<opr::SoftmaxBackward>();
+    add_single_param_json<opr::ArgsortBackward>();
 
 #endif
 }

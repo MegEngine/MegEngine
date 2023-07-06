@@ -258,3 +258,70 @@ def test_softmax():
     tester((32, 16, 5), 0)
     tester((1, 16, 5), -1)
     tester((14, 1, 13, 5), 1)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_loss():
+    def tester(
+        loss_fn,
+        pred_shape,
+        label_shape,
+        label_type="default",
+        atol=1e-5,
+        dtype=None,
+        **kwargs
+    ):
+        dtype = dtype or np.float32
+        pred = tensor(np.random.randn(*pred_shape), dtype=dtype)
+        if label_type == "default":
+            label = tensor(np.random.randn(*label_shape), dtype=dtype)
+        elif label_type == "classes":
+            label = tensor(np.random.randint(0, 10, size=label_shape), dtype=dtype)
+        dout = tensor(np.random.randn(1,), dtype=dtype)
+
+        gm = autodiff.GradManager()
+
+        @jit.xla_trace(without_host=True)
+        def func(pred, label, dout):
+            gm.attach([pred])
+            with gm:
+                out = loss_fn(pred, label, **kwargs)
+                gm.backward(out, dout)
+            return out, pred.grad
+
+        mge_rsts = func(pred, label, dout)
+        xla_rsts = func(pred, label, dout)
+
+        for idx, (mge_rst, xla_rst) in enumerate(zip(mge_rsts, xla_rsts)):
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=atol)
+
+    from megengine.functional import loss
+
+    tester(loss.l1_loss, (32, 16, 8, 8), (32, 16, 8, 8))
+    tester(loss.l1_loss, (1, 16), (1, 16))
+    tester(loss.square_loss, (32, 16, 8, 8), (32, 16, 8, 8))
+    tester(loss.square_loss, (16, 1), (16, 1))
+    tester(
+        loss.cross_entropy,
+        (16, 32),
+        (16,),
+        label_type="classes",
+        axis=1,
+        with_logits=True,
+        label_smooth=0.0,
+    )
+    tester(
+        loss.cross_entropy,
+        (16, 32),
+        (32,),
+        label_type="classes",
+        axis=0,
+        with_logits=False,
+        label_smooth=0.5,
+    )
+    tester(loss.binary_cross_entropy, (16, 32, 4, 8), (16, 32, 4, 8), with_logits=True)
+    tester(loss.binary_cross_entropy, (1, 32, 1), (1, 32, 1), with_logits=False)
+    tester(loss.hinge_loss, (32, 16, 8, 8), (32, 16, 8, 8), norm="L1")
+    tester(loss.hinge_loss, (1, 16, 1, 1), (1, 16, 1, 1), norm="L2")

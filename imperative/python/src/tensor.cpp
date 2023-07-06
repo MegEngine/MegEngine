@@ -1321,7 +1321,8 @@ void init_tensor(py::module m) {
                             } else if (self.check_external) {
                                 throw std::runtime_error(
                                         "have some unknown input tensors in trace "
-                                        "result");
+                                        "result, maybe you can set "
+                                        "`capture_as_const=True` when trace");
                             }
                         }
                     }

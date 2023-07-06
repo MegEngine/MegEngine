@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from ..lib.mlir import ir
@@ -19,10 +21,16 @@ def register_lower_rule(*ops):
     return decorator
 
 
-def get_rule(op):
-    if isinstance(op, str):
-        return lower_rule[op]
-    return lower_rule[type(op)]
+def get_rule(op, use_fake_rule_for_debug=False):
+    op_key = op if isinstance(op, str) else type(op)
+    if use_fake_rule_for_debug:
+        if op_key in lower_rule:
+            return lower_rule[op_key]
+        else:
+            warnings.warn(f"op: {op_key} not register, use fake op rule")
+            return lower_rule["fake_op_rule_for_debug"]
+    else:
+        return lower_rule[op_key]
 
 
 def _log_mge_opr_attrs(mopr):

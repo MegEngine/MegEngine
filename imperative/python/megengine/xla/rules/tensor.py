@@ -226,6 +226,11 @@ def pad(inp, pad_value, padding):
     )
 
 
+def where(mask, x, y):
+    mask = mask.astype("float32")
+    return mask * x + (1.0 - mask) * y
+
+
 @register_lower_rule(mops.Reshape)
 def reshape_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(args) == 2

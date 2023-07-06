@@ -101,10 +101,11 @@ class DropoutMaskCanonicalizer(Pass):
             if not isinstance(eqn.op, mops.Dropout):
                 continue
 
-            outputs = list(eqn.outputs)
+            inputs, outputs = list(eqn.inputs), list(eqn.outputs)
             mask_var = tr.vars[outputs[1]]
+            inp_shape = tr.vars[inputs[0]].shape
             new_mask_var = AbstractVar(
-                mask_var.id, (int(np.prod(mask_var.shape)) * 8,), mask_var.dtype
+                mask_var.id, (int(np.prod(inp_shape)),), mask_var.dtype
             )
             tr.vars[mask_var.id] = new_mask_var
 

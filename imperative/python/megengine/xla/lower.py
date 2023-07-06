@@ -142,7 +142,7 @@ def lowering_ops(
             vars_out=[trace_result.vars[oup] for oup in eqn.outputs],
             param=eqn.param,
         )
-        rule = get_rule(eqn.op)
+        rule = get_rule(eqn.op, use_fake_rule_for_debug=False)
 
         in_nodes = read(eqn.inputs)
         hinps = [

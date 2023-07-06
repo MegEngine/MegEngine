@@ -5,6 +5,7 @@ import numpy as np
 from ...core._imperative_rt import ops as mops
 from ..lib.mlir import ir
 from .hlotensor import HLOTensor
+from .tensor import fill
 from .utils import _check_shape, register_lower_rule
 
 
@@ -51,3 +52,8 @@ def io_mark_var_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
 def rename_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
     assert len(args) == 1
     return args
+
+
+@register_lower_rule("fake_op_rule_for_debug")
+def fake_op_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
+    return [fill(0.0, out.shape, out.dtype) for out in ctx.vars_out]

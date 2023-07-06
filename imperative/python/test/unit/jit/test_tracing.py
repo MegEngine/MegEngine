@@ -848,7 +848,10 @@ def test_trace_without_error():
         c = tensor([3.0])
         fwd(a, b, c)
     except Exception as e:
-        assert str(e) == "have some unknown input tensors in trace result"
+        assert (
+            str(e)
+            == "have some unknown input tensors in trace result, maybe you can set `capture_as_const=True` when trace"
+        )
     else:
         assert False
 
