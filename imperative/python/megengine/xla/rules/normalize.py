@@ -7,6 +7,7 @@ from .. import ir_utils
 from ..lib.mlir.dialects import hlo
 from .elemwise import sqrt
 from .hlotensor import HLOTensor
+from .reduction import _normalize_reduce_axes
 from .utils import register_lower_rule
 
 
@@ -111,9 +112,14 @@ def batch_norm_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]])
     ]
 
 
-def _normalize_lower(
-    x, axes, affine, eps, w=None, b=None,
-):
+def _normalize(x, axes, eps):
+    """
+    normalize X along axes, return normalized, mean, rstd
+    for example:
+        x.shape = (N, C, H, W), axes = (1, 2, 3)
+        return normalized(N, C, H, W), mean(N,), rstd(N)
+    """
+    axes = _normalize_reduce_axes(x.shape, axes)
     x_mean = x.mean(axes, True)
     x_mean_sqr = x_mean * x_mean
     x_sqr = x * x
@@ -125,10 +131,53 @@ def _normalize_lower(
     delta = x - x_mean
     normalized = delta * rstd
 
-    if affine:
-        normalized = normalized * w + b
+    non_reduce_shape = [x.shape[i] for i in range(x.ndim) if i not in axes]
+    x_mean = x_mean.reshape(non_reduce_shape)
+    rstd = rstd.reshape(non_reduce_shape)
 
-    return [normalized, x_mean, rstd]
+    return normalized, x_mean, rstd
+
+
+def _normalize_grad(dy, x, x_mean, rstd, axes):
+    axes = _normalize_reduce_axes(x.shape, axes)
+
+    if x_mean.ndim < x.ndim or rstd.ndim < x.ndim:
+        reduced_shape = [x.shape[i] if i not in axes else 1 for i in range(x.ndim)]
+        axes_divider = np.prod([x.shape[i] for i in axes]).astype("float32")
+
+        x_mean = x_mean.reshape(reduced_shape)
+        rstd = rstd.reshape(reduced_shape)
+
+    delta = x - x_mean
+    reducea = dy.sum(axes, True)
+    b = (dy * delta * rstd ** 2.0).sum(axes, True)
+    x1 = dy * rstd
+    x2 = -1.0 * rstd / axes_divider * reducea
+    x3 = -1.0 * rstd / axes_divider * delta * b
+    x4 = rstd / axes_divider * (delta / axes_divider * b).sum(axes, True)
+    dx = x1 + x2 + x3 + x4
+    return dx, delta * rstd
+
+
+def layer_norm(x, w, b, affine, normalized_dim, eps):
+    reduce_axes = list(range(x.ndim - normalized_dim, x.ndim))
+    y, x_mean, rstd = _normalize(x, reduce_axes, eps)
+    if affine:
+        y = y * w + b
+    return y, x_mean, rstd
+
+
+def layer_norm_grad(dy, x, w, x_mean, rstd, affine):
+    reduce_axes = list(range(x_mean.ndim, x.ndim))
+    scaled_dy = dy * w if w is not None else dy
+    dx, dw_helper = _normalize_grad(scaled_dy, x, x_mean, rstd, reduce_axes)
+
+    if affine:
+        unreduce_axes = list(range(x.ndim - w.ndim))
+        dbias = dy.sum(unreduce_axes, keepdims=False)
+        dweight = (dw_helper * dy).sum(unreduce_axes, keepdims=False)
+        return dx, dweight, dbias
+    return dx
 
 
 @register_lower_rule(mops.LayerNorm)
@@ -141,45 +190,158 @@ def layer_norm_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         assert len(args) == 1 and len(ctx.vars_in) == 1 and len(ctx.vars_out) == 3
         x, w, b = args[0], None, None
 
-    axes = list(range(x.ndim - ctx.op.normalized_dim, x.ndim))
-    rets = _normalize_lower(x, axes, ctx.op.affine, ctx.op.eps, w, b,)
-    rets[1] = rets[1].reshape(ctx.vars_out[1].shape)
-    rets[2] = rets[2].reshape(ctx.vars_out[2].shape)
-    return rets
+    return layer_norm(x, w, b, ctx.op.affine, ctx.op.normalized_dim, ctx.op.eps)
 
 
 @register_lower_rule("LayerNormBackward")
 def layer_norm_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
-    grad = args[0]
     if ctx.param["affine"]:
-        inp = args[1]
-        weight = args[2]
-        mean = args[3]
-        rstd = args[4]
+        dy, x, w, x_mean, rstd = args
     else:
-        inp = args[1]
-        mean = args[2]
-        rstd = args[3]
+        dy, x, x_mean, rstd = args
+        w = None
 
-    reduced_shape = mean.shape + (1,) * (inp.ndim - mean.ndim)
-    reduce_axes = list(range(mean.ndim, inp.ndim))
-    axes_divider = np.prod([inp.shape[i] for i in reduce_axes]).astype("float32")
+    return layer_norm_grad(dy, x, w, x_mean, rstd, ctx.param["affine"])
 
-    mean = mean.reshape(reduced_shape)
-    rstd = rstd.reshape(reduced_shape)
-    delta = inp - mean
-    a = grad * weight if ctx.param["affine"] else grad
-    reducea = a.sum(reduce_axes, True)
-    b = (a * delta * rstd ** 2.0).sum(reduce_axes, True)
-    x1 = a * rstd
-    x2 = -1.0 * rstd / axes_divider * reducea
-    x3 = -1.0 * rstd / axes_divider * (inp - mean) * b
-    x4 = rstd / axes_divider * ((inp - mean) / axes_divider * b).sum(reduce_axes, True)
-    dx = x1 + x2 + x3 + x4
 
-    if ctx.param["affine"]:
-        unreduce_axes = list(range(inp.ndim - weight.ndim))
-        dbias = grad.sum(unreduce_axes, keepdims=False)
-        dweight = (delta * rstd * grad).sum(unreduce_axes, keepdims=False)
-        return [dx, dweight, dbias]
-    return [dx]
+def group_norm(x, w, b, affine, eps, group, fmt):
+    assert x.ndim == 4, f"group/instance norm requires 4D input, get {x.shape}"
+    N = x.shape[0]
+
+    if fmt == "NCHW":
+        grouped_shape = (N, group, -1)
+        affine_shape = (1, -1, 1, 1)
+        norm_axis = 2
+    elif fmt == "NHWC":
+        # grouped_shape = (N, -1, group)
+        # affine_shape = (1, 1, 1, -1)
+        # norm_axis = 1
+        assert False, "NHWC format is not supported"
+    else:
+        assert False, f"invalid format: {fmt}"
+
+    # reshape (N, C, H, W) to (N, Group, -1) and do normalize for each group
+    grouped_x = x.reshape(grouped_shape)
+    y, x_mean, rstd = _normalize(grouped_x, norm_axis, eps)
+    y = y.reshape(x.shape)  # (N, Group, -1) -> (N, C, H, W)
+
+    if affine:
+        w = w.reshape(affine_shape)  # (C,) -> (1, C, 1, 1)
+        b = b.reshape(affine_shape)  # (C,) -> (1, C, 1, 1)
+        y = y * w + b
+
+    return y, x_mean, rstd
+
+
+def group_norm_grad(dy, x, w, x_mean, rstd, affine, group, fmt):
+    assert x.ndim == 4, f"group/instance norm requires 4D input, get {x.shape}"
+    if fmt == "NCHW":
+        norm_axis = 2
+        grouped_shape = (x.shape[0], group, -1)
+        affine_axis = 1
+        affine_shape = (1, -1, 1, 1)
+    elif fmt == "NHWC":
+        norm_axis = 1
+        grouped_shape = (x.shape[0], -1, group)
+        affine_axis = 1
+        affine_shape = (1, 1, 1, -1)
+        assert False, "not checked NHWC format"
+    else:
+        assert False, f"invalid format: {fmt}"
+
+    scaled_dy = dy if w is None else dy * w.reshape(affine_shape)
+    grouped_x = x.reshape(grouped_shape)  # (N, C, H, W) -> (N, Group, -1)
+    grouped_dy = scaled_dy.reshape(grouped_shape)
+
+    dx, dw_helper = _normalize_grad(grouped_dy, grouped_x, x_mean, rstd, norm_axis)
+    dx = dx.reshape(x.shape)
+    if affine:
+        no_affine_axis = [i for i in range(dx.ndim) if i != affine_axis]
+        db = dy.sum(no_affine_axis, False)
+        dw = (dy * dw_helper.reshape(dy.shape)).sum(no_affine_axis, False)
+        return dx, dw, db
+    return dx
+
+
+@register_lower_rule(mops.GroupNorm)
+def group_norm_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    if ctx.op.affine:
+        assert len(args) == 3 and len(ctx.vars_in) == 3 and len(ctx.vars_out) == 3
+        x, w, b = args[0], args[1], args[2]
+    else:
+        assert len(args) == 1 and len(ctx.vars_in) == 1 and len(ctx.vars_out) == 3
+        x, w, b = args[0], None, None
+
+    assert x.ndim == 4, f"group norm requires 4D input, get {x.shape}"
+
+    if ctx.op.format == mops.GroupNorm.Format.NCHW:
+        return group_norm(x, w, b, ctx.op.affine, ctx.op.eps, ctx.op.group, "NCHW")
+    elif ctx.op.format == mops.GroupNorm.Format.NHWC:
+        return group_norm(x, w, b, ctx.op.affine, ctx.op.eps, ctx.op.group, "NHWC")
+    else:
+        assert False, f"invalid format: {ctx.op.format}"
+
+
+@register_lower_rule("GroupNormBackward")
+def group_norm_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    if ctx.param["affine"] == True:
+        assert (
+            len(args) == 5 and len(ctx.vars_in) == 5 and len(ctx.vars_out) == 3
+        ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+        dy, x, w, x_mean, rstd = args
+    else:
+        assert (
+            len(args) == 4 and len(ctx.vars_in) == 4 and len(ctx.vars_out) == 1
+        ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+        dy, x, x_mean, rstd = args
+        w = None
+
+    return group_norm_grad(
+        dy,
+        x,
+        w,
+        x_mean,
+        rstd,
+        ctx.param["affine"],
+        ctx.param["group"],
+        ctx.param["format"],
+    )
+
+
+@register_lower_rule(mops.InstanceNorm)
+def instance_norm_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    if ctx.op.affine:
+        assert len(args) == 3 and len(ctx.vars_in) == 3 and len(ctx.vars_out) == 3
+        x, w, b = args[0], args[1], args[2]
+    else:
+        assert len(args) == 1 and len(ctx.vars_in) == 1 and len(ctx.vars_out) == 3
+        x, w, b = args[0], None, None
+
+    # instance norm is special group norm
+    if ctx.op.format == mops.AdaptivePooling.Format.NCHW:
+        return group_norm(x, w, b, ctx.op.affine, ctx.op.eps, x.shape[1], "NCHW")
+    elif ctx.op.format == mops.AdaptivePooling.Format.NHWC:
+        return group_norm(x, w, b, ctx.op.affine, ctx.op.eps, x.shape[-1], "NHWC")
+    else:
+        assert False, f"invalid format: {ctx.op.format}"
+
+
+@register_lower_rule("InstanceNormBackward")
+def instance_norm_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    if ctx.param["affine"] == True:
+        assert (
+            len(args) == 5 and len(ctx.vars_in) == 5 and len(ctx.vars_out) == 3
+        ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+        dy, x, w, x_mean, rstd = args
+    else:
+        assert (
+            len(args) == 4 and len(ctx.vars_in) == 4 and len(ctx.vars_out) == 1
+        ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+        dy, x, x_mean, rstd = args
+        w = None
+
+    # instance norm is special group norm
+    group = x.shape[1] if ctx.param["format"] == "NCHW" else x.shape[-1]
+    return group_norm_grad(
+        dy, x, w, x_mean, rstd, ctx.param["affine"], group, ctx.param["format"]
+    )

@@ -43,17 +43,17 @@ def create_tensor_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
 
 
 @register_lower_rule("io_mark_var")
-def io_mark_var_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
+def io_mark_var_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(args) == 1
     return args
 
 
 @register_lower_rule("rename")
-def rename_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
+def rename_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(args) == 1
     return args
 
 
 @register_lower_rule("fake_op_rule_for_debug")
-def fake_op_lower(ctx, *args: Union[ir.Value, Sequence[ir.Value]]):
+def fake_op_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     return [fill(0.0, out.shape, out.dtype) for out in ctx.vars_out]

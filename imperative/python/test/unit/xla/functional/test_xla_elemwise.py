@@ -50,7 +50,7 @@ def test_elemwise():
 
         mge_rsts = func(inps, doup)
         xla_rsts = func(inps, doup)
-        for _, (mge_rst, xla_rst) in enumerate(zip(mge_rsts, xla_rsts)):
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
             np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=atol)
 
     tester(F.neg, (4, 16, 12, 12), dtype=np.float32, atol=1e-5)
@@ -62,7 +62,7 @@ def test_elemwise():
     tester(F.cosh, (3, 16, 1), dtype=np.float32, atol=1e-5)
     tester(F.tanh, (4, 6, 3, 1), dtype=np.float32, atol=5e-4)
     tester(F.asin, (4, 1, 3, 1), dtype=np.float32, atol=1e-5)
-    # tester(F.acos, (4, 16, 3, 1), dtype=np.float32, atol=1e-5) # xla compute error
+    tester(F.acos, (4, 16, 3, 1), dtype=np.float32, atol=1e-5)
     tester(F.atan, (4, 16, 3, 1), dtype=np.float32, atol=1e-5)
     tester(F.asinh, (4, 1, 3, 1), dtype=np.float32, atol=1e-5)
     tester(F.acosh, (4, 1), dtype=np.float32, atol=1e-5)

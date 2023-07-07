@@ -4,7 +4,9 @@
 #include "megbrain/opr/dnn/adaptive_pooling.h"
 #include "megbrain/opr/dnn/batch_norm.h"
 #include "megbrain/opr/dnn/convolution.h"
+#include "megbrain/opr/dnn/group_norm.h"
 #include "megbrain/opr/dnn/images2neibs.h"
+#include "megbrain/opr/dnn/instance_norm.h"
 #include "megbrain/opr/dnn/layer_norm.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
@@ -565,6 +567,8 @@ REGISTE_PARAM_JSON_FUNC(AdaptivePoolingBackward)
 REGISTE_PARAM_JSON_FUNC(DropoutBackward)
 REGISTE_PARAM_JSON_FUNC(SoftmaxBackward)
 REGISTE_PARAM_JSON_FUNC(ArgsortBackward)
+REGISTE_PARAM_JSON_FUNC(InstanceNormBackward)
+REGISTE_PARAM_JSON_FUNC(GroupNormBackward)
 
 std::shared_ptr<json::Value> dimshuffle_param2json(
         const opr::Dimshuffle::Param& param) {
@@ -864,6 +868,8 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::DropoutBackward>();
     add_single_param_json<opr::SoftmaxBackward>();
     add_single_param_json<opr::ArgsortBackward>();
+    add_single_param_json<opr::InstanceNormBackward>();
+    add_single_param_json<opr::GroupNormBackward>();
 
 #endif
 }

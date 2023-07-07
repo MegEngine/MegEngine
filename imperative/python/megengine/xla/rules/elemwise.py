@@ -6,7 +6,7 @@ import numpy as np
 
 from ...core._imperative_rt import ops as mops
 from .. import ir_utils
-from ..lib.mlir.dialects import hlo
+from ..lib.mlir.dialects import chlo, hlo
 from .hlotensor import HLOTensor
 from .utils import register_lower_rule
 
@@ -152,7 +152,17 @@ neg = partial(_elemwise_unary, hlo.NegOp)
 abs = partial(_elemwise_unary, hlo.AbsOp)
 sin = partial(_elemwise_unary, hlo.SineOp)
 cos = partial(_elemwise_unary, hlo.CosineOp)
+tan = partial(_elemwise_unary, chlo.TanOp)
+asin = partial(_elemwise_unary, chlo.AsinOp)
+acos = partial(_elemwise_unary, chlo.AcosOp)
+atan = partial(_elemwise_unary, chlo.AtanOp)
+sinh = partial(_elemwise_unary, chlo.SinhOp)
+cosh = partial(_elemwise_unary, chlo.CoshOp)
 tanh = partial(_elemwise_unary, hlo.TanhOp)
+asinh = partial(_elemwise_unary, chlo.AsinhOp)
+acosh = partial(_elemwise_unary, chlo.AcoshOp)
+atanh = partial(_elemwise_unary, chlo.AtanhOp)
+erf = partial(_elemwise_unary, chlo.ErfOp)
 exp = partial(_elemwise_unary, hlo.ExpOp)
 sqrt = partial(_elemwise_unary, hlo.SqrtOp)
 log = partial(_elemwise_unary, hlo.LogOp)
@@ -220,49 +230,12 @@ def abs_grad(x, dy):
     return (x / abs(x)) * dy
 
 
-def tan(x):
-    return sin(x) / cos(x)
-
-
 def tan_grad(x, dy):
     return (1.0 + tan(x) ** 2.0) * dy
 
 
-def sinh(x):
-    return (exp(x) - exp(-x)) / 2.0
-
-
-def cosh(x):
-    return (exp(x) + exp(-x)) / 2.0
-
-
 def tanh_grad(x, dy):
     return (1.0 - tanh(x) ** 2.0) * dy
-
-
-def atan(x):
-    return atan2(x, 1.0)
-
-
-def asin(x):
-    return atan(x / sqrt(1.0 - x ** 2.0))
-
-
-def acos(x):
-    assert False, "xla not support"
-    # return atan(sqrt(1.0 - x ** 2.0) / x)
-
-
-def asinh(x):
-    return log(x + sqrt(x ** 2.0 + 1.0))
-
-
-def acosh(x):
-    return log(x + sqrt(x ** 2.0 - 1.0))
-
-
-def atanh(x):
-    return log((1.0 + x) / (1.0 - x)) / 2.0
 
 
 def asinh_grad(x, dy):
@@ -293,45 +266,6 @@ def gelu(inp, approximate: bool = True):
     return h
 
 
-def erfcc(inp):
-    _a = abs(inp)
-    _b = 0.5 * _a
-    _c = 1.0 + _b
-    _d = 1.0 / _c
-    _e = _d * 0.17087277
-    _f = -0.82215223 + _e
-    _g = _d * _f
-    _h = 1.48851587 + _g
-    _i = _d * _h
-    _j = -1.13520398 + _i
-    _k = _d * _j
-    _l = 0.27886807 + _k
-    _m = _d * _l
-    _n = -0.18628806 + _m
-    _o = _d * _n
-    _p = 0.09678418 + _o
-    _q = _d * _p
-    _r = 0.37409196 + _q
-    _s = _d * _r
-    _t = 1.00002368 + _s
-    _u = _d * _t
-    _v = inp * inp
-    _w = -_v
-    _x = _w - 1.26551223
-    _y = _x + _u
-    _z = exp(_y)
-    _aa = _d * _z
-    _ab = 1.0 - _aa
-    _ac = -_ab
-
-    _ad = (inp >= 0.0).astype(inp.dtype)
-    _ae = (inp < 0.0).astype(inp.dtype)
-    _af = _ad * _ab
-    _ag = _ae * _ac
-    ret = _af + _ag
-    return ret
-
-
 def gelu_grad(x, dy, approximate: bool = True):
     if approximate:
         _a = x * x
@@ -339,7 +273,7 @@ def gelu_grad(x, dy, approximate: bool = True):
         _c = exp(_b)
         phi = 0.3989422804014327 * _c
         _d = x / math.sqrt(2.0)
-        _e = erfcc(_d)
+        _e = erf(_d)
         _f = 1.0 + _e
         normcdf_v = 0.5 * _f
         _g = x * phi
