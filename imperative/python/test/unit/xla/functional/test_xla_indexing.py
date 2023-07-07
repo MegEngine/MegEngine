@@ -149,3 +149,40 @@ def test_indexing_one_hot():
     tester((4, 8, 16), -1, False)
     tester((4, 1, 16), -2, True)
     tester((4, 1, 16), -2, False)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_index_multi_vec():
+    def tester(x_shape, index_type, dtype):
+        dtype = dtype or np.float32
+        x = tensor(np.random.randn(*x_shape), dtype=dtype)
+        max_val = x.shape[0]
+        ind = tensor(np.random.randint(-max_val + 1, max_val, 24).astype("int32"))
+        gm = GradManager()
+        rand_num = tensor(np.random.random(x[ind].shape).astype(dtype))
+
+        @jit.xla_trace(without_host=True, capture_as_const=True)
+        def func(inp, ind):
+            gm.attach([inp])
+            with gm:
+                x = inp
+                if index_type == "set":
+                    x[ind] = tensor(rand_num)
+                else:
+                    x = x[ind]
+                gm.backward((x * x).sum())
+            return x, inp.grad
+
+        mge_rsts = func(x, ind)
+        xla_rsts = func(x, ind)
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+
+    tester((3, 4, 5, 6), "get", np.float32)
+    tester((3, 4, 5, 6), "get", np.float16)
+
+    # tester((2,2,2,2), "set", np.float32)
+    # tester((3,4,5,6), "set", np.float16)
+    # tester((3,4,5,6), "set", np.float16)

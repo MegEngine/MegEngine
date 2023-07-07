@@ -409,11 +409,15 @@ def scatter(
         oshape, odtype = oup_var.shape, oup_var.dtype
     else:
         oshape, odtype = x.shape, x.dtype
-
+    indices = (
+        ir_utils.ir_constant(indices)
+        if not isinstance(indices, HLOTensor)
+        else indices.tensor
+    )
     op = hlo.ScatterOp(
         ir_utils.make_ir_type_according_meta_tuple(oshape, odtype),
         [x.tensor],
-        ir_utils.ir_constant(indices),
+        indices,
         [y.tensor],
         scatter_dnums,
         indices_are_sorted=ir.BoolAttr.get(indices_are_sorted),
@@ -424,7 +428,32 @@ def scatter(
     update = op.update_computation.blocks.append(scalar_type, scalar_type)
 
     with ir.InsertionPoint(update):
-        hlo.ReturnOp((update.arguments[1],))
+        if mode == "add":
+            add = hlo.AddOp(*update.arguments)
+            hlo.ReturnOp(add.results)
+        else:
+            hlo.ReturnOp((update.arguments[1],))
+
+    return HLOTensor(op.results)
+
+
+def gather(
+    x, indices, dnums, slice_sizes, indices_are_sorted=False, unique_indices=False,
+):
+    gather_dnums = hlo.GatherDimensionNumbers.get(
+        collapsed_slice_dims=list(dnums.collapsed_slice_dims),
+        index_vector_dim=len(indices.shape) - 1,
+        offset_dims=list(dnums.offset_dims),
+        start_index_map=list(dnums.start_index_map),
+    )
+
+    op = hlo.GatherOp(
+        x.tensor,
+        indices.tensor,
+        gather_dnums,
+        indices_are_sorted=ir.BoolAttr.get(indices_are_sorted),
+        slice_sizes=ir_utils.dense_int_elements(slice_sizes),
+    )
     return HLOTensor(op.results)
 
 
@@ -554,3 +583,68 @@ def indexing_set_one_hot_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]
 
     assert ctx.op.ndim == args[0].ndim, f"{ctx.op.ndim}, {args[0].shape}"
     return indexing_set_with_tensor_index(args[0], args[2], args[1], ctx.op.axis)
+
+
+def convert_negative_index(indices: HLOTensor, max_indices: int):
+    max_i = HLOTensor(np.array([max_indices], dtype="int32"))
+    zero = HLOTensor(np.array([0], dtype="int32"))
+    zeros = zero.broadcast_to(indices.shape)
+    max_i = max_i.broadcast_to(indices.shape)
+    positive_indices = indices + max_i
+    mask = indices < zeros
+    return HLOTensor(
+        hlo.SelectOp(mask.tensor, positive_indices.tensor, indices.tensor).results
+    )
+
+
+@register_lower_rule(mops.IndexingMultiAxisVec)
+def vec_indexing_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert len(ctx.param["items"]) == 1
+    axis, _, _, _, is_index = ctx.param["items"][0]
+    assert is_index
+    inp = args[0]
+    indices = args[1]
+    indices = convert_negative_index(indices, inp.shape[axis])
+    offset_dims = tuple(i for i in range(len(inp.shape)) if i != axis)
+    collapsed_slice_dims = (axis,)
+    start_index_map = (axis,)
+    indices = indices.reshape(indices.shape + (1,))
+    slices_size = tuple(
+        (inp.shape[i] if i != axis else 1 for i in range(len(inp.shape)))
+    )
+    return gather(
+        inp,
+        indices,
+        GatherDimensionNumbers(offset_dims, collapsed_slice_dims, start_index_map),
+        slices_size,
+    )
+
+
+@register_lower_rule(mops.IndexingIncrMultiAxisVec)
+def vec_indexing_incr_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert len(ctx.param["items"]) == 1
+    axis, _, _, _, is_index = ctx.param["items"][0]
+    assert is_index
+    inp = args[0]
+    indices = args[2]
+    indices = convert_negative_index(indices, inp.shape[axis])
+    indices = indices.reshape(indices.shape + (1,))
+    y = args[1]
+    offset_dims = tuple(i for i in range(len(inp.shape)) if i != axis)
+    collapsed_slice_dims = (axis,)
+    start_index_map = (axis,)
+    dnums = ScatterDimensionNumbers(
+        update_window_dims=offset_dims,
+        inserted_window_dims=collapsed_slice_dims,
+        scatter_dims_to_operand_dims=start_index_map,
+    )
+    out = scatter(
+        inp,
+        indices,
+        y,
+        dnums,
+        indices_are_sorted=False,
+        unique_indices=False,
+        mode="add",
+    )
+    return out
