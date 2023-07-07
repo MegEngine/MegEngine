@@ -425,10 +425,45 @@ def ones_like(inp: Tensor) -> Tensor:
 
 
 def polar(abs: Tensor, angle: Tensor) -> Tensor:
+    r"""Constructs a complex tensor whose elements are Cartesian coordinates
+    corresponding to the polar coordinates with absolute value abs and angle angle.
+
+    Args:
+        abs(Tensor): the absolute value the complex tensor. Must be float.
+        angle(Tensor): the angle of the complex tensor. Must be float.
+
+    Returns:
+        the complex tensor
+
+    Examples:
+        >>> abs = Tensor([1, 2], dtype=np.float32)
+        >>> angle = Tensor([np.pi / 2, 5 * np.pi / 4], dtype=np.float32)
+        >>> z = F.polar(abs, angle)
+        >>> z
+        Tensor([-4.3711e-08+1.j     -1.4142e+00-1.4142j], dtype=complex64, device=xpux:0)
+    """
     return create_complex(abs * cos(angle), abs * sin(angle))
 
 
 def complex(real: Tensor, imag: Tensor) -> Tensor:
+    r"""Constructs a complex tensor with its real part equal to real and its imaginary part equal to imag.
+
+    Args:
+        real(Tensor): the real part of the complex tensor. Must be float.
+        imag(Tensor): the imaginary part of the complex tensor. Must be float.
+
+    Returns:
+        the complex tensor
+
+    Examples:
+        >>> real = Tensor([1, 2], dtype=np.float32)
+        >>> imag = Tensor([3, 4], dtype=np.float32)
+        >>> z = F.complex(real, imag)
+        >>> z
+        Tensor([1.+3.j 2.+4.j], dtype=complex64, device=xpux:0)
+        >>> z.dtype
+        dtype('complex64')
+    """
     if not isinstance(real, Tensor):
         real = Tensor(real)
     if not isinstance(imag, Tensor):
@@ -437,10 +472,44 @@ def complex(real: Tensor, imag: Tensor) -> Tensor:
 
 
 def real(complex: Tensor) -> Tensor:
+    r"""Returns a new tensor containing real values of the complex tensor.
+
+    Args:
+        complex(Tensor) the complex tensor
+
+    Returns:
+        the real part of the complex tensor
+
+    Examples:
+        >>> x=Tensor([0.3100+0.3553j, -0.5445-0.7896j, -1.6492-0.0633j, -0.0638-0.8119j], dtype=np.complex64)
+        
+        >>> F.real(x)
+        Tensor([[ 0.31  ]
+         [-0.5445]
+         [-1.6492]
+         [-0.0638]], device=xpux:0)
+    """
     return get_real(complex)
 
 
 def imag(complex: Tensor) -> Tensor:
+    r"""Returns a new tensor containing imaginary values of the complex tensor.
+
+    Args:
+        complex(Tensor) the complex tensor
+
+    Returns:
+        the imaginary part of the complex tensor
+
+    Examples:
+        >>> x=Tensor([0.3100+0.3553j, -0.5445-0.7896j, -1.6492-0.0633j, -0.0638-0.8119j], dtype=np.complex64)
+        
+        >>> F.imag(x)
+        Tensor([[ 0.3553]
+         [-0.7896]
+         [-0.0633]
+         [-0.8119]], device=xpux:0)
+    """
     return get_imag(complex)
 
 

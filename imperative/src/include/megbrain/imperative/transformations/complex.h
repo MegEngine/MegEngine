@@ -13,6 +13,7 @@
 #include "megbrain/imperative/utils/helper.h"
 #include "megbrain/imperative/utils/span.h"
 #include "megbrain/imperative/value.h"
+#include "megbrain/tensor.h"
 #include "megdnn/thin/small_vector.h"
 
 namespace mgb {
@@ -184,17 +185,24 @@ public:
                         f32_host.sub(SubTensorSpec::make_from_layout(real_layout));
                 auto imag_host = f32_host.sub(
                         SubTensorSpec::make_from_offset_elem(imag_layout, 1));
+                // copy into continuous
+                real_layout.init_contiguous_stride();
+                imag_layout.init_contiguous_stride();
+                auto real_value = HostTensorND{create_tensor->device(), real_layout};
+                real_value.copy_from_fixlayout(real_host);
+                auto imag_value = HostTensorND{create_tensor->device(), imag_layout};
+                imag_value.copy_from_fixlayout(imag_host);
                 // create real and imag
                 auto real = imperative::apply(
                         CreateTensor(
                                 create_tensor->kind(), create_tensor->device(),
                                 real_layout),
-                        HostStorage::make(real_host.storage()))[0];
+                        HostStorage::make(real_value.storage()))[0];
                 auto imag = imperative::apply(
                         CreateTensor(
                                 create_tensor->kind(), create_tensor->device(),
                                 imag_layout),
-                        HostStorage::make(imag_host.storage()))[0];
+                        HostStorage::make(imag_value.storage()))[0];
                 return {m_complex_type.make(real, imag)};
             } else {
                 return imperative::apply(op, inputs);

@@ -48,7 +48,8 @@ CreateTensor::CreateTensor(Kind kind, CompNode device, TensorLayout layout)
           m_shape(ValueShape::from(layout)),
           m_format(Format::Type::DEFAULT) {
     mgb_assert(
-            layout.is_contiguous() || layout.is_empty(), "layout should be contiguous");
+            layout.is_contiguous() || layout.is_empty(),
+            "layout should be contiguous, got %s", layout.to_string().c_str());
 }
 
 auto CreateTensor::parse(Span<ValueRef> inputs) const -> Args {
