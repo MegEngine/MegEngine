@@ -112,7 +112,6 @@ void reduce_fwd(
         }
 }
 
-#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
 template <>
 void reduce_fwd<Mode::SUM>(
         const dt_quint8* __restrict, dt_quint8* __restrict, size_t, size_t, size_t) {
@@ -176,7 +175,6 @@ void reduce_fwd<Mode::PRODUCT>(
             "Reduce (PRODUCT) with DEFAULT DataType is not supported "
             "on QuantizedS8");
 }
-#endif
 
 template <Mode mode>
 void dispatch_dtype(
@@ -240,7 +238,6 @@ size_t ReduceForwardImpl::get_workspace_in_bytes(
 
 void ReduceForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
-#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     using namespace reduce;
     check_exec(src.layout, dst.layout, workspace.size);
     size_t A, B, C;
@@ -307,9 +304,6 @@ void ReduceForwardImpl::exec(
             megdnn_assert_internal(false);
     }
 #undef CASE
-#else
-    __builtin_trap();
-#endif
 }
 
 }  // namespace naive

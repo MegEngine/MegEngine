@@ -78,7 +78,6 @@ void on_dest_ctype(HandleImpl* handle, const TensorND& dest, const TensorND& src
 }  // anonymous namespace
 
 void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
-#if !MGE_BUILD_WITHOUT_NAIVE_EXEC
     check_exec(src.layout, dst.layout);
 
     // exec
@@ -96,9 +95,6 @@ void TypeCvtImpl::exec(_megdnn_tensor_in src, _megdnn_tensor_out dst) {
 #undef cb
                         default : megdnn_throw("bad dtype");
     }
-#else
-    __builtin_trap();
-#endif
 }
 
 // vim: syntax=cpp.doxygen
