@@ -148,7 +148,8 @@ public:
     virtual void set_device_id(int device_id) = 0;
     virtual int get_device_id() const = 0;
     virtual LiteBackend get_backend_type() const = 0;
-    //! set stream id, default stream id = 0
+    //! set stream id, default stream id = 0, if there are multi compnode in a
+    //! model, set all the compnode stream to the stream_id
     virtual void set_stream_id(int stream_id) = 0;
     virtual int get_stream_id() const = 0;
 

@@ -112,10 +112,22 @@ void NetworkImplDft::application_config() {
                 loc.type = m_compnode_locator.type;
             }
             loc.device = m_compnode_locator.device;
+            //! the user configured stream
+            auto stream = m_compnode_locator.stream;
             //! if user set the thread number and the compnode is multithread
-            if (loc.type == mgb::CompNode::DeviceType::MULTITHREAD &&
-                m_nr_threads != 1) {
-                loc.stream = m_nr_threads;
+            if (loc.type == mgb::CompNode::DeviceType::MULTITHREAD) {
+                if (m_nr_threads != 1) {
+                    loc.nr_threads = m_nr_threads;
+                }
+                //! user set the stream to separate the different multithread
+                if (stream != 0) {
+                    auto device = m_compnode_locator.device;
+                    //! the device is also set by user, so combine them to one
+                    //! int
+                    if (device == -1) {
+                        loc.device = stream;
+                    }
+                }
             } else {
                 loc.stream = m_compnode_locator.stream;
             }

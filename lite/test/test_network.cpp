@@ -1665,6 +1665,30 @@ TEST(TestNetWork, AtlasLoadAtlasDeviceInput) {
 TEST(TestNetWork, AtlasDeviceID) {
     load_device_id(LiteDeviceType::LITE_ATLAS, 1, "./model_atlas.mgb");
 }
+
+TEST(TestNetWork, AtlasCrossCompnodeStreamID) {
+    auto thread = [](int stream_id) {
+        lite::Config config;
+        config.device_type = LiteDeviceType::LITE_ATLAS;
+        auto network = std::make_shared<lite::Network>(config);
+        network->set_stream_id(stream_id);
+        network->load_model("./model_atlas.mgb");
+        std::shared_ptr<Tensor> input_tensor = network->get_input_tensor(0);
+        std::shared_ptr<Tensor> output_tensor = network->get_output_tensor(0);
+        for (int i = 0; i < 10; i++) {
+            network->forward();
+            network->wait();
+        }
+    };
+    std::thread t0(thread, 1);
+    std::thread t1(thread, 2);
+    std::thread t2(thread, 3);
+    std::thread t3(thread, 4);
+    t0.join();
+    t1.join();
+    t2.join();
+    t3.join();
+}
 #endif
 
 #if MGB_CAMBRICON
