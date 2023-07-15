@@ -473,4 +473,18 @@ TEST(TestOprRand, Dropout) {
     run({64, 32, 16, 16}, 1, 0.4);
 }
 
+TEST(TestOprRand, ExponentialReprod) {
+    static constexpr size_t SIZE = 123;
+    std::shared_ptr<HostTensorND> scale_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{SIZE}, dtype::Float32()});
+    auto scale_ptr = scale_host->ptr<float>();
+    for (size_t i = 0; i < SIZE; ++i)
+        scale_ptr[i] = 2;
+    auto graph = ComputingGraph::make();
+    auto scale_sym = opr::Host2DeviceCopy::make(*graph, scale_host);
+    check_reproducibility(graph, SIZE, [&scale_sym](uint64_t seed) {
+        return opr::ExponentialRNG::make(scale_sym, {seed});
+    });
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

@@ -250,6 +250,35 @@ template <typename T>
 void shuffle_backward(
         T* dptr, dt_int32* iptr, T* sptr, size_t len, size_t step, cudaStream_t stream);
 
+template <typename ctype>
+struct ExponentialKernel {
+    ctype* output;
+    ctype* scale;
+    uint64_t seed, offset;
+
+    __device__ void operator()(uint32_t idx) {
+        Philox local_state;
+        curand_init(seed, idx, offset, &local_state);
+        float scl = static_cast<float>(scale[idx]);
+        float uniform_rand = curand_uniform(&local_state);
+        // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
+        float epsilon = 1e-7f;
+        float log_rand = uniform_rand >= 1 - epsilon / 2
+                        ? -epsilon / 2 : logf(uniform_rand);
+        output[idx] = static_cast<ctype>(-log_rand * scl); 
+    }
+
+#if MEGDNN_CC_HOST
+    ExponentialKernel(
+            const TensorND& output, const TensorND& scale, uint64_t seed,
+            uint64_t offset)
+            : output{output.ptr<ctype>()},
+              scale{scale.ptr<ctype>()},
+              seed{seed},
+              offset{offset} {}
+#endif
+};
+
 #define ARGSORT_FOREACH_CTYPE(cb) cb(float) cb(int32_t) DNN_INC_FLOAT16(cb(dt_float16))
 
 }  // namespace random

@@ -271,6 +271,21 @@ struct OpMeth<ShuffleRNG> {
 };
 
 template <>
+struct OpMeth<ExponentialRNG> {
+    using DnnOp = megdnn::ExponentialRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::ExponentialRNG;
+    static Param make_param(const ExponentialRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(
+                handle_seed == rng.seed,
+                "inconsistent rng seed: rng op: %lu handle: %lu", handle_seed,
+                rng.seed);
+        return {handle_seed};
+    }
+};
+
+template <>
 struct OpMeth<Dropout> {
     using DnnOp = megdnn::Dropout;
     using Param = DnnOp::Param;
@@ -964,6 +979,7 @@ REG_RNG_OP(PermutationRNG, SymbolVar)
 REG_RNG_OP(PoissonRNG, SymbolVar)
 REG_RNG_OP(BetaRNG, SymbolVar)
 REG_RNG_OP(ShuffleRNG, SymbolVarArray)
+REG_RNG_OP(ExponentialRNG, SymbolVar)
 REG_RNG_OP(Dropout, SymbolVarArray)
 REG_RNG_OP(MultiHeadAttn, SymbolVarArray)
 #undef REG_RNG_OP

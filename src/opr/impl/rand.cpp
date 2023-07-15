@@ -159,6 +159,7 @@ _INST_RNG_OPR_WITH_SHAPE(PermutationRNG, "permutation_rng")
 #define _INPUTS(prefix, subfix) prefix i0 subfix
 #define _FOR_EACH(cb)           cb(0)
 _INST_RNG_OPR_WITH_INPUT(PoissonRNG, "poisson_rng")
+_INST_RNG_OPR_WITH_INPUT(ExponentialRNG, "exponential_rng")
 #undef _INPUTS
 #undef _FOR_EACH
 
@@ -192,6 +193,7 @@ template class RNGOprBase<::megdnn::BetaRNG>;
 template class RNGOprBase<::megdnn::PoissonRNG>;
 template class RNGOprBase<::megdnn::ShuffleRNGForward>;
 template class RNGOprBase<::megdnn::ShuffleRNGBackward>;
+template class RNGOprBase<::megdnn::ExponentialRNG>;
 template class RNGOprBase<::megdnn::DropoutForward>;
 template class RNGOprBase<::megdnn::DropoutBackward>;
 template class RNGOprBase<::megdnn::MultiHeadAttnForward>;
@@ -203,6 +205,7 @@ IMPL(GammaRNG);
 IMPL(PoissonRNG);
 IMPL(PermutationRNG);
 IMPL(BetaRNG);
+IMPL(ExponentialRNG);
 #endif
 }  // namespace intl
 }  // namespace opr

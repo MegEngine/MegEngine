@@ -72,6 +72,7 @@ _DEFINE_RNG_OPR_WITH_SHAPE_CLASS(PermutationRNG)
 #define _INPUTS(preifx) preifx i0
 #define _OUTPUTS        SymbolVar
 _DEFINE_RNG_OPR_WITH_INPUT_CLASS(PoissonRNG)
+_DEFINE_RNG_OPR_WITH_INPUT_CLASS(ExponentialRNG)
 #undef _OUTPUTS
 #define _OUTPUTS SymbolVarArray
 _DEFINE_RNG_OPR_WITH_INPUT_CLASS(ShuffleRNGForward)
@@ -140,6 +141,7 @@ using PermutationRNG = intl::PermutationRNG;
 using PoissonRNG = intl::PoissonRNG;
 using BetaRNG = intl::BetaRNG;
 using ShuffleRNG = intl::ShuffleRNGForward;
+using ExponentialRNG = intl::ExponentialRNG;
 using Dropout = intl::DropoutForward;
 using DropoutForward = intl::DropoutForward;
 using MultiHeadAttn = intl::MultiHeadAttnForward;

@@ -183,6 +183,29 @@ public:
     }
 };
 
+class ExponentialRNGImpl : public ExponentialRNG {
+    uint64_t m_seed, m_offset;
+    cudaStream_t m_stream;
+
+public:
+    ExponentialRNGImpl(Handle* handle);
+
+    void exec(
+            _megdnn_tensor_in scale, _megdnn_tensor_out dst, _megdnn_workspace) override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
+        return 0;
+    }
+
+    void seed(uint64_t seed) { m_seed = seed; }
+
+    void ensure_seed(uint64_t seed) {
+        if (m_seed != seed) {
+            this->seed(seed);
+        }
+    }
+};
+
 }  // namespace cuda
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen

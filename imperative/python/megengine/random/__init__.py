@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
-from .rng import RNG, beta, gamma, normal, permutation, poisson, seed, shuffle, uniform
+from .rng import (
+    RNG,
+    beta,
+    gamma,
+    normal,
+    permutation,
+    poisson,
+    seed,
+    shuffle,
+    uniform,
+    exponential,
+)
 
 __all__ = [
     "RNG",
@@ -11,6 +22,7 @@ __all__ = [
     "seed",
     "uniform",
     "shuffle",
+    "exponential",
 ]
 # pylint: disable=undefined-variable
 del rng  # type: ignore[name-defined]

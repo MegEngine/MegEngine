@@ -103,6 +103,7 @@ MGB_SEREG_OPR(PermutationRNG, 1);
 MGB_SEREG_OPR(BetaRNG, 2);
 MGB_SEREG_OPR(ShuffleRNG, 1);
 MGB_SEREG_OPR(ShuffleRNGBackward, 3);
+MGB_SEREG_OPR(ExponentialRNG, 1);
 MGB_SEREG_OPR(Dropout, 1);
 MGB_SEREG_OPR(DropoutBackward, 2);
 MGB_SEREG_OPR(MultiHeadAttn, 0);

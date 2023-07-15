@@ -122,6 +122,7 @@ DEF(PoissonRNG, 2, true, true);
 DEF(PermutationRNG, 1, true, true);
 DEF(ShuffleRNGForward, 3, true, true);
 DEF(ShuffleRNGBackward, 3, true, false);
+DEF(ExponentialRNG, 2, true, true);
 DEF(ChecksumForward, 1, true, false);
 DEF(CheckNonFinite, 2, true, true);
 DEF(LSQForward, 5, true, true);

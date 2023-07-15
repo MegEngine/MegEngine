@@ -23,6 +23,7 @@ from ..core.ops.builtin import (
     PoissonRNG,
     ShuffleRNG,
     UniformRNG,
+    ExponentialRNG,
 )
 from ..core.tensor import utils
 from ..device import get_default_device
@@ -37,6 +38,7 @@ __all__ = [
     "poisson",
     "permutation",
     "shuffle",
+    "exponential",
 ]
 
 _rng = None
@@ -221,6 +223,26 @@ def _shuffle(inp: Tensor, seed: int, handle: int) -> Tensor:
     assert inp.size > 0, "size needs to be greater than 0"
     op = ShuffleRNG(seed=seed, handle=handle)
     output, _ = apply(op, inp)
+    return output
+
+
+def _exponential(
+    scale: Union[Tensor, float], size: Optional[Iterable[int]], seed: int, handle: int
+) -> Tensor:
+    handle_cn = None if handle == 0 else _get_rng_handle_compnode(handle)
+    if not isinstance(scale, Tensor):
+        assert scale >= 0, "Exponential is not defined when scale < 0"
+        scale = Tensor(scale, dtype="float32", device=handle_cn)
+    if isinstance(size, int) and size != 0:
+        size = (size,)
+    assert (
+        handle_cn is None or handle_cn == scale.device
+    ), "The scale ({}) must be the same device with handle ({})".format(
+        scale.device, handle_cn
+    )
+    (scale,) = _broadcast_tensors_with_size([scale], size)
+    op = ExponentialRNG(seed=seed, handle=handle)
+    (output,) = apply(op, scale)
     return output
 
 
@@ -542,6 +564,55 @@ class RNG:
         _seed = self._seed() if callable(self._seed) else self._seed
         inp._reset(_shuffle(inp=inp, seed=_seed, handle=self._handle))
 
+    def exponential(
+        self, scale: Union[float, Tensor] = 1.0, size: Optional[Iterable[int]] = None
+    ):
+        r"""Random variable with exponential distribution :math:`\operatorname{Exponential}(\scale)`.
+
+        The corresponding probability density function is
+        
+        .. math::
+
+            f(x;\frac{1}{\beta})=\frac{1}{\beta}e^{-\frac{x}{\beta}}
+
+        for x > 0 and 0 elsewhere. beta is the scale parameter, which is the inverse of the rate parameter lambda = 1/beta.
+
+        Args:
+            scale: the scale parameter of the distribution. Must be non-negative. beta = 1/lambda.
+            size: the size of output tensor. If scale is a scalar and given size is, e.g., `(m, n)`,
+                then the output shape is `(m, n)`. If scale is a Tensor with shape `(k, v)` and given
+                size is, e.g., `(m, n)`, then the output shape is `(m, n, k, v)`. Default: None.
+
+        Returns:
+            the output tensor.
+
+
+
+        Examples:
+            >>> import megengine.random as rand
+            >>> x = rand.exponential(scale=2., size=(1, 3))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[0.29976687, 2.0183907, 2.0183907]], dtype=float32)
+            >>> scale = mge.Tensor([[1.,1.],
+            ...                 [10,10]], dtype="float32")
+            >>> x = rand.exponential(scale=scale)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[ 0.60264504,  0.1853687],
+                   [15.97864, 1.3586639]], dtype=float32)
+            >>> x = rand.exponential(scale=scale, size=(1,3))
+            >>> x.numpy()   # doctest: +SKIP
+            array([[[[ 0.505074,  0.10852259],
+                     [6.77063,  23.688671]],
+
+                    [[ 0.08482812,  0.32527232],
+                     [4.942598, 20.326012]],
+
+                    [[ 0.72095776,  1.6217546],
+                     [ 37.02024, 35.46942]]]], dtype=float32)
+        """
+        _seed = self._seed() if callable(self._seed) else self._seed
+        return _exponential(scale=scale, size=size, seed=_seed, handle=self._handle)
+
     def __del__(self):
         if self._handle != 0:
             # RNG op might execute after handle released due to async dispatch, so
@@ -565,6 +636,7 @@ beta = _default_handle.beta
 poisson = _default_handle.poisson
 permutation = _default_handle.permutation
 shuffle = _default_handle.shuffle
+exponential = _default_handle.exponential
 
 
 def _random_seed_generator():

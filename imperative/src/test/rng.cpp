@@ -110,4 +110,17 @@ TEST(TestImperative, PermutationRNGBasic) {
     check_rng_basic<PermutationRNG>(123, dtype::Int32());
 }
 
+TEST(TestImperative, ExponentialRNGBasic) {
+    REQUIRE_XPU(2);
+    for (auto&& cn : {CompNode::load("xpu0"), CompNode::load("xpu1")}) {
+        TensorShape shape{5, 3000};
+        HostTensorND scale{cn, shape, dtype::Float32()};
+        auto scale_ptr = scale.ptr<float>();
+        for (int i = 0; i < 5 * 3000; ++i)
+            scale_ptr[i] = 2;
+        SmallVector<TensorPtr> inputs{Tensor::make(scale)};
+        check_rng_with_input_basic<ExponentialRNG>(cn, inputs, 123);
+    }
+}
+
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}

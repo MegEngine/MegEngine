@@ -128,6 +128,7 @@ union OperatorParam {
     param.GeneralNorm=94,
     param.MultiHeadAttn=95,
     param.Resize3D = 96,
+    param.ExponentialRNG = 97,
 }
 
 table Operator {

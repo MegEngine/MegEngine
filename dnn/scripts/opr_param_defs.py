@@ -842,6 +842,9 @@ pdef('Sleep').add_fields('float32', Doc('time', 'time to sleep in seconds'), 0)
 (pdef('ShuffleRNG').
  add_fields('uint64', 'seed', 0))
 
+(pdef('ExponentialRNG').
+ add_fields('uint64', 'seed', 0))
+
 (pdef('Flip').
  add_fields('bool', 'vertical', 'false', 'horizontal', 'false'))
 
