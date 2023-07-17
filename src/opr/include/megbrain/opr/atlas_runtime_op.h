@@ -64,6 +64,9 @@ private:
     //! Atlas need a 64bit device tensor to hold dynamic batch state
     DeviceTensorND m_dyn_batch_tensor;
     SmallVector<size_t> m_dyn_batch_choices;
+    //! Used when the input batch is static and the output batch is dynamic. Different
+    //! from the case where the input batch is dynamic and the output batch is dynamic
+    mutable SmallVector<bool> m_dyn_batch_output;
 };
 
 }  // namespace opr
