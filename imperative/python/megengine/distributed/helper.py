@@ -153,13 +153,15 @@ def synchronized(func: Callable):
 def _check_device_initialized(device_type: str, rank: int):
     try:
         test = Tensor(1, device=(device_type + str(rank)))
-        inited = False
         del test
-    except:
-        inited = True
-    errmsg = "The cuda env is set before the forked thread starts. Please do not use any cuda function or variable before forking."
-    if inited:
-        raise RuntimeError(errmsg)
+    except Exception as e:
+        errmsg = (
+            "Device initialization check failed, which may be caused "
+            "by using CUDA before forking the thread. Please review "
+            "the code to ensure that no CUDA functions or variables "
+            "are used before forking."
+        )
+        raise RuntimeError(errmsg) from e
 
 
 def _check_interpreter_status():
