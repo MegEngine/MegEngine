@@ -40,9 +40,6 @@ TensorShape acl_shape_to_mgb_shape_for_input(
     MGB_MARK_USED_VAR(aipp_input_fmt);
     TensorShape ret;
     ret.ndim = acl_shape.dimCount;
-    mgb_assert(
-            ret.ndim == 4, "Unexpected ndim form aclmdlIODims expected 4, but got %zu",
-            ret.ndim);
     for (size_t i = 0; i < ret.ndim; ++i) {
         ret[i] = acl_shape.dims[i];
     }
