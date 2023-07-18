@@ -102,7 +102,7 @@ TensorImplDft::TensorImplDft(
 
 LiteDeviceType TensorImplDft::get_device_type() const {
     if (is_host()) {
-        return LiteDeviceType::LITE_CPU;
+        return get_device_from_locator(m_host_tensor->comp_node().locator());
     } else {
         return get_device_from_locator(m_dev_tensor->comp_node().locator());
     }

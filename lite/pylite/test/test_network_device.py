@@ -140,7 +140,8 @@ class TestNetwork(TestShuffleNetCuda):
         network.load(self.model_path)
 
         input_tensor = network.get_io_tensor("data")
-        assert input_tensor.device_type == LiteDeviceType.LITE_CPU
+        # the device type is cuda, but by default, the memory type is pinned memory on the host side, which is not on cuda.
+        assert input_tensor.device_type == LiteDeviceType.LITE_CUDA
 
         self.do_forward(network)
 
