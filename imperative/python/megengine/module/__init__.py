@@ -38,8 +38,12 @@ from .rnn import LSTM, RNN, LSTMCell, RNNCell
 from .sequential import Sequential
 from .sliding_window import SlidingWindow, SlidingWindowTranspose
 from .vision import (
+    ActiveBlur,
     AdditiveElemwise,
     AdditiveGaussianNoise,
     AdditiveLaplaceNoise,
     AdditivePoissonNoise,
+    Emboss,
+    LinearContrast,
+    Sharpen,
 )
