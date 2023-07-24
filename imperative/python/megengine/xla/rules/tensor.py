@@ -79,14 +79,13 @@ def transpose(inp, permutation):
 
 def expand_dims(inp, axis):
     assert isinstance(axis, int), f"only int axis supported, get {axis}"
-    axis = (axis + inp.ndim) if axis < 0 else axis
-    assert axis >= 0 and axis <= inp.ndim, f"invalid axis {axis} for {inp.shape}"
+    assert (
+        axis >= -inp.ndim - 1 and axis <= inp.ndim
+    ), f"invalid axis {axis} for {inp.shape}"
 
-    dst_shape = []
-    for i in range(inp.ndim):
-        if i == axis:
-            dst_shape.append(1)
-        dst_shape.append(inp.shape[i])
+    dst_shape = list(inp.shape)
+    insert_pos = axis if axis >= 0 else (axis + inp.ndim + 1)
+    dst_shape.insert(insert_pos, 1)
 
     return inp.reshape(tuple(dst_shape))
 
@@ -94,14 +93,29 @@ def expand_dims(inp, axis):
 @register_lower_rule(mops.Dimshuffle)
 def dim_shuffle_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(args) == 1 and len(ctx.vars_in) == 1 and len(ctx.vars_out) == 1
-    permutation = ctx.op.pattern
-    return transpose(args[0], permutation)
+    # mge dimshuffle can do transpose and broadcast simutaneously
+    # for example:
+    #   case1: (16, 32, 64) with pattern [0, 2, 1] -> (16, 64, 32)
+    #   case2: (16, 32, 64) with pattern [0, -1, 2, -1, 1] -> (16, 1, 64, 1, 32)
+    #   case3: (16, 1, 64, 1, 32) with pattern [0, 4, 2] -> (16, 32, 64)
+
+    pattern = ctx.op.pattern
+    inp = args[0]
+    if len(pattern) == inp.ndim:
+        permutation = pattern
+        return transpose(inp, permutation)
+    elif len(pattern) > inp.ndim:
+        permutation = [item for item in pattern if item != -1]
+        return transpose(inp, permutation).reshape(ctx.vars_out[0].shape)
+    else:
+        permutation = [i for i in range(inp.ndim) if i not in pattern] + list(pattern)
+        return transpose(inp, permutation).reshape(ctx.vars_out[0].shape)
 
 
 def concat(inps, axis):
     assert len(inps) > 0, f"concat inputs should not be empty"
     if axis < 0:
-        axis = axis + inps[0].ndim[0]
+        axis = axis + inps[0].ndim
 
     hlo_inps = [inp.tensor for inp in inps]
 
@@ -173,6 +187,21 @@ def fill(value, shape, dtype):
     assert isinstance(value, (int, float, bool))
     value = np.asarray(value, dtype=dtype)
     return broadcast_to(HLOTensor(value, dtype=dtype), shape)
+
+
+def iota(dtype, shape, dimension):
+    """
+    do some thing like arange.
+    for example:
+        shape = (2, 3), dimension=1, output is [[0, 1, 2], [0, 1, 2]]
+        shape = (2, 3), dimension=-1, output is [[0, 0, 0], [1, 1, 1]]
+    """
+    dimension = dimension + len(shape) if dimension < 0 else dimension
+    ret = hlo.IotaOp(
+        ir_utils.make_ir_type_according_meta(shape, dtype), ir_utils.i64_attr(dimension)
+    ).results
+    assert len(ret) == 1, f"{len(ret)}"
+    return HLOTensor(ret[0])
 
 
 @register_lower_rule(mops.Fill)

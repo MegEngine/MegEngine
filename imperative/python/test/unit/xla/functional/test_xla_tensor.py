@@ -113,6 +113,13 @@ def test_transpose():
     tester((2, 3, 1), (0, 1, 2))
     tester((2, 3, 1, 4), (3, 1, 0, 2))
 
+    tester((1,), ("x", 0))
+    # tester((1,), (0, 'x')) # bug for mge
+    tester((1, 2), ("x", 0, 1))
+    tester((1, 2), (0, "x", 1))
+    # tester((1, 2), (0, 1, 'x')) # bug for mge
+    tester((16, 32, 64), (0, "x", 2, "x", 1))
+
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
 @pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")

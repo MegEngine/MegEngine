@@ -192,6 +192,7 @@ class TraceResult:
         dtype_to_str = {
             "float16": "f16",
             "float32": "f32",
+            "int8": "i8",
             "int32": "i32",
             "int64": "i64",
             "uint8": "u8",
@@ -415,6 +416,10 @@ def ui64_attr(i):
 
 def f32_attr(i):
     return ir.FloatAttr.get(ir.F32Type.get(), i)
+
+
+def bool_attr(i):
+    return ir.BoolAttr.get(i)
 
 
 def precision_attr(lhs_prec, rhs_prec) -> ir.ArrayAttr:

@@ -66,7 +66,7 @@ def _hslice_with_step_is_one(inp, slices):
 
 def _hslice_with_any_step(inp, slices):
     """
-    if inp_shape is N-dim, slices should contain N slice, slice can not None
+    if inp_shape is N-dim, slices should contain N slice, slice can not None.
     for shape [12, 15], slices can be [slice(0, 3, 1), slice(12, 15, 1)]
     """
     starts = [int(sl.start) for sl in slices]
@@ -83,7 +83,7 @@ def _hslice_with_any_step(inp, slices):
 
 def index_with_slices(inp, slices):
     """
-    if inp_shape is N-dim, slices should contain N slice, slice can be None
+    if inp_shape is N-dim, slices should contain N slice, slice can be None.
     for shape [12, 15], slices can be [slice(0, 3, 1), slice(12, 15, 1)] or [None, None]
     """
     assert isinstance(slices, Sequence), f"{slices}"
