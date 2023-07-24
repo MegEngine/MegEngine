@@ -435,13 +435,22 @@ inline FT get_inputs_format(Span<ValueRef>& inputs, const FormatTransformation& 
     return format;
 }
 
+inline bool if_convert_format(const Format src_fmt, const FT& dst_fmt) {
+    if ((src_fmt == FT::NCHW && dst_fmt == FT::DEFAULT) ||
+        (src_fmt == FT::DEFAULT && dst_fmt == FT::NCHW)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 inline ValueRefList unify_inputs_format(
         const Span<ValueRef>& inputs, const FT& dst_fmt, const std::string& scope,
         const FormatTransformation& t) {
     ValueRefList unified_inputs(inputs.size());
     for (size_t i = 0; i < inputs.size(); ++i) {
         auto&& inp = inputs[i].cast(t.value_type());
-        if (inp.format() != dst_fmt) {
+        if (inp.format() != dst_fmt && if_convert_format(inp.format(), dst_fmt)) {
             unified_inputs[i] = t.to(inp, dst_fmt, scope);
         } else {
             unified_inputs[i] = inputs[i];

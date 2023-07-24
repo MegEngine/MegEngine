@@ -20,6 +20,10 @@ def test_basic():
     b = tensor(a)
     assert b.format == "nhwc"
 
+    b = tensor(data, format="nchw")
+    result = F.pad(b, ((0, 0), (0, 0), (1, 1), (1, 1)), mode="reflect")
+    assert result.format == "default"
+
     # TODO: init from tensor with new format
     # c = tensor(a, format="nchw")
     # assert c.format == "nchw"
