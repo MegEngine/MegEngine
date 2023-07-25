@@ -4,7 +4,7 @@
 
 #define MGE_MAJOR 1
 #define MGE_MINOR 12
-#define MGE_PATCH 4
+#define MGE_PATCH 5
 
 // for rc version, could be like "rc1", "rc2", etc
 #define MGE_EXTRA_NAME ""
