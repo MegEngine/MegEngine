@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import traceback
+from multiprocessing import Array, Value
 
 import numpy as np
 
@@ -40,6 +41,41 @@ logger = get_logger(__name__)
 
 
 GLOBAL_TIMEOUT = 5
+
+# Use to enable DataLoader monitoring
+data_monitor = int(os.environ.get("MGE_DATA_MONITOR", "0"))
+
+# This variable controls the interval of iterations for printing the monitored time. Default: 10.
+# Currently only supported when DataLoader num_workers is greater than 0.
+data_monitor_frequency = int(os.environ.get("MGE_DATA_MONITOR_FREQUENCY", "10"))
+
+if data_monitor:
+    # The number of processes to be monitored, greater than or equal to num_workers of dataloader
+    monitor_num_workers = Value("i", 16)
+
+    # Each monitor_workers represents the process id of a dataloader process
+    monitor_workers = Array("i", [0] * monitor_num_workers.value)
+
+    # When Parallel, the main process needs to obtain the time to communicate with the child process,
+    # and IPC_worker is the process id of the main process
+    IPC_worker = Value("i", 0)
+
+    # When Parallel, get the time when each child process put data
+    put_time = Array("d", [0.0] * monitor_num_workers.value)
+
+    # The time to get the dataset for each step
+    dataset_time = 0.0
+    # The time to transform data for each step
+    transform_time = 0.0
+    # The time to collate data for each step
+    collate_time = 0.0
+
+
+def get_monitor_time_stats(func, *args, **kwargs):
+    tik = time.perf_counter()
+    ret = func(*args, **kwargs)
+    tok = time.perf_counter()
+    return ret, tok - tik
 
 
 def raise_timeout_error():
@@ -221,6 +257,12 @@ class PreLoader:
             self.pre_load_device_cache = None
         self.preload = preload
 
+        if data_monitor:
+            global monitor_num_workers, monitor_workers, put_time
+            monitor_num_workers.value = self.num_workers
+            monitor_workers = Array("i", [0] * monitor_num_workers.value)
+            put_time = Array("d", [0.0] * monitor_num_workers.value)
+
     def __iter__(self):
         return self
 
@@ -387,6 +429,20 @@ class _ParallelDataLoaderIter:
     def _try_get_data(self, timeout=GLOBAL_TIMEOUT):
         try:
             data = self._data_queue.get(timeout=timeout)
+
+            if data_monitor:
+                pid = os.getpid()
+                idx = data[0]
+
+                if IPC_worker.value == 0:
+                    IPC_worker.value = pid
+
+                if pid == IPC_worker.value and idx % data_monitor_frequency == 0:
+                    data_tok = time.perf_counter()
+                    worker_idx = idx % monitor_num_workers.value
+                    IPC_time = data_tok - put_time[worker_idx]
+                    print(f"pid: {pid}, idx: {idx}, IPC_time: {IPC_time:.6f}")
+
             return (True, data)
         except Exception as e:
             failed_workers = []
@@ -482,10 +538,33 @@ class _SerialMapDataLoaderIter(_BaseMapDataLoaderIter):
         self._sampler_iter = iter(self.sampler)
 
     def _get_next_batch(self):
-        indices = next(self._sampler_iter)
-        items = [self.dataset[idx] for idx in indices]
-        trans_items = self.transform.apply_batch(items)
-        return self.collator.apply(trans_items)
+        if data_monitor:
+            global monitor_workers
+            pid = os.getpid()
+            if monitor_workers[0] == 0:
+                monitor_workers[0] = pid
+
+            data_tik = time.perf_counter()
+            indices = next(self._sampler_iter)
+            items = [self.dataset[idx] for idx in indices]
+            data_tok = time.perf_counter()
+            dataset_time = data_tok - data_tik
+
+            trans_items, transform_time = get_monitor_time_stats(
+                self.transform.apply_batch, items
+            )
+            collate_ret, collate_time = get_monitor_time_stats(
+                self.collator.apply, trans_items
+            )
+            print(
+                f"pid: {pid}, dataset_time: {dataset_time:.6f}, transform_time: {transform_time:.6f}, collate_time: {collate_time:.6f}"
+            )
+            return collate_ret
+        else:
+            indices = next(self._sampler_iter)
+            items = [self.dataset[idx] for idx in indices]
+            trans_items = self.transform.apply_batch(items)
+            return self.collator.apply(trans_items)
 
 
 class _ParallelMapDataLoaderIter(_BaseMapDataLoaderIter, _ParallelDataLoaderIter):
@@ -586,11 +665,39 @@ class _SerialStreamDataLoaderIter(_BaseStreamDataLoaderIter):
     def _get_next_batch(self):
         ret = []
         start_time = time.time()
-        while len(ret) < self.sampler.batch_size:
-            raw_data = self._try_get_raw_data(start_time)
-            ret.append(self.transform.apply(raw_data))
 
-        return self.collator.apply(ret)
+        if data_monitor:
+            global monitor_workers
+            pid = os.getpid()
+            if monitor_workers[0] == 0:
+                monitor_workers[0] = pid
+            while len(ret) < self.sampler.batch_size:
+                if pid == monitor_workers[0]:
+                    raw_data, dataset_time = get_monitor_time_stats(
+                        self._try_get_raw_data, start_time
+                    )
+                    raw_data, transform_time = get_monitor_time_stats(
+                        self.transform.apply, raw_data
+                    )
+                    ret.append(raw_data)
+                else:
+                    raw_data = self._try_get_raw_data(start_time)
+                    ret.append(self.transform.apply(raw_data))
+            if pid == monitor_workers[0]:
+                collate_ret, collate_time = get_monitor_time_stats(
+                    self.collator.apply, ret
+                )
+                print(
+                    f"pid: {pid}, dataset_time: {dataset_time:.6f}, transform_time: {transform_time:.6f}, collate_time: {collate_time:.6f}"
+                )
+            else:
+                collate_ret = self.collator.apply(ret)
+            return collate_ret
+        else:
+            while len(ret) < self.sampler.batch_size:
+                raw_data = self._try_get_raw_data(start_time)
+                ret.append(self.transform.apply(raw_data))
+            return self.collator.apply(ret)
 
 
 class _ParallelStreamDataLoaderIter(_BaseStreamDataLoaderIter, _ParallelDataLoaderIter):
@@ -644,14 +751,25 @@ class ManagerWatchdog(object):
 def stream_fetcher(
     dataset_iter, place_holder, transform, collate, parallel_stream, batch_size
 ):
+    pid = os.getpid()
+    global dataset_time, transform_time, collate_time
     data = []
     for idx in place_holder:
         try:
             if parallel_stream is False:
                 raw_data = idx
             else:
-                raw_data = next(dataset_iter)
-            trans_items = transform.apply(raw_data)
+                if data_monitor:
+                    raw_data, dataset_time = get_monitor_time_stats(next, dataset_iter)
+                else:
+                    raw_data = next(dataset_iter)
+
+            if data_monitor:
+                trans_items, transform_time = get_monitor_time_stats(
+                    transform.apply, raw_data
+                )
+            else:
+                trans_items = transform.apply(raw_data)
             data.append(trans_items)
 
         except StopIteration:
@@ -659,15 +777,34 @@ def stream_fetcher(
 
     if len(data) == 0:
         raise StopIteration
-    data = collate.apply(data)
-    return data
+    if data_monitor:
+        data, collate_time = get_monitor_time_stats(collate.apply, data)
+        return data, pid, dataset_time, transform_time, collate_time
+    else:
+        data = collate.apply(data)
+        return data
 
 
 def map_fetcher(dataset, place_holder, transform, collate, parallel_stream, batch_size):
-    items = [dataset[idx] for idx in place_holder]
-    trans_items = transform.apply_batch(items)
-    data = collate.apply(trans_items)
-    return data
+    if data_monitor:
+        pid = os.getpid()
+        global dataset_time, transform_time, collate_time
+
+        data_tik = time.perf_counter()
+        items = [dataset[idx] for idx in place_holder]
+        data_tok = time.perf_counter()
+        dataset_time = data_tok - data_tik
+
+        trans_items, transform_time = get_monitor_time_stats(
+            transform.apply_batch, items
+        )
+        data, collate_time = get_monitor_time_stats(collate.apply, trans_items)
+        return data, pid, dataset_time, transform_time, collate_time
+    else:
+        items = [dataset[idx] for idx in place_holder]
+        trans_items = transform.apply_batch(items)
+        data = collate.apply(trans_items)
+        return data
 
 
 def _worker_loop(
@@ -709,9 +846,36 @@ def _worker_loop(
 
         idx, place_holder = r
         try:
-            data = fetcher(
-                dataset, place_holder, transform, collate, parallel_stream, batch_size
-            )
+            if data_monitor:
+                data, pid, dataset_time, transform_time, collate_time = fetcher(
+                    dataset,
+                    place_holder,
+                    transform,
+                    collate,
+                    parallel_stream,
+                    batch_size,
+                )
+
+                if idx < monitor_num_workers.value:
+                    if monitor_workers[idx] == 0:
+                        monitor_workers[idx] = pid
+                worker_idx = idx % monitor_num_workers.value
+                if (
+                    pid == monitor_workers[worker_idx]
+                    and idx % data_monitor_frequency == 0
+                ):
+                    print(
+                        f"pid: {pid}, idx: {idx}, dataset_time: {dataset_time:.6f}, transform_time: {transform_time:.6f}, collate_time: {collate_time:.6f}"
+                    )
+            else:
+                data = fetcher(
+                    dataset,
+                    place_holder,
+                    transform,
+                    collate,
+                    parallel_stream,
+                    batch_size,
+                )
         except Exception as e:
             if isinstance(e, StopIteration) and datakind == "stream":
                 data = worker_id
@@ -724,6 +888,13 @@ def _worker_loop(
                 exc_msg = "".join(traceback.format_exception(*exc_info))
                 data = _ExceptionWrapper(exc_info[0].__name__, exc_msg, where)
                 data = pickle.dumps(data)
+
+        if data_monitor:
+            pid = os.getpid()
+            worker_idx = idx % monitor_num_workers.value
+            if pid == monitor_workers[worker_idx]:
+                data_tik = time.perf_counter()
+                put_time[worker_idx] = data_tik
 
         data_queue.put((idx, data))
         del data, idx, place_holder, r
