@@ -71,14 +71,14 @@ public:
         return CompNode::DeviceType::CAMBRICON;
     }
     void set_device(int device) override {
-        cnrtDev_t dev;
-        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
-        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev));
+        int dev;
+        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
+        MGB_CNRT_CHECK(cnrtSetDevice(dev));
     }
     void device_synchronize(int device) override {
-        cnrtDev_t dev;
-        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
-        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev));
+        int dev;
+        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
+        MGB_CNRT_CHECK(cnrtSetDevice(dev));
         MGB_CNRT_CHECK(cnrtSyncDevice());
     }
 };
@@ -109,7 +109,7 @@ class CambriconCompNode::CompNodeImpl final : public CompNode::Impl {
     Locator m_locator, m_locator_logical;
     mem_alloc::StreamMemAlloc* m_mem_alloc;
     DeviceInfo* m_device_info;
-    cnrtDev_t m_dev;
+    int m_dev;
 
     void activate() { m_env.cnrt_env().activate(); }
 
@@ -142,7 +142,7 @@ public:
     void* alloc_host(size_t size) override {
         activate();
         void* ptr;
-        MGB_CNRT_CHECK(cnrtMallocHost(&ptr, size, CNRT_MEMTYPE_DEFAULT));
+        // MGB_CNRT_CHECK(cnrtMallocHost(&ptr, size, CNRT_MEMTYPE_DEFAULT));
         return ptr;
     }
 
@@ -150,7 +150,7 @@ public:
         if (!check_global_finalized()) {
             activate();
         }
-        MGB_CNRT_CHECK(cnrtSetCurrentDevice(m_dev));
+        MGB_CNRT_CHECK(cnrtSetDevice(m_dev));
         MGB_CNRT_CHECK(cnrtFreeHost(ptr));
     }
 
@@ -207,7 +207,7 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(CambriconCompNode::CompNodeImpl);
 
 struct CambriconCompNodeImpl::DeviceInfo {
     int dev_num = -1;
-    cnrtDev_t dev;
+    int dev;
     std::unique_ptr<mem_alloc::DevMemAlloc> mem_alloc;
 
     bool init_done() const { return mem_alloc.get(); }
@@ -216,7 +216,7 @@ struct CambriconCompNodeImpl::DeviceInfo {
 
     // unlike cuda, we have to set device first, then release device memory
     void fini() {
-        cnrtSetCurrentDevice(dev);
+        cnrtSetDevice(dev);
         return mem_alloc.reset();
     }
 
@@ -344,7 +344,7 @@ void CambriconCompNodeImpl::peer_copy_to(
         MGB_CNRT_CHECK(cnrtMemcpyAsync(
                 dest, const_cast<void*>(src), size, queue,
                 CNRT_MEM_TRANS_DIR_DEV2HOST));
-        MGB_CNRT_CHECK(cnrtSyncQueue(queue));
+        MGB_CNRT_CHECK(cnrtQueueSync(queue));
     };
     dest_impl->env().cpu_env().dispatch(copy);
 }
@@ -357,8 +357,8 @@ void CambriconCompNodeImpl::sync() {
     activate();
 
     // remark: CNRT does not provide interface like cudaEventQuery to test
-    // whether an event is finished. so we just call the cnrtSyncQueue
-    MGB_CNRT_CHECK(cnrtSyncQueue(m_env.cnrt_env().queue));
+    // whether an event is finished. so we just call the cnrtQueueSync
+    MGB_CNRT_CHECK(cnrtQueueSync(m_env.cnrt_env().queue));
 }
 
 bool CambriconCompNodeImpl::enable_peer_access(int dev0, int dev1) {
@@ -383,7 +383,7 @@ void CambriconCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     auto&& cnenv = env.cnrt_env();
     cnenv.activate();
     dev_num = cnenv.device;
-    MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, dev_num));
+    // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, dev_num));
     // remark: Because free_device will be called after global finalize, so the
     // implementation of mem_alloc should handle the deallocation of memories
     // allocated by the mem_alloc. As a result, we should use the DevMemAlloc
@@ -399,11 +399,11 @@ void CambriconCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     mem_alloc->prealloc_config(sd->prealloc_config);
     auto align = env.property().mem_alignment;
     mem_alloc->alignment(align);
-    cnrtDeviceInfo_t device_info;
-    MGB_CNRT_CHECK(cnrtGetDeviceInfo(&device_info, dev_num));
+    cnrtDeviceProp_t device_info;
+    MGB_CNRT_CHECK(cnrtGetDeviceProperties(&device_info, dev_num));
     mgb_log("cambricon: card%d: name=`%s' dyn_mem_reserve=%.2fMiB "
             "alignment=0x%zx",
-            dev_num, device_info.device_name, reserve_size / 1024.0 / 1024, align);
+            dev_num, device_info.name, reserve_size / 1024.0 / 1024, align);
 #endif
 }
 
@@ -471,7 +471,7 @@ class CambriconCompNode::EventImpl final : public EventImplHelper {
         if (!m_sync_queue_called) {
             cambricon_comp_node_impl()->activate();
             auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-            MGB_CNRT_CHECK(cnrtSyncQueue(env.queue));
+            MGB_CNRT_CHECK(cnrtQueueSync(env.queue));
             m_sync_queue_called = true;
         }
     }
@@ -485,13 +485,13 @@ class CambriconCompNode::EventImpl final : public EventImplHelper {
         mgb_assert(m_placed_notifier);
         cambricon_comp_node_impl()->activate();
         auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-        MGB_CNRT_CHECK(cnrtSyncQueue(env.queue));
+        MGB_CNRT_CHECK(cnrtQueueSync(env.queue));
     }
 
     double do_elapsed_time_until(EventImplHelper& end) override {
         cambricon_comp_node_impl()->activate();
         auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-        MGB_CNRT_CHECK(cnrtSyncQueue(env.queue));
+        MGB_CNRT_CHECK(cnrtQueueSync(env.queue));
         float ret = 0.f;
         MGB_CNRT_CHECK(cnrtNotifierDuration(
                 m_cnrt_notifier, static_cast<EventImpl&>(end).m_cnrt_notifier, &ret));
@@ -504,13 +504,13 @@ public:
     EventImpl(CambriconCompNodeImpl* comp_node_impl, size_t create_flags)
             : EventImplHelper(comp_node_impl, create_flags) {
         cambricon_comp_node_impl()->activate();
-        MGB_CNRT_CHECK(cnrtCreateNotifier(&m_cnrt_notifier));
+        MGB_CNRT_CHECK(cnrtNotifierCreate(&m_cnrt_notifier));
         m_init_finished = true;
     }
 
     ~EventImpl() {
         if (m_init_finished) {
-            MGB_TRY { MGB_CNRT_CHECK(cnrtDestroyNotifier(&m_cnrt_notifier)); }
+            MGB_TRY { MGB_CNRT_CHECK(cnrtNotifierDestroy(m_cnrt_notifier)); }
             MGB_CATCH(MegBrainError & exc, {
                 mgb_log_error("failed to destroy cnrt notifier: %s", exc.what());
             })
@@ -527,14 +527,14 @@ void CambriconCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
         auto imp = static_cast<CambriconCompNodeImpl*>(cn_impl);
         auto queue = imp->m_env.cnrt_env().queue;
         imp->activate();
-        MGB_CNRT_CHECK(cnrtSyncQueue(queue));
+        MGB_CNRT_CHECK(cnrtQueueSync(queue));
         return;
     }
     if (cn_impl->env().property().type == DeviceType::CPU) {
         auto waiter = [this]() {
             cambricon_comp_node_impl()->activate();
             auto queue = cambricon_comp_node_impl()->m_env.cnrt_env().queue;
-            MGB_CNRT_CHECK(cnrtSyncQueue(queue));
+            MGB_CNRT_CHECK(cnrtQueueSync(queue));
         };
         cn_impl->add_callback(std::move(waiter));
         return;
@@ -647,9 +647,9 @@ void CambriconCompNode::sync_all() {
 
     MGB_LOCK_GUARD(sd->mtx);
     for (int i = 0; i < sd->nr_dev_used; ++i) {
-        cnrtDev_t dev;
-        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, sd->dev_info[i].dev_num));
-        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev));
+        int dev;
+        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, sd->dev_info[i].dev_num));
+        MGB_CNRT_CHECK(cnrtSetDevice(dev));
         MGB_CNRT_CHECK(cnrtSyncDevice());
     }
 }
@@ -695,8 +695,8 @@ void mgb::mem_alloc::CambriconRawAlloctor::get_mem_info(size_t& free, size_t& to
     auto sd = CambriconCompNodeImpl::sd;
     int device = -1;
     {
-        cnrtDev_t dev;
-        MGB_CNRT_CHECK(cnrtGetCurrentDevice(&dev));
+        int dev;
+        MGB_CNRT_CHECK(cnrtGetDevice(&dev));
         for (int i = 0; i < sd->nr_dev_used; ++i) {
             if (sd->dev_info[i].dev == dev) {
                 device = sd->dev_info[i].dev_num;

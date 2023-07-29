@@ -675,15 +675,15 @@ TEST(TestCompNodeCambricon, D2DCopy) {
 TEST(TestCompNodeCambricon, P2PCopy) {
     auto run_raw = []() {
         int v0 = 0, v1 = 1;
-        cnrtDev_t dev0, dev1;
-        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev0, 0));
-        MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev1, 1));
+        int dev0, dev1;
+        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev0, 0));
+        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev1, 1));
         int *dp0, *dp1;
-        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev0));
+        MGB_CNRT_CHECK(cnrtSetDevice(dev0));
         MGB_CNRT_CHECK(cnrtMalloc((void**)(&dp0), sizeof(int)));
         MGB_CNRT_CHECK(
                 cnrtMemcpy(dp0, &v0, sizeof(int), CNRT_MEM_TRANS_DIR_HOST2DEV));
-        MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev1));
+        MGB_CNRT_CHECK(cnrtSetDevice(dev1));
         MGB_CNRT_CHECK(cnrtMalloc((void**)(&dp1), sizeof(int)));
         MGB_CNRT_CHECK(
                 cnrtMemcpy(dp1, &v1, sizeof(int), CNRT_MEM_TRANS_DIR_HOST2DEV));

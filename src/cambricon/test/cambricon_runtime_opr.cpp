@@ -34,7 +34,7 @@ public:
         auto&& cnrt_env = CompNodeEnv::from_comp_node(cn).cnrt_env();
         cnrt_env.activate();
         constexpr int core_num = 4;
-        cnrtCoreVersion_t core_version = cnrt_env.device_info.core_version;
+        int core_version = cnrt_env.device_info.ISAVersion;
 
         // prepare parameter for addpad and conv
         constexpr int dim_num = 4;
@@ -240,19 +240,19 @@ public:
         cnrt_env.activate();
         auto&& queue = cnrt_env.queue;
         cnrtNotifier_t start, end;
-        MGB_CNRT_CHECK(cnrtCreateNotifier(&start));
-        MGB_CNRT_CHECK(cnrtCreateNotifier(&end));
+        MGB_CNRT_CHECK(cnrtNotifierCreate(&start));
+        MGB_CNRT_CHECK(cnrtNotifierCreate(&end));
         MGB_CNRT_CHECK(cnrtPlaceNotifier(start, queue));
         MGB_CNML_CHECK(cnmlComputeFusionOpForward_V4(
                 fusion_op, &conv_input_tensor, input_mlu_ptrs, 1, &relu_output_tensor,
                 output_mlu_ptrs, 1, queue, nullptr));
         MGB_CNRT_CHECK(cnrtPlaceNotifier(end, queue));
-        MGB_CNRT_CHECK(cnrtSyncQueue(queue));
+        MGB_CNRT_CHECK(cnrtQueueSync(queue));
         float time = 0.f;
         MGB_CNRT_CHECK(cnrtNotifierDuration(start, end, &time));
         printf("inference time = %.2fs\n", time * 1e-3);
-        MGB_CNRT_CHECK(cnrtDestroyNotifier(&start));
-        MGB_CNRT_CHECK(cnrtDestroyNotifier(&end));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(&start));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(&end));
     }
 };
 }  // namespace

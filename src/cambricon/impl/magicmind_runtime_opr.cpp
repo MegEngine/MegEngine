@@ -1,9 +1,9 @@
-#include "megbrain/cambricon/magicmind_runtime_opr.h"
 #include "megbrain/common.h"
 #include "megbrain/comp_node_env.h"
 
 #if MGB_CAMBRICON
 #if CNRT_MAJOR_VERSION >= 5
+#include "megbrain/cambricon/magicmind_runtime_opr.h"
 
 using namespace mgb;
 using namespace opr;
@@ -177,8 +177,8 @@ MagicMindRuntimeOpr::MagicMindRuntimeOpr(
         add_output(m_model->GetOutputName(i));
     }
     IModel::EngineConfig engine_config;
-    engine_config.device_type = "MLU";
-    engine_config.allocator = m_allocator.get();
+    engine_config.SetDeviceType("MLU");
+    engine_config.SetAllocator(m_allocator.get());
     auto&& cnrt_env = CompNodeEnv::from_comp_node(m_allocator->comp_node()).cnrt_env();
     cnrt_env.activate();
     m_engine = {

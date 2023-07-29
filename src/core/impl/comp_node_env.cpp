@@ -377,7 +377,7 @@ void CompNodeEnv::init_cnrt(
     m_comp_node = comp_node;
     m_cnrt_env.device = dev;
     m_property.type = DeviceType::CAMBRICON;
-    MGB_CNRT_CHECK(cnrtGetDeviceInfo(&m_cnrt_env.device_info, dev));
+    MGB_CNRT_CHECK(cnrtGetDeviceProperties(&m_cnrt_env.device_info, dev));
     // FIXME: doc doesn't describe the aligment requirement for device memory
     // address
 #if CNRT_MAJOR_VERSION >= 5
@@ -390,7 +390,7 @@ void CompNodeEnv::init_cnrt(
     MGB_MARK_USED_VAR(queue_created);
     MGB_TRY {
         m_cnrt_env.activate();
-        MGB_CNRT_CHECK(cnrtCreateQueue(&m_cnrt_env.queue));
+        MGB_CNRT_CHECK(cnrtQueueCreate(&m_cnrt_env.queue));
         queue_created = true;
         m_user_data_container = std::make_unique<UserDataContainer>();
         cont.next(m_cnrt_env.queue);
@@ -402,7 +402,7 @@ void CompNodeEnv::init_cnrt(
     MGB_CATCH(std::exception & exc, {
         mgb_log_error("cnrt init failed: %s", exc.what());
         if (queue_created) {
-            MGB_CNRT_CHECK(cnrtDestroyQueue(m_cnrt_env.queue));
+            MGB_CNRT_CHECK(cnrtQueueDestroy(m_cnrt_env.queue));
         }
         cont.err(exc);
         throw;
@@ -430,7 +430,7 @@ void CompNodeEnv::fini() {
 #if MGB_CAMBRICON
     if (m_property.type == DeviceType::CAMBRICON) {
         m_cnrt_env.activate();
-        MGB_CNRT_CHECK(cnrtDestroyQueue(m_cnrt_env.queue));
+        MGB_CNRT_CHECK(cnrtQueueDestroy(m_cnrt_env.queue));
     }
 #endif
 

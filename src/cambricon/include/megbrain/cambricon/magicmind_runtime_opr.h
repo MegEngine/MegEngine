@@ -7,7 +7,7 @@
 #if CNRT_MAJOR_VERSION >= 5
 
 #include <sstream>
-#include "interface_runtime.h"
+#include "mm_runtime.h"
 
 #define MM_CHECK(stmt)                                                               \
     do {                                                                             \

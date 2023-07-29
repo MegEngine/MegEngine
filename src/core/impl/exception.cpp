@@ -89,7 +89,7 @@ CnrtError::CnrtError(const std::string& msg) : SystemError(msg) {
 std::string CnrtError::get_cnrt_extra_info() {
 #if MGB_CAMBRICON
     // get last error
-    auto err = cnrtGetLastErr();
+    auto err = cnrtGetLastError();
     return ssprintf("(last_err=%d(%s))", err, cnrtGetErrorStr(err));
 #else
     return "cnrt disabled at compile time";

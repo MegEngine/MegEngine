@@ -6,6 +6,8 @@
 
 #if MGB_CAMBRICON
 
+#include <cnmlrt.h>
+
 namespace mgb {
 namespace opr {
 namespace cnrt_intl {

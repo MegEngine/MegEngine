@@ -444,7 +444,7 @@ public:
     struct CnrtEnv {
         int device = -1;
         cnrtQueue_t queue = nullptr;
-        cnrtDeviceInfo_t device_info;
+        cnrtDeviceProp_t device_info;
         struct InitStatus {
             bool initialized;
             Spinlock mtx;
@@ -452,7 +452,7 @@ public:
             void init() {
                 MGB_LOCK_GUARD(mtx);
                 if (!initialized) {
-                    auto cnrt_err = cnrtInit(0);
+                    auto cnrt_err = CNRT_RET_SUCCESS;
                     initialized = cnrt_err == CNRT_RET_SUCCESS;
                     auto cndev_err = cndevInit(0);
                     initialized &= cndev_err == CNDEV_SUCCESS;
@@ -480,7 +480,7 @@ public:
                     MGB_CNML_CHECK(cnmlExit());
 #endif
                     MGB_CNDEV_CHECK(cndevRelease());
-                    cnrtDestroy();
+                    // cnrtDestroy();
                     initialized = false;
                 }
             }
@@ -491,9 +491,9 @@ public:
 
         void activate() const {
             init();
-            cnrtDev_t dev;
-            MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
-            MGB_CNRT_CHECK(cnrtSetCurrentDevice(dev));
+            int dev;
+            // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
+            MGB_CNRT_CHECK(cnrtSetDevice(dev));
         }
     };
 

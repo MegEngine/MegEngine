@@ -309,8 +309,8 @@ public:
 
         auto&& queue = cnrt_env.queue;
         cnrtNotifier_t start, end;
-        MGB_CNRT_CHECK(cnrtCreateNotifier(&start));
-        MGB_CNRT_CHECK(cnrtCreateNotifier(&end));
+        MGB_CNRT_CHECK(cnrtNotifierCreate(&start));
+        MGB_CNRT_CHECK(cnrtNotifierCreate(&end));
         MGB_CNRT_CHECK(cnrtPlaceNotifier(start, queue));
 
         constexpr size_t runs = 50;
@@ -319,12 +319,12 @@ public:
         }
 
         MGB_CNRT_CHECK(cnrtPlaceNotifier(end, queue));
-        MGB_CNRT_CHECK(cnrtSyncQueue(queue));
+        MGB_CNRT_CHECK(cnrtQueueSync(queue));
         float time = 0.f;
         MGB_CNRT_CHECK(cnrtNotifierDuration(start, end, &time));
         printf("inference time = %.2fs\n", time / static_cast<float>(runs) * 1e-3);
-        MGB_CNRT_CHECK(cnrtDestroyNotifier(&start));
-        MGB_CNRT_CHECK(cnrtDestroyNotifier(&end));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(&start));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(&end));
         for (auto&& i : input_tensors)
             i->Destroy();
         for (auto&& o : output_tensors)

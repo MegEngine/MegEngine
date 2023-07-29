@@ -745,7 +745,7 @@ void mgb::dev_tensor_memset(const DeviceTensorND& tensor, int val) {
 #endif
 #if MGB_CAMBRICON
         case CompNode::DeviceType::CAMBRICON:
-            MGB_CNRT_CHECK(cnrtSyncQueue(env.cnrt_env().queue));
+            MGB_CNRT_CHECK(cnrtQueueSync(env.cnrt_env().queue));
             MGB_CNRT_CHECK(cnrtMemset(tensor.raw_ptr(), val, size));
             break;
 #endif

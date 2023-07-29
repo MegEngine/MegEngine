@@ -13,7 +13,7 @@ endif()
 get_filename_component(__found_magicmind_root "${MAGICMIND_LIBRARY}/../../" REALPATH)
 find_path(
   MAGICMIND_INCLUDE_DIR
-  NAMES common.h
+  NAMES mm_common.h
   HINTS "$ENV{NEUWARE_HOME}/include" ${__found_magicmind_root}
   PATH_SUFFIXES include
   DOC "Path to MAGICMIND include directory.")
@@ -22,11 +22,11 @@ if(MAGICMIND_INCLUDE_DIR STREQUAL "MAGICMIND_INCLUDE_DIR-NOTFOUND")
   message(FATAL_ERROR "Can not find MAGICMIND Library")
 endif()
 
-file(STRINGS "${MAGICMIND_INCLUDE_DIR}/common.h" MAGICMIND_MAJOR
+file(STRINGS "${MAGICMIND_INCLUDE_DIR}/mm_common.h" MAGICMIND_MAJOR
      REGEX "^#define MM_MAJOR_VERSION [0-9]+.*$")
-file(STRINGS "${MAGICMIND_INCLUDE_DIR}/common.h" MAGICMIND_MINOR
+file(STRINGS "${MAGICMIND_INCLUDE_DIR}/mm_common.h" MAGICMIND_MINOR
      REGEX "^#define MM_MINOR_VERSION [0-9]+.*$")
-file(STRINGS "${MAGICMIND_INCLUDE_DIR}/common.h" MAGICMIND_PATCH
+file(STRINGS "${MAGICMIND_INCLUDE_DIR}/mm_common.h" MAGICMIND_PATCH
      REGEX "^#define MM_PATCH_VERSION [0-9]+.*$")
 
 string(REGEX REPLACE "^#define MM_MAJOR_VERSION ([0-9]+).*$" "\\1"
