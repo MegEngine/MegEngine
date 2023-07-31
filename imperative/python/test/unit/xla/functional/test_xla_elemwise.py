@@ -122,3 +122,34 @@ def test_elemwise():
     #     F.logical_xor, (4, 16, 1, 1), (4, 16, 12, 12), backward=False, dtype=np.bool8
     # )
     # tester(F.logical_not, (16, 1, 1), backward=False, dtype=np.bool8)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_is_inf_nan():
+    def tester(test_func, inf_or_nan, inp_shape, dtype=None):
+        dtype = dtype or np.float32
+        if dtype in [np.int16, np.int32, np.uint16, np.uint32]:
+            inp = tensor(np.random.randint(0, 10, size=inp_shape), dtype=dtype)
+        else:
+            nr_elem = int(np.prod(inp_shape))
+            inp = np.random.randn(nr_elem)
+            idx = np.random.randint(0, nr_elem, size=(nr_elem,))
+            inp[idx] = inf_or_nan
+            inp = tensor(inp, dtype=dtype)
+
+        @jit.xla_trace(without_host=True)
+        def func(inp):
+            oup = test_func(inp)
+            return oup
+
+        mge_rst = func(inp)
+        xla_rst = func(inp)
+        np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy())
+
+    tester(F.isinf, np.inf, (16, 1), np.float32)
+    tester(F.isinf, np.inf, (2, 32), np.int32)
+    tester(F.isnan, np.nan, (1, 16), np.float32)
+    tester(F.isnan, np.nan, (1,), np.float32)
+    tester(F.isnan, np.nan, (32,), np.int32)

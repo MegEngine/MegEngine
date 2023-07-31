@@ -123,14 +123,14 @@ def _compare(lhs, rhs, mode, comparison_type=None):
     )
 
 
-def _elemwise(hlo_op, inps):
+def _elemwise(hlo_op, inps, oshape=None, odtype=None):
     hinps = [HLOTensor(inp) if not isinstance(inp, HLOTensor) else inp for inp in inps]
 
     ishapes = [inp.shape for inp in hinps]
     idtypes = [inp.dtype for inp in hinps]
 
-    oshape = _infer_elemwise_oshape(ishapes)
-    odtype = _infer_elemwise_odtype(idtypes)
+    oshape = _infer_elemwise_oshape(ishapes) if oshape is None else oshape
+    odtype = _infer_elemwise_odtype(idtypes) if odtype is None else odtype
 
     broadcasted_inps = [hinp.broadcast_to(oshape) for hinp in hinps]
     results = hlo_op(*[binp.tensor for binp in broadcasted_inps]).results
@@ -138,16 +138,16 @@ def _elemwise(hlo_op, inps):
     return HLOTensor(results[0], oshape, odtype)
 
 
-def _elemwise_unary(hlo_op, a):
-    return _elemwise(hlo_op, [a])
+def _elemwise_unary(hlo_op, a, oshape=None, odtype=None):
+    return _elemwise(hlo_op, [a], oshape=oshape, odtype=odtype)
 
 
-def _elemwise_binary(hlo_op, a, b):
-    return _elemwise(hlo_op, [a, b])
+def _elemwise_binary(hlo_op, a, b, oshape=None, odtype=None):
+    return _elemwise(hlo_op, [a, b], oshape=oshape, odtype=odtype)
 
 
-def _elemwise_ternary(hlo_op, a, b, c):
-    return _elemwise(hlo_op, [a, b, c])
+def _elemwise_ternary(hlo_op, a, b, c, oshape=None, odtype=None):
+    return _elemwise(hlo_op, [a, b, c], oshape=oshape, odtype=odtype)
 
 
 neg = partial(_elemwise_unary, hlo.NegOp)
@@ -173,6 +173,7 @@ expm1 = partial(_elemwise_unary, hlo.Expm1Op)
 floor = partial(_elemwise_unary, hlo.FloorOp)
 ceil = partial(_elemwise_unary, hlo.CeilOp)
 round = partial(_elemwise_unary, hlo.RoundOp)
+isinf = partial(_elemwise_unary, chlo.IsInfOp, odtype=np.bool_)
 
 add = partial(_elemwise_binary, hlo.AddOp)
 sub = partial(_elemwise_binary, hlo.SubtractOp)
@@ -376,6 +377,10 @@ def silu_grad(x, dy):
     return dy * xsig * (1.0 + x * (1.0 - xsig))
 
 
+def isnan(x):
+    return x != x
+
+
 # Elemwise.Mode is unhashable, so we convert it to str
 mge_elemwise_to_xla = {
     str(mops.Elemwise.Mode.ADD): add,
@@ -448,6 +453,8 @@ mge_elemwise_to_xla = {
     str(mops.Elemwise.Mode.LOGSIGMOID): logsigmoid,
     str(mops.Elemwise.Mode.SOFTPLUS): softplus,
     str(mops.Elemwise.Mode.SOFTPLUS_GRAD): softplus_grad,
+    str(mops.Elemwise.Mode.ISINF): isinf,
+    str(mops.Elemwise.Mode.ISNAN): isnan,
 }
 
 

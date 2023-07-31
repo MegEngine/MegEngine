@@ -74,7 +74,7 @@ def isnan(inp: Tensor) -> Tensor:
         Tensor([False  True False], dtype=bool, device=xpux:0)
     """
     if not np.issubdtype(inp.dtype, np.floating):
-        return broadcast_to(Tensor(False), inp.shape)
+        return broadcast_to(Const(False, np.bool_, inp.device), inp.shape)
     return _elemwise_multi_type(inp, mode="isnan", dtype="bool")
 
 
@@ -108,7 +108,7 @@ def isinf(inp: Tensor) -> Tensor:
         Tensor([False  True False], dtype=bool, device=xpux:0)
     """
     if not np.issubdtype(inp.dtype, np.floating):
-        return broadcast_to(Tensor(False), inp.shape)
+        return broadcast_to(Const(False, np.bool_, inp.device), inp.shape)
     return _elemwise_multi_type(inp, mode="isinf", dtype="bool")
 
 
