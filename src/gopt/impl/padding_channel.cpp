@@ -558,7 +558,7 @@ void PaddingChannelPass::add_condition_padding_oprs_replace_func(LayoutTrans) {
             if (reduce->input().size() > 1) {
                 can_forward_padding = false;
             } else {
-                can_forward_padding = reduce->param().axis != 1;
+                can_forward_padding = axis != 1;
             }
         } else if (auto subtensor = opr->try_cast_final<opr::Subtensor>()) {
             auto indexs = subtensor->index_desc();
@@ -605,6 +605,7 @@ void PaddingChannelPass::add_nonpadding_oprs_replace_func(LayoutTrans) {
         return serialization::copy_opr_shallow(*opr, inps, opr->config());
     };
     m_opr_replace_funcs[opr::Reshape::typeinfo()] = replace_nonpadding_oprs;
+    m_opr_replace_funcs[opr::AxisAddRemove::typeinfo()] = replace_nonpadding_oprs;
     m_opr_replace_funcs[opr::GetVarShape::typeinfo()] = replace_nonpadding_oprs;
     m_opr_replace_funcs[opr::Concat::typeinfo()] = replace_nonpadding_oprs;
     m_opr_replace_funcs[opr::Dimshuffle::typeinfo()] = replace_nonpadding_oprs;
