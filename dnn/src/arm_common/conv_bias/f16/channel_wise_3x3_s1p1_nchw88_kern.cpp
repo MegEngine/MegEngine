@@ -248,6 +248,8 @@ void channel_wise_nchw88::do_conv_kern_3x3_stride1_padding1(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
 
     const float16_t* src0 = src - W * 8;

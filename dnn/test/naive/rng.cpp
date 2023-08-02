@@ -144,6 +144,13 @@ void run_permutation(Handle* handle) {
     using ctype = typename DTypeTrait<dtype>::ctype;
     size_t sample_num =
             std::min(200000, static_cast<int>(DTypeTrait<dtype>::max()) - 10);
+#ifdef __ANDROID__
+    //! Android NDK25c has a bug, sample_num will make malloc OOM
+    //! so we reduce the sample_num when dtype is float32
+    if (std::is_same_v<megdnn::dtype::Float32, dtype>) {
+        sample_num = 200000;
+    }
+#endif
 
     auto opr = handle->create_operator<PermutationRNG>();
     opr->param().dtype = DTypeTrait<dtype>::enumv;

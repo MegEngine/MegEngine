@@ -20,7 +20,7 @@ bool need_dst_copy(const NCBKernSizeParam& param) {
 bool need_src_copy(const NCBKernSizeParam& param) {
     auto FH = param.filter_meta.spatial[0], FW = param.filter_meta.spatial[1],
          PH = param.filter_meta.padding[0], PW = param.filter_meta.padding[1];
-    return FH > PH + 1 || FW > PW + 1 || need_dst_copy(param);
+    return FH >= PH + 1 || FW >= PW + 1 || need_dst_copy(param);
 }
 
 void get_rectified_size(

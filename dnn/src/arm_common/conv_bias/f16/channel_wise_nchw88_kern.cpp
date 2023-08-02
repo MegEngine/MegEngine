@@ -155,6 +155,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_2x2(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
     constexpr int fh = 2;
     constexpr int stride = 1;
@@ -284,6 +286,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_3x3(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
     constexpr int fh = 3;
     constexpr int stride = 1;
@@ -355,6 +359,8 @@ void channel_wise_nchw88::do_conv_kern_stride1_5x5(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
     constexpr int fh = 5;
     constexpr int stride = 1;
@@ -523,6 +529,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_2x2(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
     constexpr int fh = 2;
     constexpr int stride = 2;
@@ -592,6 +600,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_3x3(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
     constexpr int fh = 3;
     constexpr int stride = 2;
@@ -721,6 +731,8 @@ void channel_wise_nchw88::do_conv_kern_stride2_5x5(
         init = vdupq_n_f16(__fp16(0.f));
     } else if (bias_mode == BiasMode::BROADCAST_CHANNEL_BIAS) {
         init = vld1q_f16(bias);
+    } else {
+        init = vdupq_n_f16(__fp16(0.f));
     }
     constexpr int fh = 5;
     constexpr int stride = 2;
