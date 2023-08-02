@@ -434,9 +434,24 @@ void AtlasRuntimeOpr::get_output_var_shape(
                 input_dims, batch_size, !m_dyn_batch_choices.empty(), om_format,
                 m_aipp_input_format[i]);
         mgb_assert(
-                shape_from_om.eq_shape(inp_shape[i]),
-                "shape mismatch of input %zu, expected: %s got: %s", i,
-                shape_from_om.to_string().c_str(), inp_shape[i].to_string().c_str());
+                inp_shape[i].ndim == input_dims.dimCount,
+                "ndim mismatch of input %zu: expected %zu, "
+                "got %zu",
+                i, input_dims.dimCount, inp_shape[i].ndim);
+
+        for (size_t j = 0; j < inp_shape[i].ndim; j++) {
+            if (input_dims.dims[j] == -1) {
+                continue;
+            } else {
+                mgb_assert(
+                        inp_shape[i][j] == shape_from_om[j],
+                        "The shape passed in by megbrain is inconsistent with the "
+                        "shape of the wrapped om model, shape mismatch of input[%zu] "
+                        ": om model expected %s, but got %s from megbrain",
+                        i, shape_from_om.to_string().c_str(),
+                        inp_shape[i].to_string().c_str());
+            }
+        }
     }
 
     for (size_t i = 0; i < out_shape.size(); ++i) {
