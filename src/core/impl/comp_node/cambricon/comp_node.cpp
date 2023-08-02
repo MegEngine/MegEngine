@@ -877,7 +877,7 @@ bool CambriconCompNode::available() {
 void CambriconCompNode::try_coalesce_all_free_memory() {}
 void CambriconCompNode::foreach (thin_function<void(CompNode)>) {}
 void CambriconCompNode::finalize() {}
-size_t CambriconCompNode::get_device_count() {
+size_t CambriconCompNode::get_device_count(bool warn) {
     return 0;
 }
 CambriconCompNode::Impl* CambriconCompNode::load_cambricon(
