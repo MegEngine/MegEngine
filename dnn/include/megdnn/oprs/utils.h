@@ -97,6 +97,25 @@ protected:
     void check_exec(const TensorLayout& dst, size_t workspace_in_bytes);
 };
 
+//! sample from multinomial distribution
+class MultinomialRNG : public OperatorBase {
+    DEF_OPR_IMPL(MultinomialRNG, OperatorBase, 1, 1);
+    DEF_OPR_PARAM(MultinomialRNG);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in probs, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    void deduce_layout(const TensorLayout& probs, TensorLayout& dst);
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& probs, const TensorLayout& dst) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& probs, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+};
+
 class ShuffleRNGForward : public OperatorBase {
     DEF_OPR_IMPL(ShuffleRNGForward, OperatorBase, 1, 2);
     DEF_OPR_PARAM(ShuffleRNG);

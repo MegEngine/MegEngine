@@ -119,6 +119,17 @@ public:
     size_t get_workspace_in_bytes(const TensorLayout&) override { return 0; }
 };
 
+class MultinomialRNGImpl : public MultinomialRNG {
+    Xoroshiro128plus m_rng;
+
+public:
+    using MultinomialRNG::MultinomialRNG;
+
+    void exec(_megdnn_tensor_in probs, _megdnn_tensor_out dst, _megdnn_workspace)
+            override;
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override;
+};
+
 class ShuffleRNGForwardImpl : public ShuffleRNGForward {
     Xoroshiro128plus m_rng;
 

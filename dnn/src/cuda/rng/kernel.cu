@@ -2,6 +2,7 @@
 #include <device_launch_parameters.h>
 #include "../argsort/argsort.cuh"
 #include "./kernel.cuh"
+#include "src/cuda/cub/thread/thread_search.cuh"
 #include "src/cuda/cuda_shfl_compat.cuh"
 #include "src/cuda/utils.cuh"
 
@@ -50,6 +51,38 @@ __global__ void permute_duplicate_keys_kernel(
             indexs[r] = tmp;
         }
     }
+}
+
+template <typename T>
+__global__ void multinomial_kernel(
+        T* cumsum_probs, dt_int32* dst, size_t num_groups, size_t num_samples,
+        size_t len_probs, uint64_t seed, uint64_t offset) {
+    uint32_t idx =
+            threadIdx.x + blockIdx.x * blockDim.x + blockIdx.y * blockDim.x * gridDim.x;
+    Philox state;
+    curand_init(seed, idx, offset, &state);
+    for (size_t i = blockIdx.y; i < num_groups; i += gridDim.y) {
+        if (blockIdx.x * blockDim.x + threadIdx.x < num_samples) {
+            T u = static_cast<T>(curand_uniform(&state));
+            size_t select_idx =
+                    cub::LowerBound(cumsum_probs + i * len_probs, len_probs, u);
+            dst[i * num_samples + blockIdx.x * blockDim.x + threadIdx.x] =
+                    static_cast<dt_int32>(select_idx);
+        }
+    }
+}
+
+template <typename T>
+void multinomial(
+        T* cumsum_probs, dt_int32* dst, size_t num_groups, size_t num_samples,
+        size_t len_probs, uint64_t seed, uint64_t offset, int max_grid_size_y,
+        cudaStream_t stream) {
+    dim3 grid(
+            DIVUP(num_samples, 512),
+            std::min(num_groups, static_cast<size_t>(max_grid_size_y)));
+    multinomial_kernel<<<grid, 512, 0, stream>>>(
+            cumsum_probs, dst, num_groups, num_samples, len_probs, seed, offset);
+    after_kernel_launch();
 }
 
 template <typename T>
@@ -192,6 +225,17 @@ INST_PERMUTATION(dt_int16)
 INST_PERMUTATION(dt_float32)
 #undef INST_PERMUTATION
 
+#define INST_MULTINOMIAL(T)                                                          \
+    template void multinomial<T>(                                                    \
+            T * cumsum_probs, dt_int32 * dst, size_t num_groups, size_t num_samples, \
+            size_t len_probs, uint64_t seed, uint64_t offset, int max_grid_size_y,   \
+            cudaStream_t stream);
+
+INST_MULTINOMIAL(dt_float32)
+INST_MULTINOMIAL(dt_float16)
+INST_MULTINOMIAL(dt_bfloat16)
+#undef INST_MULTINOMIAL
+
 #define INST_SHUFFLE(T)                                                   \
     template void shuffle_forward<T>(                                     \
             T * sptr, T * dptr, dt_int32 * iptr, size_t len, size_t step, \
@@ -216,6 +260,9 @@ ARGSORT_FOREACH_CTYPE(INST_SHUFFLE)
             0);                                                                        \
     INST_RUN_ELEMWISE(                                                                 \
             random::ExponentialKernel<DTypeTrait<_dtype>::ctype>,                      \
+            DTypeTrait<_dtype>::ctype, 0);                                             \
+    INST_RUN_ELEMWISE(                                                                 \
+            random::LogUniformDivMultinomialProbsKernel<DTypeTrait<_dtype>::ctype>,    \
             DTypeTrait<_dtype>::ctype, 0);
 
 INST(megdnn::dtype::Float32)

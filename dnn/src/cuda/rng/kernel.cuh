@@ -264,11 +264,41 @@ struct ExponentialKernel {
 };
 
 template <typename ctype>
+struct LogUniformDivMultinomialProbsKernel {
+    ctype* output;
+    ctype* probs;
+    uint64_t seed, offset;
+
+    __device__ void operator()(uint32_t idx) {
+        Philox local_state;
+        curand_init(seed, idx, offset, &local_state);
+        float u = _curand_uniform(&local_state);
+        output[idx] = static_cast<ctype>(log(u)) / probs[idx];
+    }
+
+#if MEGDNN_CC_HOST
+    LogUniformDivMultinomialProbsKernel(
+            const TensorND& output, const TensorND& probs, uint64_t seed,
+            uint64_t offset)
+            : output{output.ptr<ctype>()},
+              probs{probs.ptr<ctype>()},
+              seed{seed},
+              offset{offset} {}
+#endif
+};
+
+template <typename ctype>
 void permutation_forward(
         ctype* dst, void* workspace, size_t size, uint64_t seed, uint64_t offset,
         cudaStream_t stream);
 
 size_t get_permutation_workspace_in_bytes(size_t N);
+
+template <typename T>
+void multinomial(
+        T* cumsum_probs, dt_int32* dst, size_t num_groups, size_t num_samples,
+        size_t len_probs, uint64_t seed, uint64_t offset, int max_grid_size_y,
+        cudaStream_t stream);
 
 template <typename T>
 void shuffle_forward(

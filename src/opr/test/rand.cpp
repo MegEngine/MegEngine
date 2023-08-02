@@ -70,6 +70,47 @@ void check_reproducibility(
     }
 }
 
+void check_reproducibility_with_int32_output(
+        std::shared_ptr<ComputingGraph> graph, size_t size,
+        thin_function<SymbolVar(uint64_t seed)> make) {
+    // out[func][opr][run]
+    HostTensorND out[2][2][2];
+
+    auto run = [&](int fid) {
+        SymbolVar o0 = make(0), o1 = make(1);
+        HostTensorND host_o0, host_o1;
+        auto func = graph->compile(
+                {make_callback_copy(o0, host_o0), make_callback_copy(o1, host_o1)});
+        for (int i = 0; i < 2; ++i) {
+            func->execute();
+            out[fid][0][i].copy_from(host_o0);
+            out[fid][1][i].copy_from(host_o1);
+        }
+    };
+    run(0);
+    run(1);
+
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j)
+            MGB_ASSERT_TENSOR_EQ(out[0][i][j], out[1][i][j]);
+    }
+
+    auto max_diff = [&](int off0, int off1) {
+        int32_t diff = 0;
+        auto p0 = out[0][off0 / 2][off0 % 2].ptr<int32_t>(),
+             p1 = out[0][off1 / 2][off1 % 2].ptr<int32_t>();
+        for (size_t i = 0; i < size; ++i) {
+            update_max(diff, std::abs(p0[i] - p1[i]));
+        }
+        return diff;
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        for (int j = i + 1; j < 4; ++j)
+            ASSERT_NE(max_diff(i, j), 0) << i << " " << j;
+    }
+}
+
 }  // anonymous namespace
 
 TEST(TestOprRand, Uniform) {
@@ -204,6 +245,126 @@ TEST(TestOprRand, Beta) {
         auto stat = BasicStat::make(host_y.ptr<float>() + 200000 * i, 200000, mean);
         ASSERT_LT(fabs(stat.mean - mean), 0.01);
         ASSERT_LT(fabs(stat.std - sqrt(std)), 0.01);
+    }
+}
+
+TEST(TestOprRand, Multinomial) {
+    size_t len_probs = 4;
+    size_t num_samples = 10000;
+    size_t num_groups = 2;
+    bool replacement = true;
+
+    std::shared_ptr<HostTensorND> probs_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{num_groups, len_probs},
+            dtype::Float32()});
+    auto probs_ptr = probs_host->ptr<float>();
+    probs_ptr[0] = 0.1;
+    probs_ptr[1] = 0.2;
+    probs_ptr[2] = 0.3;
+    probs_ptr[3] = 0.4;
+    probs_ptr[4] = 0.0;
+    probs_ptr[5] = 0.7;
+    probs_ptr[6] = 0.2;
+    probs_ptr[7] = 0.1;
+    auto graph = ComputingGraph::make();
+    auto probs_sym = opr::Host2DeviceCopy::make(*graph, probs_host);
+    auto y = opr::MultinomialRNG::make(probs_sym, {10, num_samples, replacement});
+
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+
+    func->execute();
+
+    ASSERT_EQ(TensorShape({num_groups, num_samples}), host_y.shape());
+    std::vector<float> sample_probs(num_groups * len_probs, 0);
+    for (size_t i = 0; i < num_groups; ++i) {
+        for (size_t j = 0; j < num_samples; ++j) {
+            sample_probs[i * len_probs + host_y.ptr<int32_t>()[i * num_samples + j]] +=
+                    1;
+        }
+    }
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        sample_probs[i] /= num_samples;
+    }
+
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        ASSERT_LE(std::abs(sample_probs[i] - probs_ptr[i]), 1e-2);
+    }
+
+    std::vector<float> float_data_group0;
+    std::vector<float> float_data_group1;
+    for (size_t i = 0; i < num_samples; ++i) {
+        float_data_group0.push_back(static_cast<float>(host_y.ptr<int32_t>()[i]));
+    }
+    for (size_t i = num_samples; i < 2 * num_samples; ++i) {
+        float_data_group1.push_back(static_cast<float>(host_y.ptr<int32_t>()[i]));
+    }
+    float compare_mean_group0 = 0 * 0.1 + 1 * 0.2 + 2 * 0.3 + 3 * 0.4;
+    float compare_mean_group1 = 0 * 0.0 + 1 * 0.7 + 2 * 0.2 + 3 * 0.1;
+    float compare_var_group0 = (0 * 0.1 + 1 * 0.2 + 4 * 0.3 + 9 * 0.4) -
+                               compare_mean_group0 * compare_mean_group0;
+    float compare_var_group1 = (0 * 0.0 + 1 * 0.7 + 4 * 0.2 + 9 * 0.1) -
+                               compare_mean_group1 * compare_mean_group1;
+    auto stat_group0 =
+            BasicStat::make(float_data_group0.data(), num_samples, compare_mean_group0);
+    auto stat_group1 =
+            BasicStat::make(float_data_group1.data(), num_samples, compare_mean_group1);
+    ASSERT_LE(
+            std::abs(stat_group0.mean - compare_mean_group0),
+            compare_mean_group0 * 1e-2);
+    ASSERT_LE(
+            std::abs(stat_group1.mean - compare_mean_group1),
+            compare_mean_group1 * 1e-2);
+    ASSERT_LE(
+            std::abs(stat_group0.std * stat_group0.std - compare_var_group0),
+            compare_var_group0 * 3e-2);
+    ASSERT_LE(
+            std::abs(stat_group1.std * stat_group1.std - compare_var_group1),
+            compare_var_group1 * 3e-2);
+}
+
+TEST(TestOprRand, MultinomialWithoutReplacement) {
+    size_t len_probs = 4;
+    size_t num_samples = 1;
+    size_t num_groups = 2;
+    bool replacement = false;
+    size_t total_count = 10000;
+    std::shared_ptr<HostTensorND> probs_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{num_groups, len_probs},
+            dtype::Float32()});
+    auto probs_ptr = probs_host->ptr<float>();
+    probs_ptr[0] = 1;
+    probs_ptr[1] = 2;
+    probs_ptr[2] = 3;
+    probs_ptr[3] = 4;
+    probs_ptr[4] = 0;
+    probs_ptr[5] = 7;
+    probs_ptr[6] = 2;
+    probs_ptr[7] = 1;
+    std::vector<float> norm_probs;
+    for (size_t i = 0; i < 8; ++i) {
+        norm_probs.push_back(probs_ptr[i] / 10);
+    }
+    auto graph = ComputingGraph::make();
+    auto probs_sym = opr::Host2DeviceCopy::make(*graph, probs_host);
+    auto y = opr::MultinomialRNG::make(probs_sym, {10, num_samples, replacement});
+
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+
+    std::vector<float> sample_probs(num_groups * len_probs, 0);
+    for (size_t i = 0; i < total_count; ++i) {
+        func->execute();
+        sample_probs[host_y.ptr<int32_t>()[0]] += 1;
+        sample_probs[len_probs + host_y.ptr<int32_t>()[1]] += 1;
+    }
+
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        sample_probs[i] /= total_count * num_samples;
+    }
+
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        ASSERT_LE(std::abs(sample_probs[i] - norm_probs[i]), 1e-2);
     }
 }
 
@@ -348,6 +509,30 @@ TEST(TestOprRand, EmptyShape) {
         func->execute();
         ASSERT_EQ(host_out.shape(), TensorShape({10, 0}));
     };
+    auto test_multinomial = []() {
+        std::shared_ptr<HostTensorND> probs_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        auto graph = ComputingGraph::make();
+        auto probs_sym = opr::Host2DeviceCopy::make(*graph, probs_host);
+        auto y = opr::MultinomialRNG::make(probs_sym, {10, 0, false});
+
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({10, 0}), host_y.shape());
+    };
+    auto test_multinomial_without_replacement = []() {
+        std::shared_ptr<HostTensorND> probs_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        auto graph = ComputingGraph::make();
+        auto probs_sym = opr::Host2DeviceCopy::make(*graph, probs_host);
+        auto y = opr::MultinomialRNG::make(probs_sym, {10, 0, true});
+
+        HostTensorND host_y;
+        auto func = graph->compile({make_callback_copy(y, host_y)});
+        func->execute();
+        ASSERT_EQ(TensorShape({10, 0}), host_y.shape());
+    };
     test_uniform();
     test_gaussian();
     test_gamma();
@@ -355,6 +540,8 @@ TEST(TestOprRand, EmptyShape) {
     test_beta();
     test_permutation();
     test_exponential();
+    test_multinomial();
+    test_multinomial_without_replacement();
 }
 
 TEST(TestOprRand, ShuffleForward) {
@@ -462,6 +649,56 @@ TEST(TestOprRand, BetaReprod) {
     check_reproducibility(graph, SIZE, [&alpha_sym, &beta_sym](uint64_t seed) {
         return opr::BetaRNG::make(alpha_sym, beta_sym, {seed});
     });
+}
+
+TEST(TestOprRand, MultinomialReprod) {
+    static constexpr size_t NUM_GROUPS = 2;
+    static constexpr size_t LEN_PROBS = 4;
+    static constexpr size_t NUM_SAMPLES = 10000;
+    static constexpr bool REPLACEMENT = true;
+
+    std::shared_ptr<HostTensorND> probs_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{NUM_GROUPS, LEN_PROBS},
+            dtype::Float32()});
+
+    auto probs_ptr = probs_host->ptr<float>();
+    probs_ptr[0] = 0.1;
+    probs_ptr[1] = 0.2;
+    probs_ptr[2] = 0.3;
+    probs_ptr[3] = 0.4;
+    probs_ptr[4] = 0.0;
+    probs_ptr[5] = 0.7;
+    probs_ptr[6] = 0.2;
+    probs_ptr[7] = 0.1;
+    auto graph = ComputingGraph::make();
+    auto probs_sym = opr::Host2DeviceCopy::make(*graph, probs_host);
+    check_reproducibility_with_int32_output(
+            graph, NUM_GROUPS * NUM_SAMPLES, [&probs_sym](uint64_t seed) {
+                return opr::MultinomialRNG::make(
+                        probs_sym, {seed, NUM_SAMPLES, REPLACEMENT});
+            });
+}
+
+TEST(TestOprRand, MultinomialWithoutReplacementReprod) {
+    static constexpr size_t NUM_GROUPS = 2;
+    static constexpr size_t LEN_PROBS = 10;
+    static constexpr size_t NUM_SAMPLES = 10;
+    static constexpr bool REPLACEMENT = false;
+
+    std::shared_ptr<HostTensorND> probs_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{NUM_GROUPS, LEN_PROBS},
+            dtype::Float32()});
+    auto probs_ptr = probs_host->ptr<float>();
+    for (size_t i = 0; i < NUM_GROUPS * LEN_PROBS; ++i) {
+        probs_ptr[i] = 1;
+    }
+    auto graph = ComputingGraph::make();
+    auto probs_sym = opr::Host2DeviceCopy::make(*graph, probs_host);
+    check_reproducibility_with_int32_output(
+            graph, NUM_GROUPS * NUM_SAMPLES, [&probs_sym](uint64_t seed) {
+                return opr::MultinomialRNG::make(
+                        probs_sym, {seed, NUM_SAMPLES, REPLACEMENT});
+            });
 }
 
 TEST(TestOprRand, PermutationReprod) {

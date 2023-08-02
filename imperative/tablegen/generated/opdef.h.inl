@@ -1475,6 +1475,22 @@ public:
     }
 };
 
+class MultinomialRNG : public OpDefImplBase<MultinomialRNG> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    uint64_t seed = 0;
+    uint64_t num_samples = 1;
+    bool replacement = false;
+    size_t handle;
+    MultinomialRNG() = default;
+    MultinomialRNG(uint64_t seed_, uint64_t num_samples_, bool replacement_, size_t handle_, std::string scope_ = {}): seed(seed_), num_samples(num_samples_), replacement(replacement_), handle(handle_) { set_scope(scope_); }
+    MultinomialRNG(::megdnn::param::MultinomialRNG packed_param_0, size_t handle_): seed(packed_param_0.seed), num_samples(packed_param_0.num_samples), replacement(packed_param_0.replacement), handle(handle_) {}
+    ::megdnn::param::MultinomialRNG param() const {
+        return {seed, num_samples, replacement};
+    }
+};
+
 class NMSKeep : public OpDefImplBase<NMSKeep> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

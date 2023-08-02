@@ -91,6 +91,21 @@ _DEFINE_RNG_OPR_WITH_INPUT_CLASS(GammaRNG)
 #undef _DEFINE_RNG_OPR_WITH_INPUT_CLASS
 
 MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
+        MultinomialRNG, RNGOprBase<megdnn::MultinomialRNG>) // {
+    void add_input_layout_constraint() override;
+    cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;
+
+public:
+    MultinomialRNG(
+            VarNode* probs, const Param& param, const OperatorNodeConfig& config);
+    MGE_WIN_DECLSPEC_FUC static SymbolVar make(
+            SymbolVar probs, const Param& param = {},
+            const OperatorNodeConfig& config = {});
+    void init_output_static_infer_desc() override;
+    void scn_do_execute() override;
+};
+
+MGB_DEFINE_OPR_CLASS_WITH_EXPORT(
         MultiHeadAttnForward, RNGOprBase<megdnn::MultiHeadAttnForward>) // {
     void add_input_layout_constraint() override;
     cg::OperatorNodeBase::NodeProp* do_make_node_prop() const override;
@@ -140,6 +155,7 @@ using GammaRNG = intl::GammaRNG;
 using PermutationRNG = intl::PermutationRNG;
 using PoissonRNG = intl::PoissonRNG;
 using BetaRNG = intl::BetaRNG;
+using MultinomialRNG = intl::MultinomialRNG;
 using ShuffleRNG = intl::ShuffleRNGForward;
 using ExponentialRNG = intl::ExponentialRNG;
 using Dropout = intl::DropoutForward;

@@ -4,6 +4,7 @@ from .rng import (
     beta,
     exponential,
     gamma,
+    multinomial,
     normal,
     permutation,
     poisson,
@@ -23,6 +24,7 @@ __all__ = [
     "uniform",
     "shuffle",
     "exponential",
+    "multinomial",
 ]
 # pylint: disable=undefined-variable
 del rng  # type: ignore[name-defined]

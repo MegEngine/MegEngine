@@ -107,6 +107,133 @@ void run_poisson(Handle* handle) {
     }
 }
 
+template <typename T>
+void run_multinomial(Handle* handle) {
+    using ctype = typename DTypeTrait<T>::ctype;
+    auto opr = handle->create_operator<MultinomialRNG>();
+
+    size_t num_groups = 2;
+    size_t num_samples = 10000;
+    size_t len_probs = 4;
+    bool replacement = true;
+
+    TensorLayout ly_out{TensorShape{num_groups, num_samples}, dtype::Int32()};
+    TensorLayout ly_probs{TensorShape{num_groups, len_probs}, T()};
+
+    Tensor<dt_int32> out(handle, ly_out);
+    Tensor<ctype> probs(handle, ly_probs);
+
+    auto probs_ptr = probs.ptr();
+    probs_ptr[0] = 0.1;
+    probs_ptr[1] = 0.2;
+    probs_ptr[2] = 0.3;
+    probs_ptr[3] = 0.4;
+    probs_ptr[4] = 0.0;
+    probs_ptr[5] = 0.7;
+    probs_ptr[6] = 0.2;
+    probs_ptr[7] = 0.1;
+
+    opr->param().num_samples = num_samples;
+    opr->param().replacement = replacement;
+    opr->exec(probs.tensornd(), out.tensornd(), {});
+
+    auto ptr = out.ptr();
+
+    std::vector<float> sample_probs(num_groups * len_probs, 0);
+    for (size_t i = 0; i < num_groups; ++i) {
+        for (size_t j = 0; j < num_samples; ++j) {
+            sample_probs[i * len_probs + ptr[i * num_samples + j]] += 1;
+        }
+    }
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        sample_probs[i] /= num_samples;
+    }
+
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        ASSERT_LE(std::abs(sample_probs[i] - probs_ptr[i]), 1e-2);
+    }
+
+    std::vector<float> float_data_group0;
+    std::vector<float> float_data_group1;
+    for (size_t i = 0; i < num_samples; ++i) {
+        float_data_group0.push_back(static_cast<float>(ptr[i]));
+    }
+    for (size_t i = num_samples; i < 2 * num_samples; ++i) {
+        float_data_group1.push_back(static_cast<float>(ptr[i]));
+    }
+    float compare_mean_group0 = 0 * 0.1 + 1 * 0.2 + 2 * 0.3 + 3 * 0.4;
+    float compare_mean_group1 = 0 * 0.0 + 1 * 0.7 + 2 * 0.2 + 3 * 0.1;
+    float compare_var_group0 = (0 * 0.1 + 1 * 0.2 + 4 * 0.3 + 9 * 0.4) -
+                               compare_mean_group0 * compare_mean_group0;
+    float compare_var_group1 = (0 * 0.0 + 1 * 0.7 + 4 * 0.2 + 9 * 0.1) -
+                               compare_mean_group1 * compare_mean_group1;
+    auto stat_group0 =
+            get_mean_var(float_data_group0.data(), num_samples, compare_mean_group0);
+    auto stat_group1 =
+            get_mean_var(float_data_group1.data(), num_samples, compare_mean_group1);
+    ASSERT_LE(
+            std::abs(stat_group0.first - compare_mean_group0),
+            compare_mean_group0 * 1e-2);
+    ASSERT_LE(
+            std::abs(stat_group1.first - compare_mean_group1),
+            compare_mean_group1 * 1e-2);
+    ASSERT_LE(
+            std::abs(stat_group0.second - compare_var_group0),
+            compare_var_group0 * 3e-2);
+    ASSERT_LE(
+            std::abs(stat_group1.second - compare_var_group1),
+            compare_var_group1 * 3e-2);
+}
+
+template <typename T>
+void run_multinomial_without_replacement(Handle* handle) {
+    using ctype = typename DTypeTrait<T>::ctype;
+
+    size_t num_groups = 2;
+    size_t num_samples = 1;
+    size_t len_probs = 4;
+    bool replacement = false;
+    size_t total_count = 10000;
+
+    TensorLayout ly_probs{TensorShape{num_groups, len_probs}, T()};
+    Tensor<ctype> probs(handle, ly_probs);
+    auto probs_ptr = probs.ptr();
+    probs_ptr[0] = 1;
+    probs_ptr[1] = 2;
+    probs_ptr[2] = 3;
+    probs_ptr[3] = 4;
+    probs_ptr[4] = 0;
+    probs_ptr[5] = 7;
+    probs_ptr[6] = 2;
+    probs_ptr[7] = 1;
+
+    std::vector<float> norm_probs;
+    for (size_t i = 0; i < 8; ++i) {
+        norm_probs.push_back(probs_ptr[i] / 10);
+    }
+
+    auto opr = handle->create_operator<MultinomialRNG>();
+    opr->param().num_samples = num_samples;
+    opr->param().replacement = replacement;
+    std::vector<float> sample_probs(num_groups * len_probs, 0);
+    for (size_t i = 0; i < total_count; ++i) {
+        TensorLayout ly_out{TensorShape{num_groups, num_samples}, dtype::Int32()};
+        Tensor<dt_int32> out(handle, ly_out);
+        opr->exec(probs.tensornd(), out.tensornd(), {});
+        auto ptr = out.ptr();
+        sample_probs[ptr[0]] += 1;
+        sample_probs[len_probs + ptr[1]] += 1;
+    }
+
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        sample_probs[i] /= total_count * num_samples;
+    }
+
+    for (size_t i = 0; i < num_groups * len_probs; ++i) {
+        ASSERT_LE(std::abs(sample_probs[i] - norm_probs[i]), 1e-2);
+    }
+}
+
 template <typename dtype>
 void run_beta(Handle* handle) {
     using ctype = typename DTypeTrait<dtype>::ctype;
@@ -348,6 +475,16 @@ TEST_F(NAIVE, POISSON_RNG_F32) {
 
 TEST_F(NAIVE, POISSON_RNG_F16) {
     DNN_INC_FLOAT16(run_poisson<dtype::Float16>(handle()));
+}
+
+TEST_F(NAIVE, MULTINOMIAL_RNG_F32) {
+    run_multinomial<dtype::Float32>(handle());
+    run_multinomial_without_replacement<dtype::Float32>(handle());
+}
+
+TEST_F(NAIVE, MULTINOMIAL_RNG_F16) {
+    DNN_INC_FLOAT16(run_multinomial<dtype::Float16>(handle()));
+    run_multinomial_without_replacement<dtype::Float16>(handle());
 }
 
 TEST_F(NAIVE, BETA_RNG_F32) {

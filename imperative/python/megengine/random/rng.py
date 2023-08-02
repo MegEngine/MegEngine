@@ -20,6 +20,7 @@ from ..core.ops.builtin import (
     ExponentialRNG,
     GammaRNG,
     GaussianRNG,
+    MultinomialRNG,
     PermutationRNG,
     PoissonRNG,
     ShuffleRNG,
@@ -36,6 +37,7 @@ __all__ = [
     "gamma",
     "beta",
     "poisson",
+    "multinomial",
     "permutation",
     "shuffle",
     "exponential",
@@ -205,6 +207,42 @@ def _poisson(
     (lam,) = _broadcast_tensors_with_size([lam], size)
     op = PoissonRNG(seed=seed, handle=handle)
     (output,) = apply(op, lam)
+    return output
+
+
+def _multinomial(
+    input: Tensor, num_samples: int, replacement: bool, seed: int, handle: int
+) -> Tensor:
+    handle_cn = None if handle == 0 else _get_rng_handle_compnode(handle)
+    assert num_samples > 0, "Multinomial is not defined when num_samples <= 0"
+    assert (
+        input.ndim == 1 or input.ndim == 2
+    ), "Multinomial is not defined when ndim of input is not 1 or 2"
+    assert input.shape[-1] != 0, "Multinomial is not defined when num of input == 0"
+    assert (
+        input.dtype.name == "float32" or input.dtype.name == "float16"
+    ), "Multinomial is not defined when input dtype is not float"
+    assert (
+        replacement or num_samples <= input.shape[-1]
+    ), "Multinomial is not defined when num_samples > input.shape[-1] in case of no replacement"
+
+    require_one_dim = False
+    if input.ndim == 1:
+        input = input.reshape((1, input.size))
+        require_one_dim = True
+    if replacement:
+        input = input / input.sum(-1, True)
+    assert (
+        handle_cn is None or handle_cn == input.device
+    ), "The input ({}) must be the same device with handle ({})".format(
+        input.device, handle_cn
+    )
+    op = MultinomialRNG(
+        seed=seed, num_samples=num_samples, replacement=replacement, handle=handle
+    )
+    (output,) = apply(op, input)
+    if require_one_dim:
+        output = output.reshape((output.size,))
     return output
 
 
@@ -496,6 +534,63 @@ class RNG:
         _seed = self._seed() if callable(self._seed) else self._seed
         return _poisson(lam=lam, size=size, seed=_seed, handle=self._handle)
 
+    def multinomial(
+        self, input: Tensor, num_samples: int, replacement: Optional[bool] = False
+    ):
+        r"""Random variable with multinomial distribution :math:`\operatorname{Mulitnomial}(p)`.
+
+        The corresponding probability mass function is
+
+        .. math::
+            f(x_1,...,x_k;n,p_1,...,p_k)=\left\{
+	            \begin{aligned}
+                \frac{n!}{x_1!...x_k!}p^{x_1}_1 \times ... \times p^{x_k}_k  & , & {\textstyle \sum_{i=1}^{k}x_i=n}  \\
+                0 & , & otherwise
+	            \end{aligned}
+                \right.,
+
+        where :math:`p_1,...,p_k` are the probabilities and :math:`x_1,...,x_k` are the numbers of occurrences :math:`({\displaystyle k=0,1,2...})`.
+
+        Args:
+            input: the probability tensor or weight tensor. Must be non-negative and each rows must have a non-zero sum.
+            num_samples: the number of samples. Must be positive.
+            replacement: whether to draw samples with replacement or not. Defautl: False.
+
+        Returns:
+            the output tensor.
+
+        Examples:
+            >>> import megengine.random as rand
+            >>> input = mge.Tensor([1, 2, 3, 4], dtype="float32")
+            >>> x = rand.multinomial(input=input, num_samples=2, replacement=True)
+            >>> x.numpy()   # doctest: +SKIP
+            array([3, 2], dtype=int32)
+            >>> input = mge.Tensor([[1, 2, 3, 4],
+            ...                     [0, 7, 2, 1]], dtype="float32")
+            >>> x = rand.multinomial(input=input, num_samples=2, replacement=True)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[1, 3],
+                   [1, 1]], dtype=int32)
+            >>> input = mge.Tensor([1, 2, 3, 4], dtype="float32")
+            >>> x = rand.multinomial(input=input, num_samples=2, replacement=False)
+            >>> x.numpy()   # doctest: +SKIP
+            array([3, 1], dtype=int32)
+            >>> input = mge.Tensor([[1, 2, 3, 4],
+            ...                     [0, 7, 2, 1]], dtype="float32")
+            >>> x = rand.multinomial(input=input, num_samples=2, replacement=False)
+            >>> x.numpy()   # doctest: +SKIP
+            array([[0, 3],
+                   [1, 2]], dtype=int32)
+        """
+        _seed = self._seed() if callable(self._seed) else self._seed
+        return _multinomial(
+            input=input,
+            num_samples=num_samples,
+            replacement=replacement,
+            seed=_seed,
+            handle=self._handle,
+        )
+
     def permutation(self, n: Union[int, Tensor], *, dtype: str = "int32"):
         r"""Randomly permute a sequence, or return a permuted range.
             If ``n`` is a multi-dimensional tensor, it is only shuffled along its first index.
@@ -626,6 +721,7 @@ normal = _default_handle.normal
 gamma = _default_handle.gamma
 beta = _default_handle.beta
 poisson = _default_handle.poisson
+multinomial = _default_handle.multinomial
 permutation = _default_handle.permutation
 shuffle = _default_handle.shuffle
 exponential = _default_handle.exponential

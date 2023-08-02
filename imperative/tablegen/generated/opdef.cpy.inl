@@ -16137,6 +16137,169 @@ void _init_py_MultiHeadAttn(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MultiHeadAttn::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(MultinomialRNG) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(MultinomialRNG)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"seed", serialization<decltype(opdef.seed)>::dump(opdef.seed)},
+            {"num_samples", serialization<decltype(opdef.num_samples)>::dump(opdef.num_samples)},
+            {"replacement", serialization<decltype(opdef.replacement)>::dump(opdef.replacement)},
+            {"handle", serialization<decltype(opdef.handle)>::dump(opdef.handle)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(MultinomialRNG)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("seed");
+        if (iter != state.end()) {
+            opdef.seed = serialization<decltype(opdef.seed)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("num_samples");
+        if (iter != state.end()) {
+            opdef.num_samples = serialization<decltype(opdef.num_samples)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("replacement");
+        if (iter != state.end()) {
+            opdef.replacement = serialization<decltype(opdef.replacement)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("handle");
+        if (iter != state.end()) {
+            opdef.handle = serialization<decltype(opdef.handle)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(MultinomialRNG)
+
+int PyOp(MultinomialRNG)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"seed", "num_samples", "replacement", "handle", "scope", NULL};
+    PyObject *seed = NULL, *num_samples = NULL, *replacement = NULL, *handle = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOO", const_cast<char**>(kwlist), &seed, &num_samples, &replacement, &handle, &scope))
+    return -1;
+
+    if (seed) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultinomialRNG)*>(self)->inst().seed =
+                    py::cast<decltype(MultinomialRNG::seed)>(py::handle(seed));
+        } CATCH_ALL(-1)
+    }
+
+    if (num_samples) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultinomialRNG)*>(self)->inst().num_samples =
+                    py::cast<decltype(MultinomialRNG::num_samples)>(py::handle(num_samples));
+        } CATCH_ALL(-1)
+    }
+
+    if (replacement) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultinomialRNG)*>(self)->inst().replacement =
+                    py::cast<decltype(MultinomialRNG::replacement)>(py::handle(replacement));
+        } CATCH_ALL(-1)
+    }
+
+    if (handle) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultinomialRNG)*>(self)->inst().handle =
+                    py::cast<decltype(MultinomialRNG::handle)>(py::handle(handle));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(MultinomialRNG)::py_getsetters[] = {
+    {const_cast<char*>("seed"), py_get_generic(MultinomialRNG, seed), py_set_generic(MultinomialRNG, seed), const_cast<char*>("seed"), NULL},
+    {const_cast<char*>("num_samples"), py_get_generic(MultinomialRNG, num_samples), py_set_generic(MultinomialRNG, num_samples), const_cast<char*>("num_samples"), NULL},
+    {const_cast<char*>("replacement"), py_get_generic(MultinomialRNG, replacement), py_set_generic(MultinomialRNG, replacement), const_cast<char*>("replacement"), NULL},
+    {const_cast<char*>("handle"), py_get_generic(MultinomialRNG, handle), py_set_generic(MultinomialRNG, handle), const_cast<char*>("handle"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(MultinomialRNG)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(MultinomialRNG)::getstate, METH_NOARGS, "MultinomialRNG getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(MultinomialRNG)::setstate, METH_VARARGS, "MultinomialRNG setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(MultinomialRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(MultinomialRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(MultinomialRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(MultinomialRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., num_samples: int = ..., replacement: bool = ..., handle: int = ...) -> None\n"
+};
+
+void _init_py_MultinomialRNG(py::module m) {
+    using py_op = PyOp(MultinomialRNG);
+    auto& py_type = PyOpType(MultinomialRNG);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.MultinomialRNG";
+    py_type.tp_basicsize = sizeof(PyOp(MultinomialRNG));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "MultinomialRNG";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(MultinomialRNG), &PyOp(MultinomialRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("MultinomialRNG", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(MultinomialRNG::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(NMSKeep) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -24224,6 +24387,7 @@ void _init_py_WhereBackward(py::module m) {
     _init_py_MeshGrid(m); \
     _init_py_MeshIndexing(m); \
     _init_py_MultiHeadAttn(m); \
+    _init_py_MultinomialRNG(m); \
     _init_py_NMSKeep(m); \
     _init_py_NonZero(m); \
     _init_py_NvOf(m); \

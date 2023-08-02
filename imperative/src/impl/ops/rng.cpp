@@ -226,6 +226,21 @@ struct OpMeth<GammaRNG> {
 };
 
 template <>
+struct OpMeth<MultinomialRNG> {
+    using DnnOp = megdnn::MultinomialRNG;
+    using Param = DnnOp::Param;
+    using OpNode = mgb::opr::MultinomialRNG;
+    static Param make_param(const MultinomialRNG& rng) {
+        auto handle_seed = RNGDnnOpManager::get_seed(rng.handle);
+        mgb_assert(
+                handle_seed == rng.seed,
+                "inconsistent rng seed: rng op: %lu handle: %lu", handle_seed,
+                rng.seed);
+        return {handle_seed, rng.num_samples, rng.replacement};
+    }
+};
+
+template <>
 struct OpMeth<PermutationRNG> {
     using DnnOp = megdnn::PermutationRNG;
     using Param = DnnOp::Param;
@@ -576,6 +591,33 @@ SmallVector<LogicalTensorDesc> infer_output_attrs<Dropout>(
     dests[1].comp_node = cn;
     dests[1].layout = TensorLayout(TensorShape({get_mask_size()}), dtype::Byte());
     return dests;
+}
+
+template <>
+SmallVector<LogicalTensorDesc> infer_output_attrs<MultinomialRNG>(
+        const OpDef& op, const SmallVector<TensorPtr>& inputs) {
+    LogicalTensorDesc dest;
+    auto&& rng = op.cast_final_safe<MultinomialRNG>();
+    auto handle = rng.handle;
+    if (handle) {
+        dest.comp_node = RNGDnnOpManager::get_comp_node(handle);
+    } else {
+        dest.comp_node = inputs[0]->comp_node();
+    }
+    mgb_assert(
+            inputs[0]->comp_node() == dest.comp_node,
+            "%s expects the device of inputs[0] to be same as the device of "
+            "handle; "
+            "got %s and %s actually",
+            rng.dyn_typeinfo()->name, inputs[0]->comp_node().to_string().c_str(),
+            dest.comp_node.to_string().c_str());
+    mgb_assert(
+            inputs[0]->layout().ndim == 2,
+            "%s expects the ndim of inputs[0] to be 2; got %zu actually",
+            rng.dyn_typeinfo()->name, inputs[0]->layout().ndim);
+    dest.layout = TensorLayout(
+            {inputs[0]->layout().shape[0], rng.num_samples}, dtype::Int32());
+    return {dest};
 }
 
 template <typename Op>
@@ -933,6 +975,23 @@ std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<
     return ret;
 }
 
+template <>
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible<
+        MultinomialRNG>(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    bool success = inputs[0].layout.ndim != 0;
+    auto&& rng_def = def.cast_final_safe<MultinomialRNG>();
+    LogicalTensorDesc dest;
+    dest.comp_node = inputs[0].comp_node;
+    if (success) {
+        dest.layout = TensorLayout(
+                {inputs[0].layout.shape[0], rng_def.num_samples}, dtype::Int32());
+    } else {
+        dest.layout = TensorLayout(dtype::Int32());
+    }
+    return {{dest}, success};
+}
+
 template <typename Op>
 SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
         const OpDef& def, const SmallVector<TensorPtr>& inputs) {
@@ -978,6 +1037,7 @@ REG_RNG_OP(GammaRNG, SymbolVar)
 REG_RNG_OP(PermutationRNG, SymbolVar)
 REG_RNG_OP(PoissonRNG, SymbolVar)
 REG_RNG_OP(BetaRNG, SymbolVar)
+REG_RNG_OP(MultinomialRNG, SymbolVar)
 REG_RNG_OP(ShuffleRNG, SymbolVarArray)
 REG_RNG_OP(ExponentialRNG, SymbolVar)
 REG_RNG_OP(Dropout, SymbolVarArray)

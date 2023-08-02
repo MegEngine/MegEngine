@@ -121,6 +121,59 @@ void fill_gamma(Xoroshiro128plus* rng, U* dst, size_t size, U* shape, U* scale) 
     }
 }
 
+template <typename U>
+void fill_multinomial_without_replacement(
+        Xoroshiro128plus* rng, U* probs, dt_int32* dst, size_t num_groups,
+        size_t num_samples, size_t len_probs) {
+    std::vector<std::vector<U>> data(num_groups, std::vector<U>(len_probs, U(0)));
+    for (size_t i = 0; i < num_groups; ++i) {
+        for (size_t j = 0; j < len_probs; ++j) {
+            data[i][j] = log(uniform_sample<U>(rng)) / probs[i * len_probs + j];
+        }
+    }
+
+    std::vector<std::vector<dt_int32>> index(
+            num_groups, std::vector<dt_int32>(len_probs, 0));
+    for (size_t i = 0; i < num_groups; ++i) {
+        for (size_t j = 0; j < len_probs; ++j) {
+            index[i][j] = j;
+        }
+    }
+
+    for (size_t i = 0; i < num_groups; ++i) {
+        std::sort(index[i].begin(), index[i].end(), [&](size_t idx1, size_t idx2) {
+            return data[i][idx1] > data[i][idx2];
+        });
+        std::copy(
+                index[i].begin(), index[i].begin() + num_samples,
+                dst + i * num_samples);
+    }
+}
+
+template <typename U>
+void fill_multinomial(
+        Xoroshiro128plus* rng, U* probs, dt_int32* dst, size_t num_groups,
+        size_t num_samples, size_t len_probs, bool replacement) {
+    if (!replacement) {
+        fill_multinomial_without_replacement(
+                rng, probs, dst, num_groups, num_samples, len_probs);
+        return;
+    }
+    for (size_t i = 0; i < num_groups; ++i) {
+        for (size_t j = 0; j < num_samples; ++j) {
+            U u = uniform_sample<U>(rng);
+            U cumsum_res = U(0);
+            for (size_t k = 0; k < len_probs; ++k) {
+                cumsum_res += probs[i * len_probs + k];
+                if (u <= cumsum_res) {
+                    dst[i * num_samples + j] = k;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 template <typename T, typename U>
 void fill_poisson(Xoroshiro128plus* rng, U* dst, U* lam, size_t size) {
     for (size_t i = 0; i < size; ++i) {
@@ -343,6 +396,37 @@ void GammaRNGImpl::exec(
         default:
             megdnn_throw("bad dtype");
     }
+}
+
+void MultinomialRNGImpl::exec(
+        _megdnn_tensor_in probs, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(probs.layout, dst.layout, workspace.size);
+    auto prng = &m_rng.ensure_seed(m_param.seed);
+    size_t num_groups = probs.layout.shape[0];
+    size_t num_samples = m_param.num_samples;
+    size_t len_probs = probs.layout.shape[1];
+    bool replacement = m_param.replacement;
+    switch (probs.layout.dtype.enumv()) {
+#define cb(_dt)                                                                \
+    case DTypeTrait<_dt>::enumv: {                                             \
+        using ctype = DTypeTrait<_dt>::ctype;                                  \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({                                         \
+            fill_multinomial(                                                  \
+                    prng, probs.ptr<ctype>(), dst.ptr<dt_int32>(), num_groups, \
+                    num_samples, len_probs, replacement);                      \
+        };);                                                                   \
+        return;                                                                \
+    }
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+    }
+}
+
+size_t MultinomialRNGImpl::get_workspace_in_bytes(
+        const TensorLayout&, const TensorLayout&) {
+    return 0;
 }
 
 void PoissonRNGImpl::exec(

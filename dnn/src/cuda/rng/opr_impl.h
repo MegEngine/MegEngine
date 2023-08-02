@@ -123,6 +123,30 @@ public:
     }
 };
 
+class MultinomialRNGImpl : public MultinomialRNG {
+    uint64_t m_seed, m_offset;
+    cudaStream_t m_stream;
+
+public:
+    MultinomialRNGImpl(Handle* handle);
+
+    void exec(_megdnn_tensor_in probs, _megdnn_tensor_out dst, _megdnn_workspace)
+            override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override;
+
+    WorkspaceBundle get_workspace_bundle(
+            void* ptr, const TensorLayout& src, const TensorLayout& dst);
+
+    void seed(uint64_t seed) { m_seed = seed; }
+
+    void ensure_seed(uint64_t seed) {
+        if (m_seed != seed) {
+            this->seed(seed);
+        }
+    }
+};
+
 class PermutationRNGImpl : public PermutationRNG {
     uint64_t m_seed, m_offset;
     cudaStream_t m_stream;

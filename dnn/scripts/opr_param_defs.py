@@ -1390,3 +1390,9 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
  .add_fields('float32', Doc('attn_prob', 'Dropout probability on attention, is applied directly to the softmax output'), '0.f')
  .add_fields('float32', Doc('out_prob', 'Dropout probability on output, alters the multi-m_head attention output'), '0.f')
  )
+
+(pdef('MultinomialRNG').
+ add_fields('uint64', 'seed', '0').
+ add_fields('uint64', 'num_samples', '1').
+ add_fields('bool', 'replacement', 'false')
+ )

@@ -143,6 +143,7 @@ private:
     cb(BetaRNG) \
     cb(PoissonRNG) \
     cb(PermutationRNG) \
+    cb(MultinomialRNG) \
     cb(ShuffleRNGForward) \
     cb(ShuffleRNGBackward) \
     cb(ExponentialRNG) \

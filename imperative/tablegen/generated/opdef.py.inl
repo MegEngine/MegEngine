@@ -1560,6 +1560,16 @@ MultiHeadAttnInst
     .def_readwrite("out_prob", &MultiHeadAttn::out_prob)
     .def_readwrite("handle", &MultiHeadAttn::handle);
 
+py::class_<MultinomialRNG, std::shared_ptr<MultinomialRNG>, OpDef> MultinomialRNGInst(m, "MultinomialRNG");
+
+MultinomialRNGInst
+    .def(py::init<uint64_t, uint64_t, bool, size_t, std::string>(), py::arg("seed") = 0, py::arg("num_samples") = 1, py::arg("replacement") = false, py::arg("handle"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("seed", &MultinomialRNG::seed)
+    .def_readwrite("num_samples", &MultinomialRNG::num_samples)
+    .def_readwrite("replacement", &MultinomialRNG::replacement)
+    .def_readwrite("handle", &MultinomialRNG::handle);
+
 py::class_<NMSKeep, std::shared_ptr<NMSKeep>, OpDef> NMSKeepInst(m, "NMSKeep");
 
 NMSKeepInst

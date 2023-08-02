@@ -5464,6 +5464,52 @@ OP_TRAIT_REG(MultiHeadAttn, MultiHeadAttn)
     .props(MultiHeadAttn_props_impl)
     .make_name(MultiHeadAttn_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultinomialRNG);
+
+namespace {
+size_t MultinomialRNG_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MultinomialRNG>();
+    static_cast<void>(op_);
+
+    return mgb::hash_pair_combine(
+      mgb::hash(op_.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash(op_.handle),
+        mgb::hash_pair_combine(
+          mgb::hash(op_.num_samples),
+          mgb::hash(op_.replacement)
+        )
+      )
+    );
+  }
+bool MultinomialRNG_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<MultinomialRNG>(),
+         &&b_ = rhs_.cast_final_safe<MultinomialRNG>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+return a_.handle == b_.handle && a_.num_samples == b_.num_samples && a_.replacement == b_.replacement;}
+std::vector<std::pair<const char*, std::string>> MultinomialRNG_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MultinomialRNG>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("seed", std::to_string(op_.seed));
+    props_.emplace_back("num_samples", std::to_string(op_.num_samples));
+    props_.emplace_back("replacement", std::to_string(op_.replacement));
+    props_.emplace_back("handle", std::to_string(op_.handle));
+    return props_;
+}
+std::string MultinomialRNG_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<MultinomialRNG>();
+    static_cast<void>(op_);
+    return "MultinomialRNG";
+}
+} // anonymous namespace
+OP_TRAIT_REG(MultinomialRNG, MultinomialRNG)
+    .hash(MultinomialRNG_hash_impl)
+    .is_same_st(MultinomialRNG_is_same_st_impl)
+    .props(MultinomialRNG_props_impl)
+    .make_name(MultinomialRNG_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(NMSKeep);
 
 namespace {

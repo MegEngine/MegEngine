@@ -155,6 +155,110 @@ void PoissonRNGImpl::exec(
     m_offset += 20;
 }
 
+MultinomialRNGImpl::MultinomialRNGImpl(Handle* handle)
+        : MultinomialRNG(handle),
+          m_seed(0),
+          m_offset(0),
+          m_stream(cuda_stream(handle)) {}
+
+void MultinomialRNGImpl::exec(
+        _megdnn_tensor_in probs, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(probs.layout, dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    megdnn_assert(size);
+    size_t num_groups = probs.layout.shape[0];
+    size_t num_samples = m_param.num_samples;
+    size_t len_probs = probs.layout.shape[1];
+    ensure_seed(m_param.seed);
+    auto cuda_handle = concrete_handle(handle());
+    auto bundle = get_workspace_bundle(workspace.raw_ptr, probs.layout, dst.layout);
+
+    if (!m_param.replacement) {
+        // refer to
+        // https://link.springer.com/referenceworkentry/10.1007/978-0-387-30162-4_478
+        TensorND log_uniform_div_probs_result(bundle.get(0), probs.layout);
+        ElemwiseOpParamN<0> ele_param(probs.layout.total_nr_elems());
+        switch (probs.layout.dtype.enumv()) {
+#define cb(_dt)                                                                     \
+    case DTypeTrait<_dt>::enumv: {                                                  \
+        using ctype = DTypeTrait<_dt>::ctype;                                       \
+        run_elemwise<random::LogUniformDivMultinomialProbsKernel<ctype>, ctype, 0>( \
+                ele_param, m_stream,                                                \
+                {log_uniform_div_probs_result, probs, m_seed, m_offset});           \
+        break;                                                                      \
+    }
+            MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+            default:
+                megdnn_throw("bad dtype");
+        }
+
+        TensorLayout top_k_value_layout(dst.layout);
+        top_k_value_layout.dtype = probs.layout.dtype;
+        TensorND top_k_value(bundle.get(2), top_k_value_layout);
+        auto top_k_opr = cuda_handle->create_operator<TopK>();
+        top_k_opr->param().mode = megdnn::param::TopK::Mode::VALUE_IDX_NOSORT;
+        top_k_opr->exec(
+                -1 * num_samples, log_uniform_div_probs_result, top_k_value, dst,
+                bundle.get_workspace(1));
+        m_offset += num_groups * len_probs;
+    } else {
+        TensorND cumsum_probs(bundle.get(1), probs.layout);
+        auto cumsum_opr = cuda_handle->create_operator<CumsumForward>();
+        cumsum_opr->param().exclusive = false;
+        cumsum_opr->param().reverse = false;
+        cumsum_opr->param().axis = 1;
+        cumsum_opr->exec(probs, cumsum_probs, bundle.get_workspace(0));
+
+        auto max_grid_size_y = cuda_handle->device_prop().maxGridSize[1];
+        switch (cumsum_probs.layout.dtype.enumv()) {
+#define cb(_dt)                                                                       \
+    case DTypeTrait<_dt>::enumv: {                                                    \
+        using ctype = DTypeTrait<_dt>::ctype;                                         \
+        random::multinomial(                                                          \
+                cumsum_probs.ptr<ctype>(), dst.ptr<dt_int32>(), num_groups,           \
+                num_samples, len_probs, m_seed, m_offset, max_grid_size_y, m_stream); \
+        break;                                                                        \
+    }
+            MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+            default:
+                megdnn_throw("bad dtype");
+        }
+        m_offset += num_groups * num_samples;
+    }
+}
+
+size_t MultinomialRNGImpl::get_workspace_in_bytes(
+        const TensorLayout& src, const TensorLayout& dst) {
+    return get_workspace_bundle(nullptr, src, dst).total_size_in_bytes();
+}
+
+WorkspaceBundle MultinomialRNGImpl::get_workspace_bundle(
+        void* ptr, const TensorLayout& src, const TensorLayout& dst) {
+    if (m_param.replacement) {
+        auto cumsum_opr = concrete_handle(handle())->create_operator<CumsumForward>();
+        cumsum_opr->param().axis = 1;
+        cumsum_opr->param().exclusive = false;
+        cumsum_opr->param().reverse = false;
+        size_t cumsum_wk_size = cumsum_opr->get_workspace_in_bytes(src, TensorLayout());
+        size_t cumsum_res_size = src.span().dist_byte();
+        return {ptr, {cumsum_wk_size, cumsum_res_size}};
+    } else {
+        size_t log_uniform_div_probs_size = src.span().dist_byte();
+
+        TensorLayout top_k_value_layout(dst);
+        top_k_value_layout.dtype = src.dtype;
+        size_t top_k_value_size = top_k_value_layout.span().dist_byte();
+        auto top_k_opr = concrete_handle(handle())->create_operator<TopK>();
+        top_k_opr->param().mode = megdnn::param::TopK::Mode::VALUE_IDX_NOSORT;
+        size_t top_k_wk_size = top_k_opr->get_workspace_in_bytes(
+                m_param.num_samples, src, top_k_value_layout, dst);
+
+        return {ptr, {log_uniform_div_probs_size, top_k_wk_size, top_k_value_size}};
+    }
+}
+
 BetaRNGImpl::BetaRNGImpl(Handle* handle)
         : BetaRNG(handle), m_seed(0), m_offset(0), m_stream(cuda_stream(handle)) {}
 

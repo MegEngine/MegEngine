@@ -123,6 +123,7 @@ DEF(GaussianRNG, 1, true, true);
 DEF(GammaRNG, 3, true, true);
 DEF(BetaRNG, 3, true, true);
 DEF(PoissonRNG, 2, true, true);
+DEF(MultinomialRNG, 2, true, true);
 DEF(PermutationRNG, 1, true, true);
 DEF(ShuffleRNGForward, 3, true, true);
 DEF(ShuffleRNGBackward, 3, true, false);

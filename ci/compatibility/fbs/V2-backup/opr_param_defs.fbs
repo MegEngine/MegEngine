@@ -1415,6 +1415,12 @@ table PoissonRNG {
     seed:ulong = 0;
 }
 
+table MultinomialRNG {
+    seed:ulong = 0;
+    num_samples:ulong = 1;
+    replacement:bool = false;
+}
+
 table PermutationRNG {
     seed:ulong = 0;
     /// The dtype of output Tensor. Int32, Int16 and Float32 are supported.

@@ -191,6 +191,7 @@ template class RNGOprBase<::megdnn::GammaRNG>;
 template class RNGOprBase<::megdnn::PermutationRNG>;
 template class RNGOprBase<::megdnn::BetaRNG>;
 template class RNGOprBase<::megdnn::PoissonRNG>;
+template class RNGOprBase<::megdnn::MultinomialRNG>;
 template class RNGOprBase<::megdnn::ShuffleRNGForward>;
 template class RNGOprBase<::megdnn::ShuffleRNGBackward>;
 template class RNGOprBase<::megdnn::ExponentialRNG>;
@@ -203,6 +204,7 @@ IMPL(GaussianRNG);
 IMPL(UniformRNG);
 IMPL(GammaRNG);
 IMPL(PoissonRNG);
+IMPL(MultinomialRNG);
 IMPL(PermutationRNG);
 IMPL(BetaRNG);
 IMPL(ExponentialRNG);
@@ -210,6 +212,74 @@ IMPL(ExponentialRNG);
 }  // namespace intl
 }  // namespace opr
 }  // namespace mgb
+
+/* ================= MultinomialRNG =================  */
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultinomialRNG);
+
+MultinomialRNG::MultinomialRNG(
+        VarNode* probs, const Param& param, const OperatorNodeConfig& config)
+        : Super({probs->owner_graph(), config, "multinomial_rng", {probs}}, param) {
+    add_input({probs});
+    add_output(None)->dtype(dtype::Int32()).add_flag(VarNode::Flag::ALLOW_EMPTY_SHAPE);
+    cg::add_workspace_output(this);
+    add_equivalence_component<ScalarHash<void*>>(this);
+}
+
+SymbolVar MultinomialRNG::make(
+        SymbolVar probs, const Param& param, const OperatorNodeConfig& config) {
+    return probs.insert_single_output_opr<MultinomialRNG>(probs.node(), param, config);
+}
+
+void MultinomialRNG::init_output_static_infer_desc() {
+    using namespace cg::static_infer;
+    auto&& mgr = owner_graph()->static_infer_manager();
+
+    auto infer_oshp = [this](TensorShape& dest, const InpVal& iv) {
+        ensure_megdnn_opr();
+        TensorLayout o0;
+        m_dnn_opr->deduce_layout({iv.val[0].shape(), input(0)->dtype()}, o0);
+        dest = o0;
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(0), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_oshp});
+
+    auto infer_wk = [this](TensorShape& dest, const InpVal& inp) {
+        ensure_megdnn_opr();
+        dest.ndim = 1;
+        dest.shape[0] = m_dnn_opr->get_workspace_in_bytes(
+                {inp.val.at(0).shape(), input(0)->dtype()},
+                {output(0)->shape(), output(0)->dtype()});
+        return true;
+    };
+    mgr.register_shape_infer(
+            output(1), {SourceType::DEP, {{input(0), DepType::SHAPE}}, infer_wk});
+}
+
+void MultinomialRNG::add_input_layout_constraint() {
+    input(0)->add_layout_constraint_contiguous();
+};
+
+void MultinomialRNG::scn_do_execute() {
+    auto&& ret = output(0);
+    if (ret->layout().is_empty()) {
+        mgb_assert(ret->dev_tensor().empty());
+        return;
+    }
+    m_dnn_opr->exec(
+            input(0)->dev_tensor().as_megdnn(), output(0)->dev_tensor().as_megdnn(),
+            get_megdnn_workspace_from_var(output(1)));
+}
+
+cg::OperatorNodeBase::NodeProp* MultinomialRNG::do_make_node_prop() const {
+    auto prop = Super::do_make_node_prop();
+    prop->add_flag(NodeProp::Flag::IMPURE_FUNC);
+    for (auto i : input()) {
+        prop->add_dep_type_existing_var(i, NodeProp::DepType::VALUE_ALLOW_EMPTY);
+    }
+    return prop;
+}
 
 /* ================= ShuffleRNGForward =================  */
 

@@ -303,7 +303,7 @@ private:
         std::vector<std::string> op_blacklist = {
                 "CollectiveComm", "InplaceAdd", "ParamPackSplit", "ParamPackConcat",
                 "GaussianRNG",    "UniformRNG", "GammaRNG",       "PermutationRNG",
-                "PoissonRNG",     "BetaRNG",    "ExponentialRNG"};
+                "PoissonRNG",     "BetaRNG",    "ExponentialRNG", "MultinomialRNG"};
     } m_dtr;
 
     //! automatically evict an optimal tensor

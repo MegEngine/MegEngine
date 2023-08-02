@@ -92,6 +92,25 @@ void ExponentialRNG::check_exec(
     megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(rate, dst));
 }
 
+void MultinomialRNG::deduce_layout(const TensorLayout& probs, TensorLayout& dst) {
+    dst = TensorLayout(
+            TensorShape({probs.shape[0], static_cast<size_t>(m_param.num_samples)}),
+            megdnn::dtype::Int32());
+}
+
+void MultinomialRNG::check_exec(
+        const TensorLayout& probs, const TensorLayout& dst, size_t workspace_in_bytes) {
+    megdnn_assert(probs.is_contiguous() && dst.is_contiguous());
+    megdnn_assert(probs.ndim == 2 && dst.ndim == 2);
+    TensorLayout dst_expected;
+    deduce_layout(probs, dst_expected);
+    megdnn_assert_eq_layout(dst_expected, dst);
+    megdnn_assert(probs.dtype.category() == DTypeCategory::FLOAT);
+    megdnn_assert(dst.dtype == dtype::Int32());
+    megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(probs, dst));
+    megdnn_assert(m_param.replacement || m_param.num_samples <= probs.shape[1]);
+}
+
 #define INST_CHECK_EXEC(RNG_NAME)                                                   \
     void RNG_NAME::check_exec(const TensorLayout& dst, size_t workspace_in_bytes) { \
         megdnn_assert(                                                              \
@@ -100,8 +119,7 @@ void ExponentialRNG::check_exec(
         megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(dst));           \
     }
 
-INST_CHECK_EXEC(UniformRNG)
-INST_CHECK_EXEC(GaussianRNG)
+INST_CHECK_EXEC(UniformRNG) INST_CHECK_EXEC(GaussianRNG)
 #undef INST_CHECK_EXEC
 
 }  // namespace megdnn

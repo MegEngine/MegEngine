@@ -54,6 +54,29 @@ void check_rng_with_input_basic(
     delete_handle(h);
 }
 
+template <typename Op, typename... Args>
+void check_rng_with_input_basic_with_target_shape(
+        const CompNode& cn, const SmallVector<TensorPtr>& inputs,
+        const TensorShape& output_shape, Args&&... args) {
+    Handle h = new_handle(cn, 123);
+    auto op = Op::make(std::forward<Args>(args)..., h);
+    SmallVector<LogicalTensorDesc> input_descs;
+    for (auto&& i : inputs) {
+        input_descs.push_back({i->layout(), i->comp_node(), i->dev_tensor()});
+    }
+    auto [output_descs, validated] =
+            OpDef::infer_output_attrs_fallible(*op, input_descs);
+    auto outputs =
+            OpDef::apply_on_physical_tensor(*op, inputs, output_descs, validated);
+    ASSERT_TRUE(outputs[0]->layout().eq_shape(output_shape));
+    ASSERT_TRUE(cn == outputs[0]->comp_node());
+    // sync before delete handle
+    for (auto&& p : outputs) {
+        p->get_value();
+    }
+    delete_handle(h);
+}
+
 TEST(TestImperative, PoissonRNGBasic) {
     REQUIRE_XPU(2);
     for (auto&& cn : {CompNode::load("xpu0"), CompNode::load("xpu1")}) {
@@ -120,6 +143,43 @@ TEST(TestImperative, ExponentialRNGBasic) {
             rate_ptr[i] = 2;
         SmallVector<TensorPtr> inputs{Tensor::make(rate)};
         check_rng_with_input_basic<ExponentialRNG>(cn, inputs, 123);
+    }
+}
+TEST(TestImperative, MultinomialRNGBasic) {
+    REQUIRE_XPU(2);
+    for (auto&& cn : {CompNode::load("xpu0"), CompNode::load("xpu1")}) {
+        TensorShape shape{2, 4};
+        TensorShape output_shape{2, 10000};
+        HostTensorND probs{cn, shape, dtype::Float32()};
+        auto probs_ptr = probs.ptr<float>();
+        probs_ptr[0] = 0.1;
+        probs_ptr[1] = 0.2;
+        probs_ptr[2] = 0.3;
+        probs_ptr[3] = 0.4;
+        probs_ptr[4] = 0.0;
+        probs_ptr[5] = 0.7;
+        probs_ptr[6] = 0.2;
+        probs_ptr[7] = 0.1;
+        SmallVector<TensorPtr> inputs{Tensor::make(probs)};
+        check_rng_with_input_basic_with_target_shape<MultinomialRNG>(
+                cn, inputs, output_shape, 123, 10000, true);
+    }
+    for (auto&& cn : {CompNode::load("xpu0"), CompNode::load("xpu1")}) {
+        TensorShape shape{2, 4};
+        TensorShape output_shape{2, 1};
+        HostTensorND probs{cn, shape, dtype::Float32()};
+        auto probs_ptr = probs.ptr<float>();
+        probs_ptr[0] = 0.1;
+        probs_ptr[1] = 0.2;
+        probs_ptr[2] = 0.3;
+        probs_ptr[3] = 0.4;
+        probs_ptr[4] = 0.0;
+        probs_ptr[5] = 0.7;
+        probs_ptr[6] = 0.2;
+        probs_ptr[7] = 0.1;
+        SmallVector<TensorPtr> inputs{Tensor::make(probs)};
+        check_rng_with_input_basic_with_target_shape<MultinomialRNG>(
+                cn, inputs, output_shape, 123, 1, false);
     }
 }
 

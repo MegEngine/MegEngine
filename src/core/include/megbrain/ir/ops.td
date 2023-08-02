@@ -240,6 +240,25 @@ def BetaRNG: MgbHashableOp<"BetaRNG", [BetaRNGParam]> {
   let cmpFunction = [{return $0.handle == $1.handle;}];
 }
 
+def MultinomialRNG: MgbHashableOp<"MultinomialRNG", [MultinomialRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash_pair_combine(
+        mgb::hash($_self.handle),
+        mgb::hash_pair_combine(
+          mgb::hash($_self.num_samples),
+          mgb::hash($_self.replacement)
+        )
+      )
+    );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.num_samples == $1.num_samples && $0.replacement == $1.replacement;}];
+}
+
 def PermutationRNG: MgbHashableOp<"PermutationRNG", [PermutationRNGParam]> {
   let extraArguments = (ins
     MgbSizeTAddr:$handle

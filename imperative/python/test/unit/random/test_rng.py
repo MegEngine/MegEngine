@@ -18,6 +18,7 @@ from megengine.core.ops.builtin import (
     ExponentialRNG,
     GammaRNG,
     GaussianRNG,
+    MultinomialRNG,
     PermutationRNG,
     PoissonRNG,
     UniformRNG,
@@ -171,6 +172,123 @@ def test_poisson_op():
     delete_rng_handle(h)
     assert np.fabs(output.numpy().mean() - 2.0) < 1e-1
     assert np.fabs(np.sqrt(output.numpy().var()) - np.sqrt(2.0)) < 1e-1
+    assert str(output.device) == str(cn)
+
+
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
+)
+def test_multinomial_op():
+    set_global_seed(1024)
+    num_groups = 2
+    num_samples = 10000
+    len_probs = 4
+    replacement = True
+
+    probs_np = np.array([[0.1, 0.2, 0.3, 0.4], [0.0, 0.7, 0.2, 0.1]])
+    probs = Tensor(probs_np, dtype="float32")
+    op = MultinomialRNG(
+        seed=get_global_rng_seed(), num_samples=num_samples, replacement=replacement
+    )
+    (output,) = apply(op, probs)
+    sample_probs = (
+        F.one_hot(output, len_probs).sum(axis=-2, keepdims=False).astype("float32")
+        / num_samples
+    )
+    sample_probs_np = sample_probs.numpy()
+    for i in range(num_groups):
+        for j in range(len_probs):
+            assert np.fabs(sample_probs_np[i][j] - probs_np[i][j]) < 2e-2
+    compare_mean_group0 = 0 * 0.1 + 1 * 0.2 + 2 * 0.3 + 3 * 0.4
+    compare_mean_group1 = 0 * 0.0 + 1 * 0.7 + 2 * 0.2 + 3 * 0.1
+    compare_var_group0 = (
+        0 * 0.1 + 1 * 0.2 + 4 * 0.3 + 9 * 0.4
+    ) - compare_mean_group0 * compare_mean_group0
+    compare_var_group1 = (
+        0 * 0.0 + 1 * 0.7 + 4 * 0.2 + 9 * 0.1
+    ) - compare_mean_group1 * compare_mean_group1
+    mean_group0 = output.mean(axis=1, keepdims=False)[0]
+    mean_group1 = output.mean(axis=1, keepdims=False)[1]
+    var_group0 = np.var(output.numpy(), axis=1, keepdims=False)[0]
+    var_group1 = np.var(output.numpy(), axis=1, keepdims=False)[1]
+    assert np.abs(mean_group0 - compare_mean_group0) < 1e-2 * compare_mean_group0
+    assert np.abs(mean_group1 - compare_mean_group1) < 1e-2 * compare_mean_group1
+    assert np.abs(var_group0 - compare_var_group0) < 3e-2 * compare_var_group0
+    assert np.abs(var_group1 - compare_var_group1) < 3e-2 * compare_var_group1
+    assert str(output.device) == str(CompNode("xpux"))
+
+    cn = CompNode("xpu2")
+    seed = 233333
+    h = new_rng_handle(cn, seed)
+    probs = Tensor(probs_np, dtype="float32", device=cn)
+    op = MultinomialRNG(
+        seed=seed, handle=h, num_samples=num_samples, replacement=replacement
+    )
+    (output,) = apply(op, probs)
+    delete_rng_handle(h)
+    sample_probs = (
+        F.one_hot(output, len_probs).sum(axis=-2, keepdims=False).astype("float32")
+        / num_samples
+    )
+    sample_probs_np = sample_probs.numpy()
+    for i in range(num_groups):
+        for j in range(len_probs):
+            assert np.fabs(sample_probs_np[i][j] - probs_np[i][j]) < 2e-2
+    mean_group0 = output.mean(axis=1, keepdims=False)[0]
+    mean_group1 = output.mean(axis=1, keepdims=False)[1]
+    var_group0 = np.var(output.numpy(), axis=1, keepdims=False)[0]
+    var_group1 = np.var(output.numpy(), axis=1, keepdims=False)[1]
+    assert np.abs(mean_group0 - compare_mean_group0) < 1e-2 * compare_mean_group0
+    assert np.abs(mean_group1 - compare_mean_group1) < 1e-2 * compare_mean_group1
+    assert np.abs(var_group0 - compare_var_group0) < 3e-2 * compare_var_group0
+    assert np.abs(var_group1 - compare_var_group1) < 3e-2 * compare_var_group1
+    assert str(output.device) == str(cn)
+
+
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
+)
+def test_multinomial_op_without_replacement():
+    set_global_seed(1024)
+    num_groups = 2
+    num_samples = 1
+    len_probs = 4
+    replacement = False
+    total_count = 10000
+
+    probs_np = np.array([[0.1, 0.2, 0.3, 0.4], [0.0, 0.7, 0.2, 0.1]])
+    probs = Tensor(probs_np, dtype="float32")
+    op = MultinomialRNG(
+        seed=get_global_rng_seed(), num_samples=num_samples, replacement=replacement
+    )
+    sample_probs_np = np.zeros((num_groups, len_probs))
+    for i in range(total_count):
+        (output,) = apply(op, probs)
+        sample_probs_np[0, output.numpy()[0, 0]] += 1
+        sample_probs_np[1, output.numpy()[1, 0]] += 1
+    sample_probs_np /= total_count
+    for i in range(num_groups):
+        for j in range(len_probs):
+            assert np.fabs(sample_probs_np[i][j] - probs_np[i][j]) < 1e-2
+    assert str(output.device) == str(CompNode("xpux"))
+
+    cn = CompNode("xpu2")
+    seed = 233333
+    h = new_rng_handle(cn, seed)
+    probs = Tensor(probs_np, dtype="float32", device=cn)
+    op = MultinomialRNG(
+        seed=seed, handle=h, num_samples=num_samples, replacement=replacement
+    )
+    sample_probs_np = np.zeros((num_groups, len_probs))
+    for i in range(total_count):
+        (output,) = apply(op, probs)
+        sample_probs_np[0, output.numpy()[0, 0]] += 1
+        sample_probs_np[1, output.numpy()[1, 0]] += 1
+    sample_probs_np /= total_count
+    delete_rng_handle(h)
+    for i in range(num_groups):
+        for j in range(len_probs):
+            assert np.fabs(sample_probs_np[i][j] - probs_np[i][j]) < 1e-2
     assert str(output.device) == str(cn)
 
 
@@ -392,6 +510,155 @@ def test_PoissonRNG():
 @pytest.mark.skipif(
     get_device_count("xpu") <= 1, reason="xpu counts need > 1",
 )
+def test_MultinomialRNG():
+    # test with replacement
+    num_groups = 2
+    len_probs = 4
+    num_samples = 10000
+    replacement = True
+    m1 = RNG(seed=111, device="xpu0")
+    m2 = RNG(seed=111, device="xpu1")
+    m3 = RNG(seed=222, device="xpu0")
+    input_np = np.array([[1, 2, 3, 4], [0, 7, 2, 1]])
+    probs_np = input_np / input_np.sum(axis=-1, keepdims=True)
+    input = Tensor(input_np, dtype=np.float32)
+    out1 = m1.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    out2 = m2.multinomial(
+        input=input.to("xpu1"), num_samples=num_samples, replacement=replacement
+    )
+    out3 = m3.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    np.testing.assert_allclose(out1.numpy(), out2.numpy(), atol=1e-6)
+    assert out1.device == "xpu0" and out2.device == "xpu1"
+    assert not (out1.numpy() == out3.numpy()).all()
+
+    # test without replacement
+    num_groups = 2
+    len_probs = 4
+    num_samples = 1
+    replacement = False
+    out1 = m1.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    out2 = m2.multinomial(
+        input=input.to("xpu1"), num_samples=num_samples, replacement=replacement
+    )
+    out3 = m3.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    np.testing.assert_allclose(out1.numpy(), out2.numpy(), atol=1e-6)
+    assert out1.device == "xpu0" and out2.device == "xpu1"
+    assert not (out1.numpy() == out3.numpy()).all()
+
+    # test with replacement
+    num_groups = 2
+    len_probs = 4
+    num_samples = 10000
+    replacement = True
+    out = m1.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    out_shp = out.shape
+    expected_shape = (num_groups, num_samples)
+    if isinstance(out_shp, tuple):
+        assert out_shp == expected_shape
+    else:
+        assert all(out.shape.numpy() == np.array(expected_shape))
+    sample_probs = (
+        F.one_hot(out, len_probs).sum(axis=-2, keepdims=False).astype("float32")
+        / num_samples
+    )
+    sample_probs_np = sample_probs.numpy()
+
+    for i in range(num_groups):
+        for j in range(len_probs):
+            assert np.abs(sample_probs_np[i, j] - probs_np[i, j]) < 2e-2
+
+    compare_mean_group0 = 0 * 0.1 + 1 * 0.2 + 2 * 0.3 + 3 * 0.4
+    compare_mean_group1 = 0 * 0.0 + 1 * 0.7 + 2 * 0.2 + 3 * 0.1
+    compare_var_group0 = (
+        0 * 0.1 + 1 * 0.2 + 4 * 0.3 + 9 * 0.4
+    ) - compare_mean_group0 * compare_mean_group0
+    compare_var_group1 = (
+        0 * 0.0 + 1 * 0.7 + 4 * 0.2 + 9 * 0.1
+    ) - compare_mean_group1 * compare_mean_group1
+    mean_group0 = out.mean(axis=1, keepdims=False)[0]
+    mean_group1 = out.mean(axis=1, keepdims=False)[1]
+    var_group0 = np.var(out.numpy(), axis=1, keepdims=False)[0]
+    var_group1 = np.var(out.numpy(), axis=1, keepdims=False)[1]
+    assert np.abs(mean_group0 - compare_mean_group0) < 1e-2 * compare_mean_group0
+    assert np.abs(mean_group1 - compare_mean_group1) < 1e-2 * compare_mean_group1
+    assert np.abs(var_group0 - compare_var_group0) < 3e-2 * compare_var_group0
+    assert np.abs(var_group1 - compare_var_group1) < 3e-2 * compare_var_group1
+
+    # test without replacement
+    num_groups = 2
+    len_probs = 4
+    replacement = False
+    num_samples = 1
+    total_count = 10000
+    out = m1.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    out_shp = out.shape
+    expected_shape = (num_groups, num_samples)
+    if isinstance(out_shp, tuple):
+        assert out_shp == expected_shape
+    else:
+        assert all(out.shape.numpy() == np.array(expected_shape))
+    sample_probs_np = np.zeros((num_groups, len_probs))
+    for i in range(total_count):
+        out = m1.multinomial(
+            input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+        )
+        sample_probs_np[0, out.numpy()[0, 0]] += 1
+        sample_probs_np[1, out.numpy()[1, 0]] += 1
+    sample_probs_np /= total_count
+    for i in range(num_groups):
+        for j in range(len_probs):
+            assert np.abs(sample_probs_np[i, j] - probs_np[i, j]) < 2e-2
+
+    # check shape when replacement is True and ndim is 1
+    len_probs = 4
+    num_samples = 10000
+    replacement = True
+    input_np = np.array([1, 2, 3, 4])
+    probs_np = input_np / input_np.sum(axis=-1, keepdims=True)
+    input = Tensor(input_np, dtype=np.float32)
+    out = m1.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    out_shp = out.shape
+    expected_shape = (num_samples,)
+    if isinstance(out_shp, tuple):
+        assert out_shp == expected_shape
+    else:
+        assert all(out.shape.numpy() == np.array(expected_shape))
+
+    # check shape when replacement is False and ndim is 1
+    len_probs = 4
+    num_samples = 1
+    replacement = False
+    input_np = np.array([1, 2, 3, 4])
+    probs_np = input_np / input_np.sum(axis=-1, keepdims=True)
+    input = Tensor(input_np, dtype=np.float32)
+    out = m1.multinomial(
+        input=input.to("xpu0"), num_samples=num_samples, replacement=replacement
+    )
+    out_shp = out.shape
+    expected_shape = (num_samples,)
+    if isinstance(out_shp, tuple):
+        assert out_shp == expected_shape
+    else:
+        assert all(out.shape.numpy() == np.array(expected_shape))
+
+
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 1, reason="xpu counts need > 1",
+)
 @pytest.mark.parametrize("symbolic", [True, False])
 def test_PermutationRNG(symbolic):
     m1 = RNG(seed=111, device="xpu0")
@@ -568,3 +835,37 @@ def test_rng_empty_tensor(is_symbolic):
         np.testing.assert_equal(out.numpy().shape, (0,))
         if is_symbolic is None:
             break
+
+    input_shapes_for_multinomial = [
+        (0,),
+        (0, 0),
+        (0, 10),
+    ]
+
+    output_shapes_for_multinomial = [
+        (0,),
+        (0, 0),
+        (0, 2),
+    ]
+
+    def fn3(shape, replacement):
+        input = random.normal(0, 1, shape)
+        out = random.multinomial(input=input, num_samples=2, replacement=True)
+        return out
+
+    for i in range(len(input_shapes_for_multinomial)):
+        shape = input_shapes_for_multinomial[i]
+        if is_symbolic is not None:
+            fn_ = jit.trace(symbolic=is_symbolic)(fn3)
+        else:
+            fn_ = fn3
+        for replacement in [True, False]:
+            if shape[-1] == 0 and ~replacement:
+                continue
+            for _ in range(3):
+                out = fn_(shape=shape, replacement=replacement)
+                np.testing.assert_equal(
+                    out.numpy().shape, output_shapes_for_multinomial[i]
+                )
+                if is_symbolic is None:
+                    break

@@ -33,6 +33,7 @@ def _is_rng_op(opr):
             mops.ShuffleRNG,
             mops.UniformRNG,
             mops.ExponentialRNG,
+            mops.MultinomialRNG,
         ),
     )
 
