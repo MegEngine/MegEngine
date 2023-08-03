@@ -40,6 +40,37 @@ inline std::vector<TestArg> get_args() {
     return args;
 }
 
+inline std::vector<TestArg> get_args_nhwc() {
+    std::vector<TestArg> args;
+    using Param = param::AdaptivePooling;
+    using Mode = param::AdaptivePooling::Mode;
+
+    for (size_t i = 36; i < 40; ++i) {
+        args.emplace_back(
+                Param{Mode::AVERAGE}, TensorShape{2, i, i + 1, 3},
+                TensorShape{2, i - 4, i - 2, 3});
+        args.emplace_back(
+                Param{Mode::MAX}, TensorShape{2, i, i + 1, 3},
+                TensorShape{2, i - 4, i - 2, 3});
+        args.emplace_back(
+                Param{Mode::AVERAGE_COUNT_EXCLUDE_PADDING}, TensorShape{2, i, i + 1, 3},
+                TensorShape{2, i - 4, i - 2, 3});
+    }
+
+    for (size_t i = 5; i < 10; ++i) {
+        args.emplace_back(
+                Param{Mode::AVERAGE}, TensorShape{2, i, i + 1, 3},
+                TensorShape{2, i - 3, i - 2, 3});
+        args.emplace_back(
+                Param{Mode::MAX}, TensorShape{2, i, i + 1, 3},
+                TensorShape{2, i - 3, i - 2, 3});
+        args.emplace_back(
+                Param{Mode::AVERAGE_COUNT_EXCLUDE_PADDING}, TensorShape{2, i, i + 1, 3},
+                TensorShape{2, i - 3, i - 2, 3});
+    }
+    return args;
+}
+
 inline std::vector<TestArg> get_args_nchw44() {
     std::vector<TestArg> args;
     using Param = param::AdaptivePooling;
