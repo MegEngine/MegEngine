@@ -76,7 +76,8 @@ typedef enum {
     ACL_MDL_INPUTQ_NUM_SIZET,
     ACL_MDL_INPUTQ_ADDR_PTR, /**< pointer to inputQ with shallow copy */
     ACL_MDL_OUTPUTQ_NUM_SIZET,
-    ACL_MDL_OUTPUTQ_ADDR_PTR /**< pointer to outputQ with shallow copy */
+    ACL_MDL_OUTPUTQ_ADDR_PTR, /**< pointer to outputQ with shallow copy */
+    ACL_MDL_WORKSPACE_MEM_OPTIMIZE
 } aclmdlConfigAttr;
 
 typedef enum {
