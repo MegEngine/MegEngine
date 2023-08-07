@@ -117,7 +117,7 @@ DEF(FakeQuantForward, 4, true, true);
 DEF(FakeQuantBackward, 5, true, false);
 DEF(TQTForward, 3, true, true);
 DEF(TQTBackward, 5, true, false);
-DEF(PowC, 2, false, true);
+DEF(PowC, 2, true, true);
 DEF(UniformRNG, 1, true, true);
 DEF(GaussianRNG, 1, true, true);
 DEF(GammaRNG, 3, true, true);

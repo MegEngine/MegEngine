@@ -99,11 +99,12 @@ public:
     void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst);
 
     //! compatible API for mgb; workspace is not used
-    void exec(_megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) {
+    virtual void exec(
+            _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace) {
         return exec(src, dst);
     }
 
-    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) {
+    virtual size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) {
         // the impls should require no workspace; this can be later changed to a
         // virtual function if this situation changes
         return 0;
