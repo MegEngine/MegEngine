@@ -43,7 +43,9 @@ from .vision import (
     AdditiveGaussianNoise,
     AdditiveLaplaceNoise,
     AdditivePoissonNoise,
+    Cutmix,
     Emboss,
     LinearContrast,
+    Mixup,
     Sharpen,
 )

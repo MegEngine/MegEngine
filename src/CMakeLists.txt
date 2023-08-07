@@ -83,7 +83,7 @@ set(MGB_CAMBRICON ${MGE_WITH_CAMBRICON})
 set(MGB_ATLAS ${MGE_WITH_ATLAS})
 
 if(MGE_WITH_CUDA)
-  file(GLOB_RECURSE SOURCES_ opr/impl/standalone/*.cu)
+  file(GLOB_RECURSE SOURCES_ opr/impl/standalone/*.cu opr/impl/customop/*.cu)
   list(APPEND SOURCES ${SOURCES_})
 endif()
 

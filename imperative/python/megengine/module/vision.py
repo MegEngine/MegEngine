@@ -4,7 +4,8 @@ from functools import lru_cache
 
 import numpy as np
 
-from ..core.ops import builtin
+from ..core._imperative_rt.core2 import apply
+from ..core.ops import builtin, custom
 from ..core.tensor.utils import subgraph_fn
 from ..functional import (
     arange,
@@ -17,7 +18,7 @@ from ..functional import (
     reshape,
     zeros,
 )
-from ..functional.elemwise import abs, add, log
+from ..functional.elemwise import abs, add, clip, floor, log, sqrt
 from ..functional.math import sign
 from ..functional.nn import conv2d, pad
 from ..functional.tensor import broadcast_to
@@ -510,3 +511,152 @@ class LinearContrast(Module):
             result = center_value + mul(inp.astype("float32") - center_value, alpha)
             result = result.astype(input_dtype)
             return result
+
+
+class Mixup(Module):
+    r"""Mixup is a data augmentation method that generates new training samples 
+    by mixing the features and labels of two training samples at a certain ratio, 
+    with the aim of improving the performance of the model.
+    
+    Args:
+        beta: parameters of the Beta distribution will affect the ratio of the mixed samples
+        seed: random number seed of generator
+
+    Shape:
+        - input_data: :math:`(N, C, H, W)` (now only support NCHW format tensor)
+        - input_label: :math:`(N,)`
+        - output_data: :math:`(N, C, H, W)` (same shape as input)
+        - output_label: :math:`(N,)`
+    
+    Examples:
+
+        .. code-block::
+
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+
+            m = M.Mixup(3)
+            data1 = mge.tensor(np.random.randn(2, 3, 16, 16), dtype=np.float32)
+            data2 = mge.tensor(np.random.randn(2, 3, 16, 16), dtype=np.float32)
+            label1 = mge.tensor(np.random.randn(2,), dtype=np.float32)
+            label2 = mge.tensor(np.random.randn(2,), dtype=np.float32)
+
+            data, label = m(data1, label1, data2, label2)
+
+            print(data.numpy().shape)
+            print(label.numpy().shape)
+
+        Outputs:
+
+        .. code-block::
+
+            (2, 3, 16, 16)
+            (2,)
+    """
+
+    def __init__(self, beta, seed=None):
+        assert seed is None or isinstance(seed, int)
+        super(Mixup, self).__init__()
+        self.beta_func = RNG(seed).beta
+        self.beta = beta
+
+    def sample(self, batch):
+        return self.beta_func(self.beta, self.beta, size=(batch,))
+
+    def forward(self, data1, label1, data2, label2):
+        assert all(
+            isinstance(inp, Tensor) for inp in [data1, label1, data2, label2]
+        ), "expected input is megengine.Tensor"
+
+        batch, C, H, W = data1.shape
+        self.lamb = self.sample(batch)
+
+        label = self.lamb * label1 + (1.0 - self.lamb) * label2
+
+        data = (
+            self.lamb.reshape(batch, 1, 1, 1) * data1
+            + (1 - self.lamb).reshape(batch, 1, 1, 1) * data2
+        )
+
+        return data, label
+
+
+class Cutmix(Module):
+    r"""The Cutmix method is a technique that generates a random bounding box (bbox) based on a lambda value, 
+    and assigns the values of the bounding box from another data sample to the current sample.
+    
+    Args:
+        beta: parameters of the Beta distribution will affect the ratio of the mixed samples
+        seed: random number seed of generator
+
+    Shape:
+        - input_data: :math:`(N, C, H, W)` (now only support NCHW format tensor)
+        - input_label: :math:`(N,)`
+        - output_data: :math:`(N, C, H, W)` (same shape as input)
+        - output_label: :math:`(N,)`
+    
+    Examples:
+
+        .. code-block::
+
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+
+            m = M.Cutmix(3)
+            data1 = mge.tensor(np.random.randn(2, 3, 16, 16), dtype=np.float32)
+            data2 = mge.tensor(np.random.randn(2, 3, 16, 16), dtype=np.float32)
+            label1 = mge.tensor(np.random.randn(2,), dtype=np.float32)
+            label2 = mge.tensor(np.random.randn(2,), dtype=np.float32)
+
+            data, label = m(data1, label1, data2, label2)
+
+            print(data.numpy().shape)
+            print(label.numpy().shape)
+
+        Outputs:
+
+        .. code-block::
+
+            (2, 3, 16, 16)
+            (2,)
+    """
+
+    def __init__(self, beta, seed=None):
+        assert seed is None or isinstance(seed, int)
+        super(Cutmix, self).__init__()
+        self.beta_func = RNG(seed).beta
+        self.uniform_func = RNG(seed).uniform
+        self.beta = beta
+        self.custom_func = custom.cutmix_forward()
+
+    def sample(self, batch):
+        return self.beta_func(self.beta, self.beta, size=(batch,))
+
+    def forward(self, data1, label1, data2, label2):
+        assert all(
+            isinstance(inp, Tensor) for inp in [data1, label1, data2, label2]
+        ), "expected input is megengine.Tensor"
+
+        batch, C, H, W = data1.shape
+
+        self.lamb = self.sample(batch)
+        lamb_rat = sqrt(1.0 - self.lamb)
+
+        label = self.lamb * label1 + (1.0 - self.lamb) * label2
+
+        self.cut_h = floor(H * lamb_rat)
+        self.cut_w = floor(W * lamb_rat)
+
+        # uniform
+        self.cx = self.uniform_func(high=H, size=(batch,))
+        self.cx = floor(self.cx)
+        self.cy = self.uniform_func(high=W, size=(batch,))
+        self.cy = floor(self.cy)
+
+        data = apply(
+            self.custom_func, data1, data2, self.cx, self.cy, self.cut_h, self.cut_w
+        )[0]
+
+        return data, label
