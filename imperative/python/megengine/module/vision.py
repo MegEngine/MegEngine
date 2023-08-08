@@ -72,12 +72,11 @@ class AdditiveLaplaceNoise(AdditiveElemwise):
     r"""Add random laplace noise to the input data.
     Laplace noise is generated with given mean and std, sampled from Laplace distribution
     ref to this page to learn more: https://en.wikipedia.org/wiki/Laplace_distribution
-    
 
     Args:
         mean: laplace mean used to generate noise.
         std: laplace standard deviation used to generate noise.
-        per_channel: Whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
+        per_channel: whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
         seed: random number seed of generator
     """
 
@@ -112,7 +111,7 @@ class AdditivePoissonNoise(AdditiveElemwise):
 
     Args:
         lam: lam parameter of poisson distribution used to generate noise.
-        per_channel: Whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
+        per_channel: whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
         seed: random number seed of generator
     """
 
@@ -143,9 +142,9 @@ class AdditiveGaussianNoise(AdditiveElemwise):
     Gaussian noise is generated with given mean and std.
 
     Args:
-        mean: Gaussian mean used to generate noise.
-        std: Gaussian standard deviation used to generate noise.
-        per_channel: Whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
+        mean: gaussian mean used to generate noise.
+        std: gaussian standard deviation used to generate noise.
+        per_channel: whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
         seed: random number seed of generator
     """
 
@@ -242,8 +241,8 @@ class ActiveBlur(Module):
             return float(param)
         elif isinstance(param, tuple):
             assert len(param) == 2, (
-                "Expected parameter '%s' with type tuple to have exactly two "
-                "entries, but got %d." % (name, len(param))
+                "Expected parameter with type tuple to have exactly two "
+                "entries, but got %d." % len(param)
             )
             param = self.rng_func(param[0], param[1])
             return float(param)
@@ -310,7 +309,7 @@ class Emboss(ActiveBlur):
     The embossed version pronounces highlights and shadows, enhances the high-frequency information of the image, and retains the low-frequency information of the image
 
     Args:
-        alpha: Adjust visibility of embossed images. number or tuple of number,  At ``0.0``, only the original image is visible, at ``1.0`` only its embossed version is visible. If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
+        alpha: adjust visibility of embossed images. number or tuple of number,  At ``0.0``, only the original image is visible, at ``1.0`` only its embossed version is visible. If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
         strength: emboss strength.Sane values are somewhere in the interval ``[0.0, 2.0)`` with ``1.0``, number or tuple of number,  If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
         seed: random number seed of generator
     
@@ -397,9 +396,10 @@ def _get_SharpenKernel_op(alpha, lightness, *, dtype=None, device=None):
 
 class Sharpen(ActiveBlur):
     r"""Sharpen images and alpha-blend the result with the original input.
+
     Args:
-        alpha: Adjust visibility of sharpened images. number or tuple of number,  At ``0.0``, only the original image is visible, at ``1.0`` only its embossed version is visible. If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
-        lightness: Controls the brightness of sharpened images. Sane values are somewhere in the interval ``[0.5, 2.0)`` with ``1.0``, number or tuple of number, If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
+        alpha: adjust visibility of sharpened images. number or tuple of number,  At ``0.0``, only the original image is visible, at ``1.0`` only its embossed version is visible. If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
+        lightness: controls the brightness of sharpened images. Sane values are somewhere in the interval ``[0.5, 2.0)`` with ``1.0``, number or tuple of number, If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
         seed: random number seed of generator
     
     Examples:
@@ -440,9 +440,10 @@ class Sharpen(ActiveBlur):
 
 class LinearContrast(Module):
     r"""Adjust contrast by scaling each pixel to ``127 + alpha*(v-127)``.
+
     Args:
         alpha: number or tuple of number. If a tuple ``(a, b)``, a random value will be sampled from the interval ``[a, b)``.
-        per_channel:Whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
+        per_channel:whether to use (imagewise) the same sample(s) for all channels (False) or to sample value(s) for each channel (True). Setting this to True will therefore lead to different transformations per image and channel, otherwise only per image. 
         seed: random number seed of generator
     
     Examples:
@@ -468,8 +469,8 @@ class LinearContrast(Module):
             return value
         elif isinstance(param, tuple):
             assert len(param) == 2, (
-                "Expected parameter '%s' with type tuple to have exactly two "
-                "entries, but got %d." % (name, len(param))
+                "Expected parameter with type tuple to have exactly two "
+                "entries, but got %d." % len(param)
             )
             value = self.rng_func(param[0], param[1], size)
             return value

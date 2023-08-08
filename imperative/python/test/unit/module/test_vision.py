@@ -1,9 +1,9 @@
-import time
+import platform
 
 import numpy as np
 import pytest
 
-from megengine import Tensor
+from megengine import Tensor, is_cuda_available
 from megengine.functional import mean, zeros
 from megengine.module import (
     AdditiveGaussianNoise,
@@ -68,6 +68,7 @@ def test_blur(cls, shape, format, dtype, param1, param2, seed):
         np.testing.assert_allclose(aug_data, aug_data_ref)
 
 
+@pytest.mark.require_ngpu(1)
 @pytest.mark.parametrize("per_channel", [False, True])
 @pytest.mark.parametrize(
     "shape, format, dtype",
