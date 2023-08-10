@@ -250,6 +250,19 @@ def PermutationRNG: MgbHashableOp<"PermutationRNG", [PermutationRNGParam]> {
   let cmpFunction = [{return $0.handle == $1.handle && $0.dtype == $1.dtype;}];
 }
 
+def ExponentialRNG: MgbHashableOp<"ExponentialRNG", [ExponentialRNGParam]> {
+  let extraArguments = (ins
+    MgbSizeTAddr:$handle
+  );
+  let hashFunction = [{
+    return mgb::hash_pair_combine(
+      mgb::hash($_self.dyn_typeinfo()),
+      mgb::hash($_self.handle)
+      );
+  }];
+  let cmpFunction = [{return $0.handle == $1.handle;}];
+}
+
 def Fill: MgbHashableOp<"Fill", [FillParam]> {
   let extraArguments = (ins
     MgbDTypeAttr:$dtype,

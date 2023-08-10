@@ -145,6 +145,7 @@ private:
     cb(PermutationRNG) \
     cb(ShuffleRNGForward) \
     cb(ShuffleRNGBackward) \
+    cb(ExponentialRNG) \
     cb(SeparableConvForward) \
     cb(SeparableFilterForward) \
     cb(BNForward) \

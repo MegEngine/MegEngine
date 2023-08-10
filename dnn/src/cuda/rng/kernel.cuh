@@ -236,6 +236,34 @@ struct BetaKernel {
 };
 
 template <typename ctype>
+struct ExponentialKernel {
+    ctype* output;
+    ctype* lambda;
+    uint64_t seed, offset;
+
+    __device__ void operator()(uint32_t idx) {
+        Philox local_state;
+        curand_init(seed, idx, offset, &local_state);
+        float lam = static_cast<float>(lambda[idx]);
+        // curand_uniform has (0,1] bounds. log(1) is 0 and exponential excludes 0.
+        float uniform_rand = curand_uniform(&local_state);
+        float epsilon = 1e-9f;
+        float log_rand = uniform_rand >= 1 - epsilon ? -epsilon : logf(uniform_rand);
+        output[idx] = static_cast<ctype>(-log_rand / lam); 
+    }
+
+#if MEGDNN_CC_HOST
+    ExponentialKernel(
+            const TensorND& output, const TensorND& lambda, uint64_t seed,
+            uint64_t offset)
+            : output{output.ptr<ctype>()},
+              lambda{lambda.ptr<ctype>()},
+              seed{seed},
+              offset{offset} {}
+#endif
+};
+
+template <typename ctype>
 void permutation_forward(
         ctype* dst, void* workspace, size_t size, uint64_t seed, uint64_t offset,
         cudaStream_t stream);

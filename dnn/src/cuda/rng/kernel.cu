@@ -204,16 +204,20 @@ ARGSORT_FOREACH_CTYPE(INST_SHUFFLE)
 #undef INST_SHUFFLE
 }  // namespace random
 
-#define INST(_dtype)                                                                   \
-    INST_RUN_ELEMWISE(                                                                 \
-            random::GammaKernel<DTypeTrait<_dtype>::ctype>, DTypeTrait<_dtype>::ctype, \
-            0);                                                                        \
-    INST_RUN_ELEMWISE(                                                                 \
-            random::PoissonKernel<DTypeTrait<_dtype>::ctype>,                          \
-            DTypeTrait<_dtype>::ctype, 0);                                             \
-    INST_RUN_ELEMWISE(                                                                 \
-            random::BetaKernel<DTypeTrait<_dtype>::ctype>, DTypeTrait<_dtype>::ctype,  \
-            0);
+#define INST(_dtype)                                                                      \
+    INST_RUN_ELEMWISE(                                                                    \
+            random::GammaKernel<DTypeTrait<_dtype>::ctype>, DTypeTrait<_dtype>::ctype,    \
+            0);                                                                           \
+    INST_RUN_ELEMWISE(                                                                    \
+            random::PoissonKernel<DTypeTrait<_dtype>::ctype>,                             \
+            DTypeTrait<_dtype>::ctype, 0);                                                \
+    INST_RUN_ELEMWISE(                                                                    \
+            random::BetaKernel<DTypeTrait<_dtype>::ctype>, DTypeTrait<_dtype>::ctype,     \
+            0);                                                                           \
+    INST_RUN_ELEMWISE(                                                                    \
+        random::ExponentialKernel<DTypeTrait<_dtype>::ctype>, DTypeTrait<_dtype>::ctype,  \
+        0);       
+
 
 INST(megdnn::dtype::Float32)
 INST(megdnn::dtype::Float16)

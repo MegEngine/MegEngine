@@ -451,6 +451,38 @@ def test_ShuffleRNG():
     else:
         assert all(out.shape.numpy() == np.array([n, m]))
 
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 1,
+    reason="xpu counts need > 1",
+)
+def test_ExponentialRNG():
+    m1 = RNG(seed=111, device="xpu0")
+    m2 = RNG(seed=111, device="xpu1")
+    m3 = RNG(seed=222, device="xpu0")
+    rate = Tensor([[2, 3, 4], [9, 10, 11]], dtype=np.float32)
+    out1 = m1.exponential(rate.to("xpu0"), size=(100,))
+    out2 = m2.exponential(rate.to("xpu1"), size=(100,))
+    out3 = m3.exponential(rate.to("xpu0"), size=(100,))
+
+    np.testing.assert_allclose(out1.numpy(), out2.numpy(), atol=1e-6)
+    assert out1.device == "xpu0" and out2.device == "xpu1"
+    assert not (out1.numpy() == out3.numpy()).all()
+
+    out = m1.exponential(rate.to("xpu0"), size=(20, 30))
+    out_shp = out.shape
+    expected_shape = (20, 30) + rate._tuple_shape
+    if isinstance(out_shp, tuple):
+        assert out_shp == expected_shape
+    else:
+        assert all(out.shape.numpy() == np.array(expected_shape))
+    rate = rate.numpy()
+
+    expected_mean = 1.0 / rate
+    expected_std = np.sqrt(1.0 / (rate * rate))
+    assert (
+        np.abs(out.mean(axis=(0, 1)).numpy() - expected_mean) / expected_std
+    ).mean() < 0.1
+    assert np.abs(np.std(out.numpy(), axis=(0, 1)) - expected_std).mean() < 0.1
 
 def test_seed():
     set_global_seed(10)

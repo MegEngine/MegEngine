@@ -147,6 +147,20 @@ public:
     }
 };
 
+class ExponentialRNGImpl : public ExponentialRNG {
+    Xoroshiro128plus m_rng;
+
+public:
+    using ExponentialRNG::ExponentialRNG;
+
+    void exec(_megdnn_tensor_in lam, _megdnn_tensor_inout dst, _megdnn_workspace)
+            override;
+
+    size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
+        return 0;
+    }
+};
+
 }  // namespace naive
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen
