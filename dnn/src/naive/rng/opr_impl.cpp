@@ -469,7 +469,7 @@ void ExponentialRNGImpl::exec(
     case DTypeTrait<_dt>::enumv: {                                                     \
         using ctype = DTypeTrait<_dt>::ctype;                                          \
         MEGDNN_DISPATCH_CPU_KERN_OPR({                                                 \
-            fill_exponential<float>(prng, dst.ptr<ctype>(), lam.ptr<ctype>(), size); \
+            fill_exponential<float>(prng, dst.ptr<ctype>(), lam.ptr<ctype>(), size);   \
         };);                                                                           \
         return;                                                                        \
     }

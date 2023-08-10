@@ -143,14 +143,14 @@ class ExponentialRNG : public OperatorBase {
 
 public:
     virtual void exec(
-            _megdnn_tensor_in scale, _megdnn_tensor_out dst,
+            _megdnn_tensor_in lam, _megdnn_tensor_out dst,
             _megdnn_workspace workspace) = 0;
     virtual size_t get_workspace_in_bytes(
-            const TensorLayout& scale, const TensorLayout& dst) = 0;
+            const TensorLayout& lam, const TensorLayout& dst) = 0;
 
 protected:
     void check_exec(
-            const TensorLayout& scale, const TensorLayout& dst,
+            const TensorLayout& lam, const TensorLayout& dst,
             size_t workspace_in_bytes);
 };
 
