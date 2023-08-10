@@ -709,7 +709,9 @@ if(MGE_BUILD_IMPERATIVE_RT
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-if(NOT ${MGE_WITH_CUDA} AND NOT ${MGE_WITH_ROCM})
+if(NOT ${MGE_WITH_CUDA}
+   AND NOT ${MGE_WITH_ROCM}
+   AND NOT ${MGE_WITH_CAMBRICON})
   message(STATUS "Disable distributed support, as both CUDA and ROCm are disabled.")
   set(MGE_WITH_DISTRIBUTED OFF)
 endif()
@@ -1444,6 +1446,9 @@ if(MGE_WITH_DISTRIBUTED)
       CACHE BOOL "Override MegRay option" FORCE)
   set(MEGRAY_WITH_RCCL
       ${MGE_WITH_ROCM}
+      CACHE BOOL "Override MegRay option" FORCE)
+  set(MEGRAY_WITH_CNCL
+      ${MGE_WITH_CAMBRICON}
       CACHE BOOL "Override MegRay option" FORCE)
   set(MEGRAY_CUDA_GENCODE
       ${MGE_CUDA_GENCODE}

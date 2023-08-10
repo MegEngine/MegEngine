@@ -9,6 +9,7 @@ import numpy as np
 
 from megengine.autodiff.grad_manager import GradManager, get_backwarding_grad_manager
 
+from .. import tensor
 from ..core._imperative_rt.core2 import apply
 from ..core._trace_option import use_xla_backend
 from ..core.ops.builtin import ParamPackConcat, ParamPackSplit

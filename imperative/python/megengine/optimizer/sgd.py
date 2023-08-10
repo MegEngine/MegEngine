@@ -3,6 +3,7 @@ import os
 from typing import Iterable, Union
 
 from ..core import _config
+from ..functional import transpose
 from ..functional.inplace import _inplace_add_
 from ..jit.tracing import is_tracing
 from ..tensor import Parameter, Tensor, tensor

@@ -212,6 +212,11 @@ public:
 #if !MGB_BUILD_SLIM_SERVING
     std::unordered_map<void*, size_t> ptr2size;
 #endif
+
+    uint64_t get_uid() override { return m_uid; }
+
+private:
+    uint64_t m_uid;
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CambriconCompNode::CompNodeImpl);
 
@@ -266,6 +271,16 @@ void CambriconCompNodeImpl::init(
     m_locator = locator;
     m_locator_logical = locator_logical;
     m_initialized = true;
+#if defined(__linux__) || defined(TARGET_OS_MAC)
+    FILE* fp;
+    fp = fopen("/dev/urandom", "r");
+    mgb_assert(fread(&m_uid, sizeof(m_uid), 1, fp) == 1);
+    fclose(fp);
+#else
+    m_uid = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::system_clock::now().time_since_epoch())
+                    .count();
+#endif
 
     auto on_succ = [this](cnrtQueue_t queue) {
         auto locator = m_locator;

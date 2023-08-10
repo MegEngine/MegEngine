@@ -94,8 +94,8 @@ class Group:
 
 WORLD = Group([])
 
-_devices = {"gpu", "cuda", "rocm"}
-_backends = {"nccl", "rccl", "auto"}
+_devices = {"gpu", "cuda", "rocm", "cambricon"}
+_backends = {"nccl", "rccl", "cncl", "auto"}
 
 
 def init_process_group(
@@ -132,6 +132,7 @@ def init_process_group(
         raise ValueError(
             "backend should be one of {} but got {}".format(_backends, backend)
         )
+
     if physical_device_type not in _devices:
         raise ValueError(
             "{} is not a valid distributed device type".format(device_type)

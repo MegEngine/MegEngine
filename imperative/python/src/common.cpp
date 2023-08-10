@@ -51,7 +51,7 @@ void set_default_device(const std::string& device) {
 }
 
 void init_nccl_env(const std::string& ip, int port, int nranks, int rank, int root) {
-#if MGB_ENABLE_OPR_MM
+#if MGB_ENABLE_OPR_MM && MGB_CUDA
     auto&& help = mgb::opr::BatchSendRecvHelper::getInstance();
     bool res = help->init(nranks, rank, ip, port, root);
     auto p = help->get(std::string("init_all_cards"));

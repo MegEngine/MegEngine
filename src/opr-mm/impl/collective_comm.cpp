@@ -351,7 +351,8 @@ class CollectiveComm::ModeTrait::BROADCAST : public ModeTrait {
             buff = (void*)iv.raw_ptr();
             length = iv.shape().total_nr_elems();
         } else {
-            buff = NULL;
+            // for cncl buff should not be nullptr.
+            buff = (void*)ov.raw_ptr();
             datatype = ov.dtype();
             length = ov.shape().total_nr_elems();
         }
