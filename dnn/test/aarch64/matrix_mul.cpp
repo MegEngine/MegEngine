@@ -176,7 +176,6 @@ TEST_F(AARCH64, MATRIX_MUL_INT4x4x16_K8x8x8_QUANTIZEDS4) {
             AlgoChecker<MatrixMul>("AARCH64_INT4X4X16_K8X8X8"));
 
     auto run = [&](size_t M, size_t N, size_t K) {
-        printf("M N K %zu %zu %zu \n", M, N, K);
         TensorShape A, B;
         if (param.transposeA) {
             A = TensorShape{K, M};

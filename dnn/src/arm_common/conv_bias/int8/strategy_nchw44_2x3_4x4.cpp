@@ -245,7 +245,6 @@ void winograd_2x3_4x4_s8_f32_nchw44::filter(
             for (size_t ic_inner = 0; ic_inner < 4; ic_inner++) {
                 const int8_t* fptr =
                         filter + (ocb * ICB + icb) * 3 * 3 * 4 * 4 + ic_inner * 4;
-
 #define cb(m, n) \
     Vector<float, 4> g##m##n = Vector<float, 4>(getter(fptr + (m * 3 + n) * 4 * 4));
 

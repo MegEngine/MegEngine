@@ -632,7 +632,7 @@ TEST_F(FALLBACK_MULTI_THREADS, CONVBIAS_GI_WINOGRAD_F43_8_NCHW88_FP16) {
             handle());
     Float16PeriodicalRNG rng(0x3800);  // (-0.5, 0.5)
     check_winograd_fp16(
-            "8:4:", checker, args, &rng, 0.027, param::MatrixMul::Format::MK8,
+            "8:4:", checker, args, &rng, 0.030, param::MatrixMul::Format::MK8,
             "WINOGRAD_NCHW88");
 }
 

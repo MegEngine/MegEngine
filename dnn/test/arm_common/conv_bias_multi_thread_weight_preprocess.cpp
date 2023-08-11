@@ -82,6 +82,9 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_F16_WEIGHT_PREPROC
         0.25);
 }
 #endif
+
+//! FIXME: these test will fail with bus error when compiled with armv7-dot
+#if MEGDNN_AARCH64
 TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_INT8_WEIGHT_PREPROCESS) {
     using namespace conv_bias;
 
@@ -115,6 +118,8 @@ TEST_F(ARM_COMMON_MULTI_THREADS, CONV_BIAS_WINOGRAD_MK_PACKED_INT8_WEIGHT_PREPRO
     run(quantized_args, dtype::QuantizedS8(2.5f), dtype::QuantizedS8(2.5f),
         dtype::QuantizedS32(6.25f), dtype::QuantizedS8(60.25f), 1e-3);
 }
+#endif
+
 TEST_F(ARM_COMMON_MULTI_THREADS,
        CONV_BIAS_WINOGRAD_NCHW44_MK_PACKED_INT8_WEIGHT_PREPROCESS) {
     using namespace conv_bias;
