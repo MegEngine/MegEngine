@@ -394,8 +394,14 @@ void AtlasRuntimeOpr::scn_do_execute() {
                 aclmdlSetDatasetTensorDesc(model_outputs, tensorDesc, i);
             }
         }
-        MGB_ATLAS_CHECK(aclmdlExecute(m_model_id, model_inputs, model_outputs));
 
+#if MGB_USE_ATLAS_ASYNC_API
+        MGB_ATLAS_CHECK(aclmdlExecuteAsync(
+                m_model_id, model_inputs, model_outputs, acl_env.stream));
+        MGB_ATLAS_CHECK(aclrtSynchronizeStream(acl_env.stream));
+#else
+        MGB_ATLAS_CHECK(aclmdlExecute(m_model_id, model_inputs, model_outputs));
+#endif
         for (size_t i = 0; i < nr_inputs; ++i) {
             aclDataBuffer* db_ptr = aclmdlGetDatasetBuffer(model_inputs, i);
             MGB_ATLAS_CHECK(aclDestroyDataBuffer(db_ptr));
