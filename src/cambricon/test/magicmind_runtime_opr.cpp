@@ -10,8 +10,8 @@
 
 #include "megbrain/cambricon/magicmind_runtime_opr.h"
 
-#include "interface_builder.h"
-#include "interface_network.h"
+#include "mm_builder.h"
+#include "mm_network.h"
 
 using namespace mgb;
 using namespace opr;
@@ -323,8 +323,8 @@ public:
         float time = 0.f;
         MGB_CNRT_CHECK(cnrtNotifierDuration(start, end, &time));
         printf("inference time = %.2fs\n", time / static_cast<float>(runs) * 1e-3);
-        MGB_CNRT_CHECK(cnrtNotifierDestroy(&start));
-        MGB_CNRT_CHECK(cnrtNotifierDestroy(&end));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(start));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(end));
         for (auto&& i : input_tensors)
             i->Destroy();
         for (auto&& o : output_tensors)

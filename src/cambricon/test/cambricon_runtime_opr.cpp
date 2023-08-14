@@ -251,8 +251,8 @@ public:
         float time = 0.f;
         MGB_CNRT_CHECK(cnrtNotifierDuration(start, end, &time));
         printf("inference time = %.2fs\n", time * 1e-3);
-        MGB_CNRT_CHECK(cnrtNotifierDestroy(&start));
-        MGB_CNRT_CHECK(cnrtNotifierDestroy(&end));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(start));
+        MGB_CNRT_CHECK(cnrtNotifierDestroy(end));
     }
 };
 }  // namespace
