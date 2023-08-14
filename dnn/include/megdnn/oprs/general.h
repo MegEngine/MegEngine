@@ -1417,11 +1417,11 @@ class MaskedFill : public OperatorBase {
 
 public:
     virtual void exec(
-            _megdnn_tensor_in origin, _megdnn_tensor_in index,
-            _megdnn_tensor_out dst) = 0;
-    void exec(
+            _megdnn_tensor_in origin, _megdnn_tensor_in index, _megdnn_tensor_out dst) {
+    }
+    virtual void exec(
             _megdnn_tensor_in origin, _megdnn_tensor_in index, _megdnn_tensor_out dst,
-            _megdnn_workspace /*workspace*/) {
+            _megdnn_workspace workspace) {
         exec(origin, index, dst);
     }
     virtual size_t get_workspace_in_bytes(
