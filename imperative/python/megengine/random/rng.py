@@ -255,15 +255,15 @@ class RNG:
     def uniform(
         self, low: float = 0, high: float = 1, size: Optional[Iterable[int]] = None
     ):
-        r"""Random variable with uniform distribution $U(0, 1)$.
+        r"""Random variable with uniform distribution :math:`U(low, high)`.
 
         Args:
-            low: lower range. Default: 0
-            high: upper range. Default: 1
-            size: the size of output tensor. Default: None
+            low(float): lower range. Default: 0.
+            high(float): upper range. Default: 1.
+            size(Optional[Iterable[int]]): the size of output tensor. Default: None.
 
         Returns:
-            the output tensor.
+            Return type: tensor. The random variable with uniform distribution.
 
         Examples:
             >>> import megengine.random as rand
@@ -288,13 +288,13 @@ class RNG:
         r"""Random variable with Gaussian distribution :math:`N(\mu, \sigma)`.
 
         Args:
-            mean: the mean or expectation of the distribution. Default: 0
-            std: the standard deviation of the distribution (variance = :math:`\sigma ^ 2`).
-                Default: 1
-            size: the size of output tensor. Default: None
+            mean(float): the mean or expectation of the distribution. Default: 0.
+            std(float): the standard deviation of the distribution (variance = :math:`\sigma ^ 2`).
+                Default: 1.
+            size(Optional[Iterable[int]]): the size of output tensor. Default: None.
 
         Returns:
-            the output tensor.
+            Return type: tensor. The random variable with Gaussian distribution.
 
         Examples:
             >>> import megengine.random as rand
@@ -331,20 +331,20 @@ class RNG:
         where :math:`\Gamma(k)` is the gamma function,
 
         .. math::
-            \Gamma(k)=(k-1) !  \quad \text { for } \quad k>0.
+            \Gamma(k)=(k-1) !  \quad \text { for } \quad k \quad \text{is positive integer}.
 
         Args:
-            shape: the shape parameter (sometimes designated "k") of the distribution.
-                Must be non-negative.
-            scale: the scale parameter (sometimes designated "theta") of the distribution.
-                Must be non-negative. Default: 1
-            size: the size of output tensor. If shape and scale are scalars and given size is, e.g.,
+            shape(Union[Tensor, float]): the shape parameter (sometimes designated "k") of the distribution.
+                Must be positive.
+            scale(Union[Tensor, float]): the scale parameter (sometimes designated "theta") of the distribution.
+                Must be positive. Default: 1.
+            size(Optional[Iterable[int]]): the size of output tensor. If shape and scale are scalars and given size is, e.g.,
                 `(m, n)`, then the output shape is `(m, n)`. If shape or scale is a Tensor and given size
                 is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(shape, scale).shape`.
-                The broadcast rules are consistent with `numpy.broadcast`. Default: None
+                The broadcast rules are consistent with `numpy.broadcast`. Default: None.
 
         Returns:
-            the output tensor.
+            Return type: tensor. The random variable with Gamma distribution.
 
         Examples:
             >>> import megengine.random as rand
@@ -394,14 +394,14 @@ class RNG:
             \mathrm{~B}(\alpha, \beta)=\int_{0}^{1} t^{\alpha-1}(1-t)^{\beta-1} d t.
 
         Args:
-            alpha: the alpha parameter of the distribution. Must be non-negative.
-            beta: the beta parameter of the distribution. Must be non-negative.
-            size: the size of output tensor. If alpha and beta are scalars and given size is, e.g.,
+            alpha(Union[Tensor, float]): the alpha parameter of the distribution. Must be positive.
+            beta(Union[Tensor, float]): the beta parameter of the distribution. Must be positive.
+            size(Optional[Iterable[int]]): the size of output tensor. If alpha and beta are scalars and given size is, e.g.,
                 `(m, n)`, then the output shape is `(m, n)`. If alpha or beta is a Tensor and given size
-                is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(alpha, beta).shape`.
+                is, e.g., `(m, n)`, then the output shape is `(m, n) + broadcast(alpha, beta).shape`. Default: None.
 
         Returns:
-            the output tensor.
+            Return type: tensor. The random variable with Beta distribution.
 
         Examples:
             >>> import megengine.random as rand
@@ -439,13 +439,13 @@ class RNG:
         where k is the number of occurrences :math:`({\displaystyle k=0,1,2...})`.
 
         Args:
-            lam: the lambda parameter of the distribution. Must be non-negative.
-            size: the size of output tensor. If lam is a scalar and given size is, e.g., `(m, n)`,
+            lam(Union[float, Tensor]): the lambda parameter of the distribution. Must be positive.
+            size(Optional[Iterable[int]]): the size of output tensor. If lam is a scalar and given size is, e.g., `(m, n)`,
                 then the output shape is `(m, n)`. If lam is a Tensor with shape `(k, v)` and given
                 size is, e.g., `(m, n)`, then the output shape is `(m, n, k, v)`. Default: None.
 
         Returns:
-            the output tensor.
+            Return type: tensor. The random variable with Poisson distribution.
 
 
 
@@ -479,7 +479,7 @@ class RNG:
             If ``n`` is a multi-dimensional tensor, it is only shuffled along its first index.
 
         Args:
-            n: If ``n`` is an integer, random permutation of integers from :math:`0` to :math:`n - 1`. 
+            n: If ``n`` is an integer, random permutation of integers from :math:`0` to :math:`n - 1`.
                 If ``n`` is an tensor, make a copy and shuffle the elements randomly.
             dtype: the output data type when ``n`` is an integer.
                 int32, int16 and float32 are supported. Default: int32
@@ -515,7 +515,7 @@ class RNG:
         return _shuffle(inp=n, seed=_seed, handle=self._handle)
 
     def shuffle(self, inp: Tensor):
-        r"""Modify a sequence in-place by shuffling its contents. 
+        r"""Modify a sequence in-place by shuffling its contents.
         This function only shuffles the Tensor along the first axis of a multi-dimensional Tensor.
         The order of sub-Tensors is changed but their contents remains the same.
 
