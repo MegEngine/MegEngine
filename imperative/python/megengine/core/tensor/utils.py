@@ -23,6 +23,7 @@ from .._imperative_rt.core2 import (
 )
 from .._imperative_rt.ops import SubgraphBuilder as _SubgraphBuilder
 from .._imperative_rt.ops import jit_supported
+from .._trace_option import use_xla_backend
 from .._wrap import as_device
 from ..autodiff.grad import Function
 from ..ops import builtin
@@ -309,7 +310,7 @@ def subgraph_fn(
     interpret=False
 ):
     def decorator(func):
-        if not interpret:
+        if not interpret and not use_xla_backend():
             op = subgraph(
                 name,
                 dtype,

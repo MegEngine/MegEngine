@@ -235,6 +235,8 @@ class TraceResult:
         if len(self.consts) > 0:
             ret += f"const:\n        {func_const_str}\n    "
         ret += "\n    ".join(map(self._str_eqn, self.eqns))
+        output_num = len(self.outputs)
+        ret += f"\n return {output_num} {func_oups_str}"
         ret += "\n}"
         return ret
 

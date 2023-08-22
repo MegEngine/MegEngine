@@ -10,6 +10,7 @@ import numpy as np
 from megengine.autodiff.grad_manager import GradManager, get_backwarding_grad_manager
 
 from ..core._imperative_rt.core2 import apply
+from ..core._trace_option import use_xla_backend
 from ..core.ops.builtin import ParamPackConcat, ParamPackSplit
 from ..functional.tensor import copy
 from ..tensor import Tensor
@@ -233,6 +234,14 @@ class AllreduceCallback:
         self._packing_size[dtype] = 0
 
     def __call__(self, param, grad):
+        if use_xla_backend():
+            self._used_xla = True
+            grad = all_reduce_sum(grad, self._group)
+            if self._reduce_method == "mean":
+                grad /= self._group.size
+            return grad
+        if getattr(self, "_used_xla", False) and grad._is_external_value():
+            return grad
         gm = get_backwarding_grad_manager()
         assert isinstance(gm, GradManager)
         if gm not in self._marked_gm:

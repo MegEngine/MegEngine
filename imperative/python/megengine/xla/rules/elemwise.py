@@ -39,11 +39,13 @@ def _infer_elemwise_oshape(inp_shapes):
             longer = lhs_shape if len(lhs_shape) > len(rhs_shape) else rhs_shape
 
             right_part = longer[-len(shorter) :]
+            left_part = longer[: -len(shorter)]
             for l, s in zip(right_part, shorter):
                 assert (
-                    l == s or s == 1
+                    l == s or s == 1 or l == 1
                 ), f"infer elemwise shape error: {lhs_shape} {rhs_shape}"
-            oshape = longer
+            right_part = tuple(max(l, s) for l, s in zip(right_part, shorter))
+            oshape = left_part + right_part
 
         return oshape
 

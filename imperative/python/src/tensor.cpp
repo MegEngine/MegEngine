@@ -43,11 +43,13 @@
 #include <pybind11/operators.h>
 #include <pybind11/pytypes.h>
 #include <pyerrors.h>
+#include <algorithm>
 #include <iterator>
 #include <range/v3/all.hpp>
 #include <string>
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "../../src/impl/mgb_cg_impl.h"
 #include "./backtrace.h"
@@ -1244,6 +1246,13 @@ void init_tensor(py::module m) {
             mgb_assert(outmark_to_id.find(mark) == outmark_to_id.end());
             outmark_to_id[mark] = id;
         }
+        void remove_output_mark(size_t id) {
+            auto marks = trace_result->vars[id].out_marker;
+            trace_result->vars[id].out_marker.clear();
+            for (auto m : marks) {
+                outmark_to_id.erase(m);
+            }
+        }
         void enter() {
             auto& self = *this;
             if (!self.trace_result) {  // untraced
@@ -1480,6 +1489,41 @@ void init_tensor(py::module m) {
                          self.compiled_guard.reset();
                      }
                  })
+            .def("_remove_unused_data_required",
+                 [](Trace& self) {
+                     for (auto&& var : self.trace_result->vars) {
+                         if (var.out_marker.empty())
+                             var.data_required = false;
+                     }
+                 })
+            .def("_remove_ops",
+                 [](Trace& self, std::vector<std::string> op_types) {
+                     std::unordered_set<std::string> removed_set(
+                             op_types.begin(), op_types.end());
+                     std::vector<int> removed_ids;
+                     auto&& ops = self.trace_result->seq;
+                     for (int i = 0; i < ops.size(); i++) {
+                         auto&& op = ops[i].op;
+                         if (op) {
+                             if (removed_set.find(op->type_name()) !=
+                                 removed_set.end()) {
+                                 removed_ids.push_back(i);
+                             }
+                         }
+                     }
+
+                     for (int i = removed_ids.size() - 1; i >= 0; i--) {
+                         ops.erase(ops.begin() + removed_ids[i]);
+                     }
+                 })
+            .def("_remove_ops_by_index",
+                 [](Trace& self, std::vector<int> ids) {
+                     std::sort(ids.begin(), ids.end());
+                     auto&& ops = self.trace_result->seq;
+                     for (int i = ids.size() - 1; i >= 0; i--) {
+                         ops.erase(ops.begin() + ids[i]);
+                     }
+                 })
             .def("end_excluded_region",
                  [](Trace& self) {
                      mgb_assert(bool(self.tracing) ^ bool(self.compiled));
@@ -1494,7 +1538,8 @@ void init_tensor(py::module m) {
                      }
                  })
             .def("mark_output", &Trace::mark_output)
-            .def("mark_input", &Trace::mark_input);
+            .def("mark_input", &Trace::mark_input)
+            .def("remove_output_mark", &Trace::remove_output_mark);
     using VarInfo = TraceResult::VarInfo;
     using OpKind = TraceResult::SeqItem::OpKind;
     std::unordered_map<VarInfo::Kind, std::string> kind2str = {
