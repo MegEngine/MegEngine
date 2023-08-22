@@ -660,3 +660,62 @@ class Cutmix(Module):
         )[0]
 
         return data, label
+
+
+class CropAndPad(Module):
+    r"""Pad or Crop the input tensor with given percent value and resize to original shape.
+    Percent supports mge.tensor type, which is the scaling ratio for each image. If value > 0, 
+    image will be padded. If value < 0, image will be cropped.
+    
+    Args:
+        mode: interpolation methods, acceptable values are:"bilinear", "nearest". Default: "bilinear"
+        align_corners: this only has an effect when ``mode`` is "bilinear". If set to ``True``, the input
+            and output tensors are aligned by the center points of their corner
+            pixels, preserving the values at the corner pixels. If set to ``False``,
+            the input and output tensors are aligned by the corner points of their
+            corner pixels, and the interpolation uses edge value padding for
+            out-of-boundary values, making this operation *independent* of input size. Default: "False"
+
+    Shape:
+        - input: :math:`(N, C, H, W)` (now only support NCHW format tensor)
+        - percent: :math:`(N,)` 
+        - pad_val: :math:`(N,)`
+    
+    Examples:
+
+        .. code-block::
+
+            import numpy as np
+            import megengine as mge
+            import megengine.module as M
+
+            m = M.CropAndPad()
+            inp = mge.tensor(np.random.randn(2, 1, 160, 160), dtype=np.float32)
+            percent = (0.2) * mge.tensor(np.random.random(128,)).astype("float32") - 0.1
+            pad_val = inp.mean(axis=[3,2,1])
+
+            out = m(inp, percent, pad_val)
+
+            print(out.numpy().shape)
+
+        Outputs:
+
+        .. code-block::
+
+            (2, 1, 160, 160)
+    """
+
+    def __init__(self, mode="bilinear", align_corners=False):
+        super().__init__()
+        assert mode in ["bilinear", "nearest"]
+        self.custom_func = custom.cropandpad_forward(
+            mode=mode, align_corners=align_corners
+        )
+
+    def forward(self, inp: Tensor, percent: Tensor, pad_val: Tensor = None) -> Tensor:
+        if pad_val is None:
+            pad_val = Tensor([])
+
+        res = apply(self.custom_func, inp, percent, pad_val)[0]
+
+        return res

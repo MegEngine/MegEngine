@@ -38,6 +38,21 @@ cudaStream_t get_cuda_stream(Device device) {
     return CompNodeEnv::from_comp_node(cn).cuda_env().stream;
 }
 
+int get_max_threads_per_block(Device device) {
+    auto cn = to_builtin<CompNode>(device);
+    return CompNodeEnv::from_comp_node(cn).cuda_env().device_prop.maxThreadsPerBlock;
+}
+
+const int* get_max_threads_dim(Device device) {
+    auto cn = to_builtin<CompNode>(device);
+    return CompNodeEnv::from_comp_node(cn).cuda_env().device_prop.maxThreadsDim;
+}
+
+const int* get_max_grid_size(Device device) {
+    auto cn = to_builtin<CompNode>(device);
+    return CompNodeEnv::from_comp_node(cn).cuda_env().device_prop.maxGridSize;
+}
+
 #else
 
 const CudaRuntimeArgs get_cuda_runtime_args(const RuntimeArgs& rt_args) {
@@ -67,6 +82,20 @@ cudaStream_t get_cuda_stream(Device device) {
             "megbrain is not support cuda now, please rebuild megbrain with CUDA "
             "ENABLED");
 }
+
+#define CUDA_DISABLED(func_def)                                                        \
+    func_def {                                                                         \
+        mgb_assert(                                                                    \
+                false,                                                                 \
+                "megbrain is not support cuda now, please rebuild megbrain with CUDA " \
+                "ENABLED");                                                            \
+    }
+
+CUDA_DISABLED(int get_max_threads_per_block(Device device))
+
+CUDA_DISABLED(const int* get_max_threads_dim(Device device))
+
+CUDA_DISABLED(const int* get_max_grid_size(Device device))
 
 #endif
 

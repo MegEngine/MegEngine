@@ -26,5 +26,8 @@ get_cuda_runtime_args(const RuntimeArgs& rt_args);
 MGE_WIN_DECLSPEC_FUC int get_cuda_device_id(Device device);
 MGE_WIN_DECLSPEC_FUC const cudaDeviceProp* get_cuda_device_props(Device device);
 MGE_WIN_DECLSPEC_FUC cudaStream_t get_cuda_stream(Device device);
+MGE_WIN_DECLSPEC_FUC int get_max_threads_per_block(Device device);
+MGE_WIN_DECLSPEC_FUC const int* get_max_threads_dim(Device device);
+MGE_WIN_DECLSPEC_FUC const int* get_max_grid_size(Device device);
 
 }  // namespace custom
