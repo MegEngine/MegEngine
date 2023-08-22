@@ -8,16 +8,21 @@ from .optimizer import Optimizer
 
 
 class AdamW(Optimizer):
-    r"""Implements AdamW algorithm proposed in `"Decoupled Weight Decay Regularization" <https://arxiv.org/abs/1711.05101>`_.
+    r"""Implements the AdamW algorithm proposed in `"Decoupled Weight Decay Regularization" <https://arxiv.org/abs/1711.05101>`_.
+
+    This optimizer combines the Adam optimizer with weight decay regularization to prevent overfitting.
 
     Args:
-        params: iterable of parameters to optimize or dicts defining
+        params (Union[Iterable[Parameter], dict]): Iterable of parameters to optimize or dicts defining
             parameter groups.
-        lr: learning rate.
-            betas: coefficients used for computing running averages of gradient
-            and its square. Default: (0.9, 0.999)
-        eps: term added to the denominator to improve numerical stability. Default: 1e-8
-        weight_decay: weight decay (L2 penalty). Default: 1e-2
+        lr (float): Learning rate.
+        betas (Tuple[float, float], optional): Coefficients used for computing running averages of gradient
+            and its square. Default: (0.9, 0.999).
+        eps (float, optional): Term added to the denominator to improve numerical stability. Default: 1e-8.
+        weight_decay (float, optional): Weight decay (L2 penalty). Default: 1e-2.
+    
+    Returns:
+        An instance of the AdamW optimizer.
     """
 
     def __init__(

@@ -8,20 +8,21 @@ from .optimizer import Optimizer
 
 
 class Adagrad(Optimizer):
-    r"""Implements Adagrad algorithm.
-    
-    It has been proposed in `"Adaptive Subgradient Methods for Online Learning
+    r"""Implements Adagrad algorithm proposed in `"Adaptive Subgradient Methods for Online Learning
     and Stochastic Optimization" <http://jmlr.org/papers/v12/duchi11a.html>`_.
 
     Args:
-        params: iterable of parameters to optimize or dicts defining
+        params (Union[Iterable[Parameter], dict]): iterable of parameters to optimize or dicts defining
             parameter groups.
-        lr: coefficient that scales delta before it is applied
-            to the parameters. Default: 1e-2
-        lr_decay: learning rate decay. Default: 0
-        eps: term added to the denominator to improve
-            numerical stability. Default: 1e-10
-        weight_decay: weight decay (L2 penalty). Default: 0
+        lr (float): coefficient that scales delta before it is applied
+            to the parameters. Default: 1e-2.
+        lr_decay (float): learning rate decay. Default: 0.
+        eps (float): term added to the denominator to improve
+            numerical stability. Default: 1e-10.
+        weight_decay (float): weight decay (L2 penalty). Default: 0.
+
+    Returns:
+        An instance of the Adagrad optimizer.
     """
 
     def __init__(

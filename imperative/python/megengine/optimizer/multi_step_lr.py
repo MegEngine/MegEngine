@@ -11,10 +11,13 @@ class MultiStepLR(LRScheduler):
         number of epoch reaches one of the milestones.
 
     Args:
-        optimizer: wrapped optimizer.
-        milestones: list of epoch indices which should be increasing.
-        gamma: multiplicative factor of learning rate decay. Default: 0.1
-        current_epoch: the index of current epoch. Default: -1
+        optimizer (Optimizer): wrapped optimizer.
+        milestones (Iter[int]): list of epoch indices which should be increasing.
+        gamma (float): multiplicative factor of learning rate decay. Default: 0.1.
+        current_epoch (int): the index of current epoch. Default: -1.
+    
+    Returns:
+        An instance of the MultiStepLR Scheduler.
     """
 
     def __init__(

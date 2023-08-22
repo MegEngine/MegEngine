@@ -8,20 +8,21 @@ from .optimizer import Optimizer
 
 
 class Adadelta(Optimizer):
-    r"""Implements Adadelta algorithm.
-    
-    It has been proposed in `"ADADELTA: An Adaptive Learning Rate Method" <https://arxiv.org/abs/1212.5701>`_.
+    r"""Implements Adadelta algorithm proposed in `"ADADELTA: An Adaptive Learning Rate Method" <https://arxiv.org/abs/1212.5701>`_.
 
     Args:
-        params: iterable of parameters to optimize or dicts defining
+        params (Union[Iterable[Parameter], dict]): iterable of parameters to optimize or dicts defining
             parameter groups.
-        lr: coefficient that scales delta before it is applied
-            to the parameters. Default: 1.0
-        rho: coefficient used for computing a running average
-            of squared gradients. Default: 0.9
-        eps: term added to the denominator to improve
-            numerical stability. Default: 1e-6
-        weight_decay: weight decay (L2 penalty). Default: 0
+        lr (float): coefficient that scales delta before it is applied
+            to the parameters. Default: 1.0.
+        rho (float): coefficient used for computing a running average
+            of squared gradients. Default: 0.9.
+        eps (float): term added to the denominator to improve
+            numerical stability. Default: 1e-6.
+        weight_decay (float): weight decay (L2 penalty). Default: 0.
+    
+    Returns:
+        An instance of the Adadelta optimizer.
     """
 
     def __init__(

@@ -11,16 +11,25 @@ from .optimizer import Optimizer
 class SGD(Optimizer):
     r"""Implements stochastic gradient descent.
 
+    This optimizer performs stochastic gradient descent with optional momentum and weight decay.
+
     Nesterov momentum is based on the formula from
-    `"On the importance of initialization and momentum in deep learning" <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_ .
+    `"On the importance of initialization and momentum in deep learning" <http://www.cs.toronto.edu/%7Ehinton/absps/momentum.pdf>`_.
 
     Args:
-        params: iterable of parameters to optimize or dicts defining
+        params (Union[Iterable[Parameter], dict]): Iterable of parameters to optimize or dicts defining
             parameter groups.
-        lr: learning rate.
-        momentum: momentum factor. Default: 0.0
-        nesterov: enables Nesterov momentum. Default: False
-        weight_decay: weight decay (L2 penalty). Default: 0.0
+        lr (float): Learning rate.
+        momentum (float): Momentum factor. Default: 0.0.
+        nesterov (bool): Enables Nesterov momentum. Default: False.
+        weight_decay (float): Weight decay (L2 penalty). Default: 0.0.
+    
+    Returns:
+        An instance of the SGD optimizer.
+
+    Note:
+        This optimizer does not guarantee that the interval does not include the stop value in cases
+        where the step is not an integer and floating-point rounding errors affect the length of the output tensor.
     """
 
     def __init__(

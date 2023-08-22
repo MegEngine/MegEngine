@@ -8,8 +8,11 @@ class LRScheduler(metaclass=ABCMeta):
     r"""Base class for all learning rate based schedulers.
 
     Args:
-        optimizer: wrapped optimizer.
-        current_epoch: the index of current epoch. Default: -1
+        optimizer (Optimizer): wrapped optimizer.
+        current_epoch (int): the index of current epoch. Default: -1.
+    
+    Returns:
+        An instance of the LRScheduler.
     """
 
     def __init__(  # pylint: disable=too-many-branches

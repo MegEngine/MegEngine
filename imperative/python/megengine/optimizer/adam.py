@@ -11,13 +11,16 @@ class Adam(Optimizer):
     r"""Implements Adam algorithm proposed in `"Adam: A Method for Stochastic Optimization" <https://arxiv.org/abs/1412.6980>`_.
 
     Args:
-        params: iterable of parameters to optimize or dicts defining
+        params (Union[Iterable[Parameter], dict]): iterable of parameters to optimize or dicts defining
             parameter groups.
-        lr: learning rate.
-            betas: coefficients used for computing running averages of gradient
-            and its square. Default: (0.9, 0.999)
-        eps: term added to the denominator to improve numerical stability. Default: 1e-8
-        weight_decay: weight decay (L2 penalty). Default: 0
+        lr (float): learning rate.
+        betas (Tuple[float, float]): coefficients used for computing running averages of gradient
+            and its square. Default: (0.9, 0.999).
+        eps (float): term added to the denominator to improve numerical stability. Default: 1e-8.
+        weight_decay (float): weight decay (L2 penalty). Default: 0.
+    
+    Returns:
+        An instance of the Adam optimizer.
     """
 
     def __init__(
