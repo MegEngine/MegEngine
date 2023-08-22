@@ -240,8 +240,12 @@ class trace:
         return self._trace.without_host
 
     def flatten_inputs(self, *args, **kwargs):
-        from ..traced_module.pytree import tree_flatten
+        from ..traced_module.pytree import tree_flatten, SUPPORTED_LEAF_CLS
         from ..module import Module
+        from ..optimizer import Optimizer
+
+        if Optimizer not in SUPPORTED_LEAF_CLS:
+            SUPPORTED_LEAF_CLS.append(Optimizer)
 
         tensor_args = []
         modules = []
@@ -253,6 +257,11 @@ class trace:
                 modules.append(a)
         for m in modules:
             tensor_args.extend(list(m.parameters()))
+        grads = []
+        for t in tensor_args:
+            if t.grad is not None:
+                grads.append(t.grad)
+        tensor_args.extend(grads)
         return tensor_args
 
     def compile(self):
@@ -397,11 +406,26 @@ class trace:
                 arg_list[i]._reset(get_marked_input_tensor(self.input_num, arg))
                 self.arg_list.append(self.input_num)
                 self.input_num += 1
+            arg_ids = [id(i) for i in arg_list]
             del arg_list
+            self.input_need_update_dict = {}
+            origin_reset = Tensor._reset
+
+            def tensor_reset_hook(obj, other):
+                if id(obj) in arg_ids:
+                    other = get_marked_output_tensor(self.output_num, other)
+                    self.input_need_update_dict[
+                        arg_ids.index(id(obj))
+                    ] = self.output_num
+                    self.output_num += 1
+                origin_reset(obj, other)
+
             symbolic_shape = set_symbolic_shape(self._symbolic_shape)
+            Tensor._reset = tensor_reset_hook
             if self.third_party_backend:
                 self.setup_env()
             outputs = self.__wrapped__(*args, **kwargs)
+            Tensor._reset = origin_reset
 
         finally:
             handling_exc = sys.exc_info() != (None,) * 3
@@ -419,13 +443,14 @@ class trace:
                 self._process_outputs(outputs)
             if not self._trace.compiled():
                 outlist, self.outdef = tree_flatten(outputs)
-                for i, out in enumerate(outlist):
-                    assert isinstance(out, RawTensor), type(out)
-                    outlist[i] = get_marked_output_tensor(self.output_num, out)
-                    del out
-                    self.out_list.append(self.output_num)
-                    self.output_num += 1
-                outputs = self.outdef.unflatten(outlist)
+                if outputs is not None:
+                    for i, out in enumerate(outlist):
+                        assert isinstance(out, RawTensor), type(out)
+                        outlist[i] = get_marked_output_tensor(self.output_num, out)
+                        del out
+                        self.out_list.append(self.output_num)
+                        self.output_num += 1
+                    outputs = self.outdef.unflatten(outlist)
             try:
                 # may raise TraceError
                 self._trace.exit()

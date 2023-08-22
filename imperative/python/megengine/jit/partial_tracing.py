@@ -19,7 +19,7 @@ def _process_fwd_bwd_trace_result(fwd, bwd, inp_grad_map, out_grad_map):
     keep_vars = fwd_features.intersection(
         bwd_features
     )  # some intermediate vars produced by forward, and will be used in backward.
-    current = max(fwd.out_list) + 1
+    current = fwd.output_num
     saved_feature_map = OrderedDict()
     saved_featrues = []
     # mark keep_vars as forward outputs
@@ -65,12 +65,12 @@ def _process_fwd_bwd_trace_result(fwd, bwd, inp_grad_map, out_grad_map):
             bwd_out_idx += 1
     # assert -1 not in bwd_dys
     assert -1 not in bwd_inps
-    for var in fwd._trace.vars:
-        if not var.out_mark:
-            var.data_required = False
+    fwd._trace._remove_unused_data_required()
     # assert -1 not in bwd_outputs
     bwd.setup_io_without_trace(bwd_dys + bwd_inps, bwd_outputs)
     bwd.setup_without_host()
+
+    bwd._trace._remove_unused_data_required()
 
     def check_external(trace_obj):
         for var in trace_obj.vars:
@@ -87,6 +87,10 @@ JIT_BACKEND = {"default": trace, "xla": xla_trace}
 
 
 def partial_trace(func=None, *, backend="default", without_host=True, **trace_options):
+    # import os
+    # if int(os.environ.get('DISABLE_TRACE', "0")) != 0:
+    #     return lambda func: func
+
     assert backend in JIT_BACKEND
     assert without_host, "partial_trace only support without_host mode currently!"
 
@@ -175,6 +179,7 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
 
                 def exit_trace():
                     backward_trace_obj._trace.exit()
+                    backward_trace_obj.unset_env()
                     new_dict = {}
                     for k, v in inp_grad_maps.items():
                         if v is not None:
@@ -197,6 +202,7 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                             new_dict[get_handle_id(k)] = get_handle_id(v.grad)
                     out_grad_maps.clear()
                     out_grad_maps.update(new_dict)
+                    backward_trace_obj.setup_env()
                     backward_trace_obj._trace.enter()
 
                 _add_backward_callback(enter_trace)
@@ -216,7 +222,9 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                 if outdef is None:
                     return custom_autodiff(*fargs)
                 else:
-                    return outdef.unflatten(custom_autodiff(*fargs))
+                    rst = custom_autodiff(*fargs)
+                    rst = [rst,] if not isinstance(rst, Sequence) else rst
+                    return outdef.unflatten(rst)
 
         return wrapped_func
 

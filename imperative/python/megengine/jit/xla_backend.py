@@ -129,9 +129,10 @@ class xla_trace(trace):
         from ..utils.module_utils import get_expand_structure
         from ..xla.device import get_xla_backend_and_device
         from ..tensor import Tensor
-        from ..distributed import get_mm_server_addr, is_distributed
+        from ..distributed import get_mm_server_addr, is_distributed, get_rank
 
         assert self.traced
+
         self.xla_exec, self.inp_ids, self.out_ids = build_xla(
             self,
             return_with_io=True,
@@ -153,7 +154,10 @@ class xla_trace(trace):
             self.has_randomstate = True
             self.random_seed = Tensor([[1, 2], [3, 4]], dtype="int32")
         else:
-            assert self.input_num == len(set(self.inp_ids))
+            assert self.input_num == len(set(self.inp_ids)), (
+                self.input_num,
+                len(self.inp_ids),
+            )
             self.has_randomstate = False
         inpmark2id = dict()
         outmark2id = dict()
@@ -216,8 +220,11 @@ class xla_trace(trace):
         xla_comp_cn = "gpu{}:{}".format(device_id, xla_stream)
         for t in inputs:
             if isinstance(t, RawTensor):
-                assert cn == t.device
-                arrays.append(t.to(xla_comp_cn, _borrow=True))
+                if not t._is_external_value():
+                    assert cn == t.device
+                    arrays.append(t.to(xla_comp_cn, _borrow=True))
+                else:
+                    arrays.append(t)
 
         arrays = self.prepare_xla_inputs(arrays)
         outputs = self.xla_exec(*arrays)
@@ -230,6 +237,10 @@ class xla_trace(trace):
                     return_vals.append(None)
             else:
                 return_vals.append(outputs[self.outkey2idx[i]])
+        if not self.out_list:
+            return_vals = [
+                None,
+            ]
         keeped_features = []
         for i in self.keeped_activation:
             keeped_features.append(tensor(outputs[self.outkey2idx[i]], device=cn))
@@ -251,6 +262,10 @@ class xla_trace(trace):
                 xla_array = outputs[self.outkey2idx[key]]
                 t = tensor(xla_array, device=cn)
                 state._reset(t)
+        elif hasattr(self, "input_need_update_dict"):
+            for index, out_mark in self.input_need_update_dict.items():
+                inputs[index]._reset(outputs[self.outkey2idx[out_mark]])
+
         rst = (
             self.outdef.unflatten(out_tensors)
             if hasattr(self, "outdef")
