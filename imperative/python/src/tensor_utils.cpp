@@ -1906,12 +1906,11 @@ PyObject* convert_single_value_cpp(
 
 PyObject* convert_inputs_cpp(PyObject* self, PyObject* const* args, size_t nargs) {
     try {
-        py::object dtype = py::reinterpret_steal<py::object>(
-                dtype_promotion(self, args, nargs - 1));
+        PyArray_Descr* res = _dtype_promotion(args, nargs - 1);
+        py::object dtype = py::cast(npy::dtype_np2mgb_descr(res));
         py::object device;
         if (args[nargs - 1] == Py_None) {
-            device = py::reinterpret_steal<py::object>(
-                    get_device(self, args, nargs - 1));
+            device = py::cast(_get_device(args, nargs - 1));
         } else {
             device = py::reinterpret_borrow<py::object>(args[nargs - 1]);
         }

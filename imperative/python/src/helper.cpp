@@ -392,7 +392,8 @@ DType dtype_np2mgb_descr(PyArray_Descr* descr) {
         (dtype_metadata = PyDict_GetItemString(descr->metadata, "mgb_dtype"))) {
         return handle_parameterized_dtype(dtype_metadata);
     }
-    return dtype_np2mgb_raw(descr->type_num);
+    int type_num = to_mgb_supported_dtype_raw(descr->type_num);
+    return dtype_np2mgb_raw(type_num);
 }
 
 HostTensorND lowbit_ndarray_to_host_tensor(

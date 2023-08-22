@@ -357,6 +357,8 @@ def test_reshape(is_varnode):
         (1, make_tensor(-1, network), 3),
         np.array([1, -1, 3], dtype="int32"),
         make_tensor([1, -1, 3], network),
+        np.array([1, -1, 3], dtype="int64"),
+        (make_tensor(1, network), -1, np.array(3, dtype="int64")),
     ]:
         yy = F.reshape(xx, shape)
         np.testing.assert_equal(yy.numpy(), y)
