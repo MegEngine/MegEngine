@@ -192,7 +192,7 @@ AtlasRuntimeOpr::AtlasRuntimeOpr(
         MGB_ATLAS_CHECK(aclmdlSetConfigOpt(
                 config_handle, ACL_MDL_MEM_SIZET, &mdl_mem_size, sizeof(size_t)));
 
-        size_t mem_optimize_mode = 1;
+        size_t mem_optimize_mode = true;
         MGB_ATLAS_CHECK(aclmdlSetConfigOpt(
                 config_handle, ACL_MDL_WORKSPACE_MEM_OPTIMIZE, &mem_optimize_mode,
                 sizeof(size_t)));

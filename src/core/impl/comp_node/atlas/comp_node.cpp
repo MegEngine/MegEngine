@@ -286,6 +286,7 @@ class AtlasCompNode::EventImpl final : public EventImplHelper {
     AtlasCompNodeImpl* const m_comp_node_impl;
     aclrtEvent m_atlas_event;
     bool m_init_finished = false;
+    bool m_used_for_sync = false;
 
     void do_record() override {
         m_comp_node_impl->activate();
@@ -306,6 +307,10 @@ class AtlasCompNode::EventImpl final : public EventImplHelper {
 
     void host_wait_cv() override {
         MGB_ATLAS_CHECK(aclrtSynchronizeEvent(m_atlas_event));
+        if (m_used_for_sync) {
+            MGB_ATLAS_CHECK(aclrtResetEvent(
+                    m_atlas_event, m_comp_node_impl->m_env.atlas_env().stream));
+        }
     }
 
     double do_elapsed_time_until(EventImplHelper& end) override {
@@ -322,8 +327,14 @@ public:
     EventImpl(AtlasCompNodeImpl* comp_node_impl, size_t create_flags)
             : EventImplHelper(comp_node_impl, create_flags),
               m_comp_node_impl{comp_node_impl} {
+        m_used_for_sync = !(m_create_flags & NEED_TIMER);
         m_comp_node_impl->activate();
-        MGB_ATLAS_CHECK(aclrtCreateEvent(&m_atlas_event));
+        if (m_used_for_sync) {
+            MGB_ATLAS_CHECK(aclrtCreateEvent(&m_atlas_event));
+        } else {
+            MGB_ATLAS_CHECK(
+                    aclrtCreateEventWithFlag(&m_atlas_event, ACL_EVENT_TIME_LINE));
+        }
         m_init_finished = true;
     }
     ~EventImpl() {
@@ -346,11 +357,19 @@ void AtlasCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
         auto stream = imp->m_env.atlas_env().stream;
         imp->activate();
         MGB_ATLAS_CHECK(aclrtStreamWaitEvent(stream, m_atlas_event));
+        if (m_used_for_sync) {
+            MGB_ATLAS_CHECK(aclrtResetEvent(
+                    m_atlas_event, m_comp_node_impl->m_env.atlas_env().stream));
+        }
         return;
     }
     if (cn_impl->env().property().type == DeviceType::CPU) {
         auto waiter = [this]() {
             MGB_ATLAS_CHECK(aclrtSynchronizeEvent(m_atlas_event));
+            if (m_used_for_sync) {
+                MGB_ATLAS_CHECK(aclrtResetEvent(
+                        m_atlas_event, m_comp_node_impl->m_env.atlas_env().stream));
+            }
         };
         cn_impl->add_callback(std::move(waiter));
         return;
