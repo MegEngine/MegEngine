@@ -71,14 +71,14 @@ public:
         return CompNode::DeviceType::CAMBRICON;
     }
     void set_device(int device) override {
-        int dev;
+        // int dev;
         // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
-        MGB_CNRT_CHECK(cnrtSetDevice(dev));
+        MGB_CNRT_CHECK(cnrtSetDevice(device));
     }
     void device_synchronize(int device) override {
-        int dev;
+        // int dev;
         // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
-        MGB_CNRT_CHECK(cnrtSetDevice(dev));
+        MGB_CNRT_CHECK(cnrtSetDevice(device));
         MGB_CNRT_CHECK(cnrtSyncDevice());
     }
 };
@@ -143,6 +143,7 @@ public:
         activate();
         void* ptr;
         // MGB_CNRT_CHECK(cnrtMallocHost(&ptr, size, CNRT_MEMTYPE_DEFAULT));
+        MGB_CNRT_CHECK(cnrtHostMalloc(&ptr, size));
         return ptr;
     }
 
@@ -384,6 +385,7 @@ void CambriconCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     cnenv.activate();
     dev_num = cnenv.device;
     // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, dev_num));
+    dev = dev_num;
     // remark: Because free_device will be called after global finalize, so the
     // implementation of mem_alloc should handle the deallocation of memories
     // allocated by the mem_alloc. As a result, we should use the DevMemAlloc
@@ -647,9 +649,9 @@ void CambriconCompNode::sync_all() {
 
     MGB_LOCK_GUARD(sd->mtx);
     for (int i = 0; i < sd->nr_dev_used; ++i) {
-        int dev;
+        // int dev;
         // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, sd->dev_info[i].dev_num));
-        MGB_CNRT_CHECK(cnrtSetDevice(dev));
+        MGB_CNRT_CHECK(cnrtSetDevice(sd->dev_info[i].dev_num));
         MGB_CNRT_CHECK(cnrtSyncDevice());
     }
 }
