@@ -45,7 +45,7 @@ public:
 };
 
 template <typename Dtype>
-void run_topk_test(Handle* handle);
+void run_topk_test(Handle* handle, bool test_kth_only = true);
 
 }  // namespace test
 }  // namespace megdnn

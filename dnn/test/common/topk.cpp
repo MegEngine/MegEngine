@@ -45,7 +45,7 @@ public:
 }  // namespace
 
 template <typename Dtype>
-void test::run_topk_test(Handle* handle) {
+void test::run_topk_test(Handle* handle, bool test_kth_only) {
     Checker<TopK> checker{handle};
     using Mode = TopK::Param::Mode;
 
@@ -144,7 +144,11 @@ void test::run_topk_test(Handle* handle) {
         }
     }
 
-    for (auto mode : {Mode::KTH_ONLY, Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED}) {
+    auto modes = {Mode::KTH_ONLY, Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED};
+    if (!test_kth_only) {
+        modes = {Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED};
+    }
+    for (auto mode : modes) {
         run(1, 1, 1, mode);
         run(-1, 1, 1, mode);
         run(1, 23, 1, mode);
@@ -175,7 +179,7 @@ void test::run_topk_test(Handle* handle) {
 }
 namespace megdnn {
 namespace test {
-#define INST(t) template void run_topk_test<t>(Handle*)
+#define INST(t) template void run_topk_test<t>(Handle*, bool)
 
 INST(dtype::Float32);
 INST(dtype::Int32);
