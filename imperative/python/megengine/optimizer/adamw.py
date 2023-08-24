@@ -120,7 +120,6 @@ class AdamW(Optimizer):
             delta = (exp_avg / (c1 - _beta0 ** step)) / (
                 (exp_avg_sq / (c1 - _beta1 ** step)) ** c05 + _eps
             )
-            if weight_decay != 0.0:
-                delta += param * _weight_decay
 
+            delta += param * _weight_decay
             param -= _lr * delta

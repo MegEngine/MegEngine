@@ -23,5 +23,6 @@ MGB_API void* get_cuda_stream(mgbComputeNode_t cn);
 MGB_API DeviceLocator get_physical_location(mgbComputeNode_t);
 MGB_API void sync(mgbComputeNode_t cn);
 MGB_API bool is_finalize();
+MGB_API bool is_xla_used();
 }  // namespace pubapi
 }  // namespace mgb

@@ -12,8 +12,10 @@ from ..core._imperative_rt.core2 import (
     set_py_external_type,
     unset_external_convert,
 )
+from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core._trace_option import set_use_xla_backend
 from ..device import get_default_device
+from ..tensor import Tensor
 from ..utils.dlpack import from_dlpack, to_dlpack
 from .tracing import trace
 
@@ -130,9 +132,11 @@ class xla_trace(trace):
         from ..xla.device import get_xla_backend_and_device
         from ..tensor import Tensor
         from ..distributed import get_mm_server_addr, is_distributed, get_rank
+        from ..device import coalesce_free_memory
 
         assert self.traced
-
+        coalesce_free_memory()
+        _full_sync()
         self.xla_exec, self.inp_ids, self.out_ids = build_xla(
             self,
             return_with_io=True,
@@ -142,6 +146,8 @@ class xla_trace(trace):
         )
         if self.overall:
             self.convert_params_to_xla()
+        coalesce_free_memory()
+        _full_sync()
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
         for idx, id in enumerate(self.inp_ids):
@@ -152,7 +158,10 @@ class xla_trace(trace):
         self.outkey2idx = {}
         if self.input_num == len(set(self.inp_ids)) - 1:
             self.has_randomstate = True
-            self.random_seed = Tensor([[1, 2], [3, 4]], dtype="int32")
+            default_rng_seed = _get_global_rng_seed()
+            high = default_rng_seed >> 32
+            low = default_rng_seed & 0xFFFFFFFF
+            self.random_seed = Tensor([[high, low], [low, high]], dtype="int32")
         else:
             assert self.input_num == len(set(self.inp_ids)), (
                 self.input_num,
@@ -195,6 +204,13 @@ class xla_trace(trace):
                 inp = self.inpkey2idx[k]
                 inp_list[inp] = tensor
                 inp_count += 1
+            opt_hyper_inps = []
+            for opt in self.optimizers:
+                opt_hyper_inps.extend([Tensor(pg["lr"]) for pg in opt.param_groups])
+            for tensor, k in zip(opt_hyper_inps, self.capture_optimizer_hyper_param):
+                inp = self.inpkey2idx[k]
+                inp_list[inp] = tensor
+                inp_count += 1
         assert inp_count == self.input_num
         if self.has_randomstate:
             inp_list.append(self.random_seed)
@@ -207,6 +223,7 @@ class xla_trace(trace):
 
     def execute(self, *args, **kwargs):
         from ..tensor import Tensor
+        from ..optimizer import Optimizer
         from ..traced_module.pytree import tree_flatten
         from ..utils.module_utils import get_expand_structure
 
@@ -218,6 +235,7 @@ class xla_trace(trace):
 
         xla_stream = stream[device_id]
         xla_comp_cn = "gpu{}:{}".format(device_id, xla_stream)
+        self.optimizers = []
         for t in inputs:
             if isinstance(t, RawTensor):
                 if not t._is_external_value():
@@ -225,6 +243,8 @@ class xla_trace(trace):
                     arrays.append(t.to(xla_comp_cn, _borrow=True))
                 else:
                     arrays.append(t)
+            if isinstance(t, Optimizer):
+                self.optimizers.append(t)
 
         arrays = self.prepare_xla_inputs(arrays)
         outputs = self.xla_exec(*arrays)

@@ -1,6 +1,7 @@
 #include "megbrain_build_config.h"
 
 #include "./impl.h"
+#include "megbrain/comp_node_api.h"
 #include "megbrain/utils/arith_helper.h"
 
 #include <algorithm>
@@ -70,6 +71,15 @@ MemAllocImplHelper::MemAddr MemAllocImplHelper::do_alloc(
                     "some gradient variables can be statically allocated",
                     size);
         }
+        return alloc_from_parent(size);
+    }
+
+    constexpr size_t threshold = 512 * 1024 * 1024;
+    if (iter->first.size > size * 8 && iter->first.addr.is_head &&
+        iter->first.size > threshold && pubapi::is_xla_used()) {
+#if !__DEPLOY_ON_XP_SP2__
+        m_mutex.unlock();
+#endif
         return alloc_from_parent(size);
     }
 

@@ -257,12 +257,19 @@ class trace:
                 tensor_args.append(a)
             elif isinstance(a, Module):
                 modules.append(a)
+            elif isinstance(a, Optimizer):
+                states = a._state.values()
+                for s in states:
+                    assert isinstance(s, dict)
+                    tensor_args.extend(list(s.values()))
         for m in modules:
             tensor_args.extend(list(m.parameters()))
         grads = []
         for t in tensor_args:
             if t.grad is not None:
                 grads.append(t.grad)
+        for m in modules:
+            tensor_args.extend(list(m.buffers()))
         tensor_args.extend(grads)
         return tensor_args
 
@@ -294,9 +301,10 @@ class trace:
         args, _ = tree_flatten((args, kwargs))
         for arg in args:
             if isinstance(arg, Optimizer):
-                arg._disable_type_convert = False
                 for param_group in arg.param_groups:
                     for k, v in param_group.items():
+                        if k == "params":
+                            continue
                         if not isinstance(v, (Tensor, Sequence)):
                             param_group[k] = Tensor(v)
                         elif isinstance(v, Sequence) and not isinstance(v[0], Tensor):
@@ -320,6 +328,7 @@ class trace:
         self.update_param_dict = dict()
         self.update_opt_param_dict = dict()
         self.capture_optimizer_state = set()
+        self.capture_optimizer_hyper_param = []
         self.opt_param_dict = dict()
 
     def __call__(self, *args, **kwargs):
@@ -482,6 +491,8 @@ class trace:
             return self.compile_and_exec(*args, **kwargs)
         try:
             active_trace = self
+            if Optimizer not in SUPPORTED_LEAF_CLS:
+                SUPPORTED_LEAF_CLS.append(Optimizer)
             if not self.traced:
                 self.convert_optimizer_state_to_tensor(*args, **kwargs)
             self._trace.enter()
@@ -489,10 +500,17 @@ class trace:
                 arglist, _ = tree_flatten((args, kwargs))
                 idx = 0
                 inp_dict = {}
+                opt_hyper_inps = []
                 for a in arglist:
                     if isinstance(a, RawTensor):
                         inp_dict[self.arg_list[idx]] = a
                         idx += 1
+                    if isinstance(a, Optimizer):
+                        opt_hyper_inps.extend(
+                            [Tensor(pg["lr"]) for pg in a.add_param_groups]
+                        )
+                for t, key in zip(opt_hyper_inps, self.capture_optimizer_hyper_param):
+                    inp_dict[key] = t
                 for t, key in self.opt_param_dict.items():
                     inp_dict[key] = t
                 self._trace.put_datas(inp_dict)
@@ -566,10 +584,19 @@ class trace:
                     self.arg_list.append(self.input_num)
                     self.input_num += 1
                 elif isinstance(arg, Optimizer):
-                    opt_params, _ = tree_flatten(arg.state_dict(keep_var=True))
+                    opt_state_dict = arg.state_dict(keep_var=True)
+                    for state in opt_state_dict["param_groups"]:
+                        state.pop("lr")
+                    opt_params, _ = tree_flatten(opt_state_dict)
                     for p in opt_params:
                         if isinstance(p, Tensor):
                             self.capture_optimizer_state.add(p)
+                    for pg in arg.param_groups:
+                        pg["lr"] = get_marked_input_tensor(
+                            self.input_num, Tensor(pg["lr"])
+                        )
+                        self.capture_optimizer_hyper_param.append(self.input_num)
+                        self.input_num += 1
             self.opt_param_dict = {}
             for t in self.capture_optimizer_state:
                 if t not in self.tensor_to_attr:  # not module parameter

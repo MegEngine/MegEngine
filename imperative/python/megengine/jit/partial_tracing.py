@@ -3,9 +3,12 @@ from typing import Sequence
 
 from ..core._imperative_rt.core2 import add_backward_callback as _add_backward_callback
 from ..core._imperative_rt.core2 import get_grad_slot, get_handle_id
+from ..logger import get_logger
 from ..tensor import Tensor
 from .tracing import trace
 from .xla_backend import xla_trace
+
+logger = get_logger(__name__)
 
 
 def _process_fwd_bwd_trace_result(fwd, bwd, inp_grad_map, out_grad_map):
@@ -113,6 +116,7 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
         outdef = None  # treedef of forward return value
         check_shape = backend == "xla"
         shape_hash = None
+        unexpected_shape_hash = set()
         from ..core.autodiff.grad import Function
 
         class CustomAutodiff(Function):
@@ -160,7 +164,10 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                     return rst
 
         def get_shape_hash(*tensors):
-            return hash(tuple([t._tuple_shape for t in tensors]))
+            def map_scalar_to_tuple(ishape):
+                return (1,) if ishape == tuple() else ishape
+
+            return hash(tuple([map_scalar_to_tuple(t._tuple_shape) for t in tensors]))
 
         def wrapped_func(*args, **kwargs):
             from ..traced_module.pytree import tree_flatten
@@ -170,7 +177,8 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
             nonlocal custom_autodiff
             nonlocal outdef
             nonlocal shape_hash
-
+            nonlocal unexpected_shape_hash
+            trace_obj.convert_optimizer_state_to_tensor(*args, **kwargs)
             if not traced:
                 traced = True
                 fargs = trace_obj.flatten_inputs(*args, **kwargs)
@@ -221,6 +229,9 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                         custom_autodiff = CustomFwd(trace_obj, backward_trace_obj)
                 fargs = trace_obj.flatten_inputs(*args, **kwargs)
                 if check_shape and get_shape_hash(*fargs) != shape_hash:
+                    if get_shape_hash(*fargs) not in unexpected_shape_hash:
+                        unexpected_shape_hash.add(get_shape_hash(*fargs))
+                        logger.warning("XLA shape mismatch, fallback to python")
                     return trace_obj.__wrapped__(*args, **kwargs)
                 del args
                 del kwargs

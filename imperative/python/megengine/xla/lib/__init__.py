@@ -64,25 +64,26 @@ mlir_api_version = xla_client.mlir_api_version
 
 # Finds the CUDA install path
 def _find_cuda_root_dir() -> Optional[str]:
-    cuda_root_dir = os.environ.get("CUDA_ROOT_DIR")
-    if cuda_root_dir is None:
-        try:
-            which = "where" if sys.platform == "win32" else "which"
-            with open(os.devnull, "w") as devnull:
-                nvcc = (
-                    subprocess.check_output([which, "nvcc"], stderr=devnull)
-                    .decode()
-                    .rstrip("\r\n")
-                )
-                cuda_root_dir = os.path.dirname(os.path.dirname(nvcc))
-        except Exception:
-            if sys.platform == "win32":
-                assert False, "xla not supported on windows"
-            else:
-                cuda_root_dir = "/usr/local/cuda"
-            if not os.path.exists(cuda_root_dir):
-                cuda_root_dir = None
-    return cuda_root_dir
+    assert sys.platform == "linux", "xla only support linux now"
+    for envvar in ["CUDA_ROOT_DIR", "CUDA_HOME", "CUDA_PATH"]:
+        if os.environ.get(envvar):
+            return os.environ[envvar]
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    for path in ["/usr/local/cuda", os.path.join(cur_dir, "../../../nvidia/cuda_nvcc")]:
+        if os.path.exists(path):
+            return path
+
+    try:
+        with open(os.devnull, "w") as devnull:
+            ptxas = (
+                subprocess.check_output(["which", "ptxas"], stderr=devnull)
+                .decode()
+                .rstrip("\r\n")
+            )
+            return os.path.dirname(os.path.dirname(ptxas))
+    except Exception:
+        assert False, "not find cuda in your environment"
 
 
 cuda_path = _find_cuda_root_dir()
