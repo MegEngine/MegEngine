@@ -1,5 +1,8 @@
 #pragma once
 
+#include "megbrain/custom/op.h"
+#include "megbrain/custom/tensor.h"
+#include "megbrain/tensor.h"
 #include "megdnn/thin/small_vector.h"
 
 namespace custom {
@@ -11,26 +14,31 @@ BuiltinT to_builtin(const CustomT& custom) {
 
 template <typename BuiltinT, typename CustomT>
 CustomT to_custom(const BuiltinT& builtin) {
-    return std::move(CustomT(&builtin));
+    return CustomT(&builtin);
 }
 
 template <typename BuiltinT, typename CustomT>
 megdnn::SmallVector<BuiltinT> to_builtin(const std::vector<CustomT>& customs) {
     megdnn::SmallVector<BuiltinT> builtins;
     for (size_t i = 0; i < customs.size(); ++i) {
-        builtins.push_back(std::move(to_builtin<BuiltinT, CustomT>(customs[i])));
+        builtins.emplace_back(to_builtin<BuiltinT, CustomT>(customs[i]));
     }
-    return std::move(builtins);
+    return builtins;
 }
 
 template <typename BuiltinT, typename CustomT>
 std::vector<CustomT> to_custom(const megdnn::SmallVector<BuiltinT>& builtins) {
     std::vector<CustomT> customs;
     for (size_t i = 0; i < builtins.size(); ++i) {
-        customs.push_back(std::move(to_custom<BuiltinT, CustomT>(builtins[i])));
+        customs.emplace_back(to_custom<BuiltinT, CustomT>(builtins[i]));
     }
-    return std::move(customs);
+    return customs;
 }
+
+MGE_WIN_DECLSPEC_FUC void dispatch_custom_op(
+        std::shared_ptr<const CustomOp> op, const Param& param,
+        std::shared_ptr<::megdnn::SmallVector<::mgb::DeviceTensorND>> inputs,
+        std::shared_ptr<::megdnn::SmallVector<::mgb::DeviceTensorND>> outputs);
 
 }  // namespace custom
 

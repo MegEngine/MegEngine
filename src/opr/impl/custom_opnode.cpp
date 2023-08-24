@@ -114,24 +114,21 @@ void CustomOpNode::init_output_comp_node() {
 
 void CustomOpNode::do_execute(ExecEnv& env) {
     auto runner = [this]() {
+        std::shared_ptr<SmallVector<DeviceTensorND>> inputs =
+                std::make_shared<SmallVector<DeviceTensorND>>();
+        std::shared_ptr<SmallVector<DeviceTensorND>> outputs =
+                std::make_shared<SmallVector<DeviceTensorND>>();
+        for (size_t i = 0; i < input_num(); i++) {
+            inputs->emplace_back(input(i)->dev_tensor());
+        }
+        for (size_t i = 0; i < output_num(); i++) {
+            outputs->emplace_back(output(i)->dev_tensor());
+        }
+
         this->owner_graph()->event().signal_inplace<cg::event::BeforeKernel>(
                 this, m_comp_node);
         m_comp_node.activate();
-
-        SmallVector<DeviceTensorND> inputs, outputs;
-        for (size_t i = 0; i < input_num(); i++)
-            inputs.push_back(input(i)->dev_tensor());
-        for (size_t i = 0; i < output_num(); i++)
-            outputs.push_back(output(i)->dev_tensor());
-
-        std::vector<custom::Tensor> custom_inputs =
-                custom::to_custom<DeviceTensorND, custom::Tensor>(inputs);
-        std::vector<custom::Tensor> custom_outputs =
-                custom::to_custom<DeviceTensorND, custom::Tensor>(outputs);
-        m_op->compute(custom_inputs, m_param, custom_outputs);
-        // [TODO] sync should be modified
-        CompNode::sync_all();
-
+        custom::dispatch_custom_op(m_op, m_param, inputs, outputs);
         this->owner_graph()->event().signal_inplace<cg::event::AfterKernel>(
                 this, m_comp_node);
     };

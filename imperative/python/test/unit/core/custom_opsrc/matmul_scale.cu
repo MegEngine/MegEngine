@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include "./matmul_scale.h"
+#include "megbrain/custom/platform/custom_cuda.h"
 
 using namespace custom;
 
@@ -51,12 +52,13 @@ void matmul_forward_helper(
         float scale) {
     dim3 block(1, 1);
     dim3 grid(N / block.x, M / block.y);
-
-    DISPATCH_INT_AND_FLOAT_TYPES(res.dtype(), "matmul_forward", ([&]() {
-                                     matmul_forward_naive<scalar_t><<<grid, block>>>(
-                                             lhs.data<scalar_t>(), rhs.data<scalar_t>(),
-                                             res.data<scalar_t>(), M, K, N, scale);
-                                 }));
+    auto stream = get_cuda_stream(lhs.device());
+    DISPATCH_INT_AND_FLOAT_TYPES(
+            res.dtype(), "matmul_forward", ([&]() {
+                matmul_forward_naive<scalar_t><<<grid, block, 0, stream>>>(
+                        lhs.data<scalar_t>(), rhs.data<scalar_t>(),
+                        res.data<scalar_t>(), M, K, N, scale);
+            }));
 }
 
 void matmul_backward_lhs_helper(
@@ -64,9 +66,10 @@ void matmul_backward_lhs_helper(
         size_t N, float scale) {
     dim3 block(1, 1);
     dim3 grid(K / block.x, M / block.y);
+    auto stream = get_cuda_stream(rhs.device());
     DISPATCH_INT_AND_FLOAT_TYPES(
             lhs_grad.dtype(), "matmul_backward_lhs", ([&]() {
-                matmul_backward_lhs_naive<scalar_t><<<grid, block>>>(
+                matmul_backward_lhs_naive<scalar_t><<<grid, block, 0, stream>>>(
                         rhs.data<scalar_t>(), ograd.data<scalar_t>(),
                         lhs_grad.data<scalar_t>(), M, K, N, scale);
             }));
@@ -77,9 +80,10 @@ void matmul_backward_rhs_helper(
         size_t N, float scale) {
     dim3 block(1, 1);
     dim3 grid(N / block.x, K / block.y);
+    auto stream = get_cuda_stream(lhs.device());
     DISPATCH_INT_AND_FLOAT_TYPES(
             rhs_grad.dtype(), "matmul_backward_rhs", ([&]() {
-                matmul_backward_rhs_naive<scalar_t><<<grid, block>>>(
+                matmul_backward_rhs_naive<scalar_t><<<grid, block, 0, stream>>>(
                         lhs.data<scalar_t>(), ograd.data<scalar_t>(),
                         rhs_grad.data<scalar_t>(), M, K, N, scale);
             }));

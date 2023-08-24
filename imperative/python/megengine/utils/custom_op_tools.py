@@ -782,6 +782,10 @@ def build(
         with_cudnn,
         abi_tag,
     )
+
+    target_libpath = "{}_v{}".format(name, version) + str(
+        ".dll" if IS_WINDOWS else ".so"
+    )
     if verbose:
         if version != old_version and old_version != None:
             print(
@@ -795,8 +799,7 @@ def build(
             print(
                 "No modifications detected for {}, skipping build step...".format(name)
             )
-        return
-    name = "{}_v{}".format(name, version)
+        return os.path.join(build_dir, "{}".format(target_libpath))
 
     # phase 3: compiler and ninja check
     _check_ninja_availability()
@@ -830,8 +833,6 @@ def build(
         try:
             # phase 5: generate ninja build file
             objs = [_obj_file_path(src) for src in sources]
-            name += ".dll" if IS_WINDOWS else ".so"
-
             build_file_path = os.path.join(build_dir, "build.ninja")
             if verbose:
                 print("Emitting ninja build file {}".format(build_file_path))
@@ -844,7 +845,7 @@ def build(
                 sources=sources,
                 objects=objs,
                 ldflags=ldflags,
-                library_target=name,
+                library_target=target_libpath,
                 with_cuda=with_cuda,
             )
 
@@ -852,7 +853,7 @@ def build(
             if verbose:
                 print(
                     "Compiling and linking your custom op {}".format(
-                        os.path.join(build_dir, name)
+                        os.path.join(build_dir, target_libpath)
                     )
                 )
             _build_with_ninja(build_dir, verbose, "compiling error")
@@ -861,7 +862,7 @@ def build(
     else:
         baton.wait()
 
-    return os.path.join(build_dir, name)
+    return os.path.join(build_dir, target_libpath)
 
 
 def build_and_load(

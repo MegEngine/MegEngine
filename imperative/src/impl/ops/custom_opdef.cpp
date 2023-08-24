@@ -3,7 +3,7 @@
 #if MGB_CUSTOM_OP
 
 #include "../op_trait.h"
-#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/opr/custom_opnode.h"
 
 namespace mgb {
@@ -51,13 +51,9 @@ const std::shared_ptr<const custom::CustomOp>& CustomOpDef::impl(void) const {
 }
 
 void CustomOpDef::compute(
-        const SmallVector<DeviceTensorND>& inputs,
-        SmallVector<DeviceTensorND>* outputs) const {
-    std::vector<custom::Tensor> custom_inputs =
-            custom::to_custom<DeviceTensorND, custom::Tensor>(inputs);
-    std::vector<custom::Tensor> custom_outputs =
-            custom::to_custom<DeviceTensorND, custom::Tensor>(*outputs);
-    m_op->compute(custom_inputs, this->m_param, custom_outputs);
+        std::shared_ptr<SmallVector<DeviceTensorND>> inputs,
+        std::shared_ptr<SmallVector<DeviceTensorND>> outputs) const {
+    custom::dispatch_custom_op(m_op, m_param, inputs, outputs);
 }
 
 std::tuple<SmallVector<LogicalTensorDesc>, bool> CustomOpDef::infer_output_attrs(
@@ -169,13 +165,6 @@ std::shared_ptr<OpDef> CustomOpDefFactory::create_opdef(
 
 namespace custom_opdef {  // avoid name conflict
 
-void apply_on_device_tensornd(
-        const OpDef& def, const SmallVector<DeviceTensorND>& inputs,
-        SmallVector<DeviceTensorND>* outputs) {
-    auto&& op = static_cast<const CustomOpDef&>(def);
-    op.compute(inputs, outputs);
-}
-
 SmallVector<TensorPtr> apply_on_physical_tensor(
         const OpDef& def, const SmallVector<TensorPtr>& inputs,
         SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
@@ -194,15 +183,19 @@ SmallVector<TensorPtr> apply_on_physical_tensor(
         output = Tensor::make(output_descs[i].layout, output_descs[i].comp_node);
     }
 
-    SmallVector<DeviceTensorND> inp_tensornds(inputs.size());
-    SmallVector<DeviceTensorND> oup_tensornds(outputs.size());
+    std::shared_ptr<SmallVector<DeviceTensorND>> inp_tensornds =
+            std::make_shared<SmallVector<DeviceTensorND>>();
+    std::shared_ptr<SmallVector<DeviceTensorND>> oup_tensornds =
+            std::make_shared<SmallVector<DeviceTensorND>>();
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        inp_tensornds->emplace_back(inputs[i]->dev_tensor(true));
+    }
+    for (size_t i = 0; i < outputs.size(); ++i) {
+        oup_tensornds->emplace_back(outputs[i]->dev_tensor(true));
+    }
 
-    for (size_t i = 0; i < inputs.size(); ++i)
-        inp_tensornds[i] = inputs[i]->dev_tensor();
-    for (size_t i = 0; i < outputs.size(); ++i)
-        oup_tensornds[i] = outputs[i]->dev_tensor();
-
-    apply_on_device_tensornd(def, inp_tensornds, &oup_tensornds);
+    auto&& op = static_cast<const CustomOpDef&>(def);
+    op.compute(inp_tensornds, oup_tensornds);
     return outputs;
 }
 
@@ -258,7 +251,6 @@ std::string make_name(const OpDef& def) {
 OP_TRAIT_REG(CustomOpDef, CustomOpDef)
         .apply_on_physical_tensor(apply_on_physical_tensor)
         .apply_on_var_node(apply_on_var_node)
-        .apply_on_device_tensornd(apply_on_device_tensornd)
         .infer_output_attrs_fallible(infer_output_attrs_fallible)
         .hash(hash)
         .is_same_st(is_same_st)

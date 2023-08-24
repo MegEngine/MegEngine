@@ -31,7 +31,8 @@ public:
     const std::shared_ptr<const custom::CustomOp>& impl(void) const;
 
     void compute(
-            const SmallVector<DeviceTensorND>&, SmallVector<DeviceTensorND>*) const;
+            std::shared_ptr<SmallVector<DeviceTensorND>>,
+            std::shared_ptr<SmallVector<DeviceTensorND>>) const;
     std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs(
             const SmallVector<TensorPtr>& inputs) const;
     std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs(

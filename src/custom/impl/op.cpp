@@ -4,8 +4,11 @@
 
 #include <sstream>
 #include <unordered_set>
+#include "megbrain/comp_node_env.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/custom/op.h"
 #include "megbrain/custom/utils.h"
+#include "megbrain/tensor.h"
 #include "megbrain/utils/thin/function.h"
 
 using namespace mgb;
@@ -548,6 +551,45 @@ void CustomOp::compute(
     forward_func(inputs, param, outputs, rt_args);
     postprocess_func(outputs, param, outputs, rt_args);
     assert_outputs_size_right(outputs);
+}
+
+void compute_impl(
+        std::shared_ptr<const CustomOp> op, const Param& param,
+        std::shared_ptr<::megdnn::SmallVector<::mgb::DeviceTensorND>> inputs,
+        std::shared_ptr<::megdnn::SmallVector<::mgb::DeviceTensorND>> outputs) {
+    std::vector<custom::Tensor> custom_inputs;
+    for (size_t i = 0; i < inputs->size(); ++i) {
+        custom_inputs.emplace_back(to_custom_tensor(inputs->operator[](i)));
+    }
+    std::vector<custom::Tensor> custom_outputs;
+    for (size_t i = 0; i < outputs->size(); ++i) {
+        custom_outputs.emplace_back(to_custom_tensor(outputs->operator[](i)));
+    }
+    op->compute(custom_inputs, param, custom_outputs);
+}
+
+void dispatch_custom_op(
+        std::shared_ptr<const CustomOp> op, const Param& param,
+        std::shared_ptr<::megdnn::SmallVector<::mgb::DeviceTensorND>> inputs,
+        std::shared_ptr<::megdnn::SmallVector<::mgb::DeviceTensorND>> outputs) {
+    if (outputs->size() == 0) {
+        return;
+    }
+
+    auto compnode = outputs->at(0).comp_node();
+    if (compnode.device_type() == CompNode::DeviceType::CPU) {
+        auto&& cpu_env = CompNodeEnv::from_comp_node(compnode).cpu_env();
+        cpu_env.dispatch([op, param, inputs, outputs]() {
+            compute_impl(op, param, inputs, outputs);
+        });
+
+    } else {
+        mgb_assert(
+                compnode.device_type() == CompNode::DeviceType::CUDA,
+                "custom op only support cuda/cpu now, but get %s",
+                compnode.to_string().c_str());
+        compute_impl(op, param, inputs, outputs);
+    }
 }
 
 }  // namespace custom

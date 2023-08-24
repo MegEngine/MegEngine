@@ -76,8 +76,6 @@ class Device;
  * Macro Callback for Register
  */
 #define CUSTOM_REG_DYN_PARAMTYPE(dyn_type, static_type) dyn_type,
-#define CUSTOM_REG_DYN_PARAMTYPE_NAME(dyn_type, static_type) \
-    {ParamDynType::dyn_type, #dyn_type},
 
 #define CUSTOM_REG_DYN_PARAMTYPE_GETTER(dyn_type, static_type)       \
     template <>                                                      \
@@ -95,10 +93,7 @@ enum class ParamDynType : uint32_t {
     CUSTOM_FOR_EACH_VALID_PARAMTYPE(CUSTOM_REG_DYN_PARAMTYPE) Invalid = 255
 };
 
-static std::unordered_map<
-        ParamDynType, std::string, EnumHash<ParamDynType>, EnumCmp<ParamDynType>>
-        type2name = {CUSTOM_FOR_EACH_VALID_PARAMTYPE(CUSTOM_REG_DYN_PARAMTYPE_NAME){
-                ParamDynType::Invalid, "Invalid"}};
+MGE_WIN_DECLSPEC_FUC std::string ptype2name(ParamDynType);
 
 /**
  * get the dynamic data type according to the builtin static data type
@@ -124,7 +119,6 @@ CUSTOM_FOR_EACH_VALID_PARAMTYPE(CUSTOM_REG_DYN_PARAMTYPE_GETTER)
 CUSTOM_FOR_EACH_VALID_PARAMTYPE(CUSTOM_REG_STATIC_PARAMTYPE_GETTER)
 
 #undef CUSTOM_REG_DYN_PARAMTYPE
-#undef CUSTOM_REG_DYN_PARAMTYPE_NAME
 #undef CUSTOM_REG_DYN_PARAMTYPE_GETTER
 #undef CUSTOM_REG_STATIC_PARAMTYPE_GETTER
 
@@ -290,7 +284,7 @@ T& ParamVal::as(void) {
     ParamDynType t_dyn_type = get_dyn_type<DecayType>::type;
     custom_assert(
             t_dyn_type == m_type, "type mismatch, type %s cannot be cast to type %s\n",
-            type2name[m_type].c_str(), type2name[t_dyn_type].c_str());
+            ptype2name(m_type).c_str(), ptype2name(t_dyn_type).c_str());
     return TypedRef(T, m_ptr.get());
 }
 

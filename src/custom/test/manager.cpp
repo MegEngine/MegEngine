@@ -12,16 +12,17 @@ namespace custom {
 
 TEST(TestOpManager, TestOpManager) {
     CustomOpManager* com = CustomOpManager::inst();
+    std::vector<std::string> builtin_op_names = com->op_name_list();
+    size_t builtin_op_num = builtin_op_names.size();
+
     com->insert("Op1", CUSTOM_OP_VERSION);
     com->insert("Op2", CUSTOM_OP_VERSION);
-    std::shared_ptr<CustomOp> ptr = com->find_or_reg("Op3", CUSTOM_OP_VERSION);
-    ASSERT_TRUE(ptr != nullptr);
 
     std::vector<std::string> op_names = com->op_name_list();
     std::vector<RunTimeId> op_ids = com->op_id_list();
 
-    ASSERT_TRUE(op_names.size() == 3);
-    ASSERT_TRUE(op_ids.size() == 3);
+    ASSERT_TRUE(op_names.size() == builtin_op_num + 2);
+    ASSERT_TRUE(op_ids.size() == builtin_op_num + 2);
 
 #if MANAGER_TEST_LOG
     for (std::string& name : op_names) {
@@ -52,12 +53,9 @@ TEST(TestOpManager, TestOpManager) {
     }
 #endif
     ASSERT_TRUE(com->erase("Op1"));
-    ASSERT_TRUE(com->erase(com->to_id("Op2")));
-    ASSERT_TRUE(com->op_id_list().size() == 1);
-    ASSERT_TRUE(com->op_name_list().size() == 1);
-    ASSERT_TRUE(com->op_name_list()[0] == "Op3");
-    ptr.reset();
-    ASSERT_TRUE(com->erase("Op3"));
+    ASSERT_TRUE(com->op_id_list().size() == builtin_op_num + 1);
+    ASSERT_TRUE(com->op_name_list().size() == builtin_op_num + 1);
+    ASSERT_TRUE(com->erase("Op2"));
 }
 
 TEST(TestOpManager, TestOpReg) {

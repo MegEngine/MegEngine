@@ -4,9 +4,10 @@
 
 #include "gtest/gtest.h"
 #include "megbrain/comp_node.h"
-#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/custom/op.h"
 #include "megbrain/tensor.h"
+#include "megbrain/test/helper.h"
 #include "megbrain_build_config.h"
 
 #define OP_TEST_LOG 0
@@ -93,60 +94,6 @@ void format_infer(
     outputs[1] = inputs[0];
 }
 
-void cpu_kernel(
-        const std::vector<Tensor>& inputs, const Param& params,
-        std::vector<Tensor>& outputs) {
-    (void)inputs;
-    (void)params;
-    (void)outputs;
-#if OP_TEST_LOG
-    std::cout << "Checking CPU Forward - " << params["device"].as<std::string>()
-              << std::endl;
-#endif
-    ASSERT_TRUE(params["device"] == "x86");
-}
-
-void gpu_kernel(
-        const std::vector<Tensor>& inputs, const Param& params,
-        std::vector<Tensor>& outputs) {
-    (void)inputs;
-    (void)params;
-    (void)outputs;
-#if OP_TEST_LOG
-    std::cout << "Checking GPU Forward - " << params["device"].as<std::string>()
-              << std::endl;
-#endif
-    ASSERT_TRUE(params["device"] == "cuda");
-}
-
-void cpu_kernel_with_runtime_args(
-        const std::vector<Tensor>& inputs, const Param& params,
-        std::vector<Tensor>& outputs, const RuntimeArgs& args) {
-    (void)inputs;
-    (void)params;
-    (void)outputs;
-    (void)args;
-#if OP_TEST_LOG
-    std::cout << "Checking CPU Forward - " << params["device"].as<std::string>()
-              << std::endl;
-#endif
-    ASSERT_TRUE(params["device"] == "x86");
-}
-
-void gpu_kernel_with_runtime_args(
-        const std::vector<Tensor>& inputs, const Param& params,
-        std::vector<Tensor>& outputs, const RuntimeArgs& args) {
-    (void)inputs;
-    (void)params;
-    (void)outputs;
-    (void)args;
-#if OP_TEST_LOG
-    std::cout << "Checking GPU Forward - " << params["device"].as<std::string>()
-              << std::endl;
-#endif
-    ASSERT_TRUE(params["device"] == "cuda");
-}
-
 TEST(TestCustomOp, TestCustomOpFuncSetter) {
 #if MGB_CUDA
     CustomOp test("TestOp", CUSTOM_OP_VERSION);
@@ -155,7 +102,8 @@ TEST(TestCustomOp, TestCustomOpFuncSetter) {
             .add_input("rhs", "rhs of Test op", {"float32", "int32"}, 2)
             .add_output("outl", "outl of Test op", {"float32", "int32"}, 2)
             .add_output("outr", "outr of Test op", {"float32", "int32"}, 2)
-            .add_param("smooth", "smooth", 0.f)
+            .add_param("scale_f", "scale_f", 1.f)
+            .add_param("offset_i", "offset_i", 0)
             .add_param("device", "using for judge device", "x86");
 
     std::vector<Device> idevices = {"x86", "cuda"};
@@ -206,35 +154,93 @@ TEST(TestCustomOp, TestCustomOpFuncSetter) {
     ASSERT_TRUE(odtypes[1] == "int32");
     ASSERT_TRUE(iformats[0].is_default());
     ASSERT_TRUE(iformats[1].is_default());
-
-    test.set_compute(cpu_kernel_with_runtime_args);
-    test.set_compute(cpu_kernel);
-    DeviceTensorND cdev_itensor0(CompNode::load("cpux"), {3, 2}, dtype::Int32{});
-    DeviceTensorND cdev_itensor1(CompNode::load("cpux"), {3, 2}, dtype::Float32{});
-    DeviceTensorND cdev_otensor0(CompNode::load("cpux"), {3, 2}, dtype::Float32{});
-    DeviceTensorND cdev_otensor1(CompNode::load("cpux"), {3, 2}, dtype::Int32{});
-
-    std::vector<Tensor> cinputs = {
-            to_custom_tensor(cdev_itensor0), to_custom_tensor(cdev_itensor1)};
-    std::vector<Tensor> coutputs = {
-            to_custom_tensor(cdev_otensor0), to_custom_tensor(cdev_otensor1)};
-    param["device"] = "x86";
-    test.compute(cinputs, param, coutputs);
-
-    test.set_compute("cuda", gpu_kernel_with_runtime_args);
-    test.set_compute("cuda", gpu_kernel);
-    DeviceTensorND gdev_itensor0(CompNode::load("gpux"), {3, 2}, dtype::Int32{});
-    DeviceTensorND gdev_itensor1(CompNode::load("gpux"), {3, 2}, dtype::Float32{});
-    DeviceTensorND gdev_otensor0(CompNode::load("gpux"), {3, 2}, dtype::Float32{});
-    DeviceTensorND gdev_otensor1(CompNode::load("gpux"), {3, 2}, dtype::Int32{});
-
-    std::vector<Tensor> ginputs = {
-            to_custom_tensor(gdev_itensor0), to_custom_tensor(gdev_itensor1)};
-    std::vector<Tensor> goutputs = {
-            to_custom_tensor(gdev_otensor0), to_custom_tensor(gdev_otensor1)};
-    param["device"] = "cuda";
-    test.compute(ginputs, param, goutputs);
 #endif
+}
+
+void cpu_kernel(
+        const std::vector<Tensor>& inputs, const Param& params,
+        std::vector<Tensor>& outputs) {
+    ASSERT_TRUE(inputs.size() == 2);
+    ASSERT_TRUE(outputs.size() == 2);
+    ASSERT_TRUE(params["device"] == "x86");
+    ASSERT_TRUE(params["scale_f"] == 2.12f);
+    ASSERT_TRUE(params["offset_i"] == 6);
+    ASSERT_TRUE(inputs[0].shape() == Shape({3, 4}));
+    ASSERT_TRUE(inputs[1].shape() == Shape({5, 6}));
+    ASSERT_TRUE(outputs[0].shape() == Shape({5, 6}));
+    ASSERT_TRUE(outputs[1].shape() == Shape({3, 4}));
+    ASSERT_TRUE(inputs[0].device() == "x86");
+    ASSERT_TRUE(inputs[1].device() == "x86");
+    ASSERT_TRUE(outputs[0].device() == "x86");
+    ASSERT_TRUE(outputs[1].device() == "x86");
+
+    float scale_f = params["scale_f"].as<float>();
+    int offset_i = params["offset_i"].as<int>();
+
+    for (size_t i = 0; i < 5 * 6; ++i) {
+        ASSERT_TRUE(inputs[1].data<float>()[i] == static_cast<float>(i));
+        outputs[0].data<float>()[i] = inputs[1].data<float>()[i] * scale_f;
+    }
+    for (size_t i = 0; i < 3 * 4; ++i) {
+        ASSERT_TRUE(inputs[0].data<int>()[i] == static_cast<int>(i));
+        outputs[1].data<int>()[i] = inputs[0].data<int>()[i] + offset_i;
+    }
+}
+
+TEST(TestCustomOp, TestCustomOpCompute) {
+    std::shared_ptr<CustomOp> op =
+            std::make_shared<CustomOp>("TestOp", CUSTOM_OP_VERSION);
+    op->set_description("Test Op Forward Backward Union")
+            .add_input("lhs", "lhs of Test op", {"float32", "int32"}, 2)
+            .add_input("rhs", "rhs of Test op", {"float32", "int32"}, 2)
+            .add_output("outl", "outl of Test op", {"float32", "int32"}, 2)
+            .add_output("outr", "outr of Test op", {"float32", "int32"}, 2)
+            .add_param("scale_f", "scale_f", 1.f)
+            .add_param("offset_i", "offset_i", 0)
+            .add_param("device", "using for judge device", "x86")
+            .set_shape_infer(shape_infer)
+            .set_dtype_infer(dtype_infer)
+            .set_compute("x86", cpu_kernel);
+
+    Param param(op->param_info());
+    param["device"] = "x86";
+    param["scale_f"] = 2.12f;
+    param["offset_i"] = 6;
+
+    HostTensorGenerator<dtype::Float32> gen_f;
+    HostTensorGenerator<dtype::Int32> gen_i;
+    auto host_i0 = gen_i({3, 4}), host_i1 = gen_f({5, 6});
+    auto expect_o0 = gen_f({5, 6}), expect_o1 = gen_i({3, 4});
+    for (size_t i = 0; i < 5 * 6; ++i) {
+        host_i1->ptr<float>()[i] = static_cast<float>(i);
+        expect_o0->ptr<float>()[i] = host_i1->ptr<float>()[i] * 2.12f;
+    }
+    for (size_t i = 0; i < 3 * 4; ++i) {
+        host_i0->ptr<int>()[i] = static_cast<int>(i);
+        expect_o1->ptr<int>()[i] = host_i0->ptr<int>()[i] + 6;
+    }
+
+    auto cn = CompNode::load("cpux");
+    std::shared_ptr<SmallVector<DeviceTensorND>> x86_inps =
+            std::make_shared<SmallVector<DeviceTensorND>>(2);
+    x86_inps->at(0) = DeviceTensorND{cn};
+    x86_inps->at(1) = DeviceTensorND{cn};
+    x86_inps->at(0).copy_from(*host_i0).sync();
+    x86_inps->at(1).copy_from(*host_i1).sync();
+
+    std::shared_ptr<SmallVector<DeviceTensorND>> x86_oups =
+            std::make_shared<SmallVector<DeviceTensorND>>(2);
+    x86_oups->at(0) = DeviceTensorND{cn, {5, 6}, dtype::Float32{}};
+    x86_oups->at(1) = DeviceTensorND{cn, {3, 4}, dtype::Int32{}};
+
+    dispatch_custom_op(op, param, x86_inps, x86_oups);
+    cn.sync();
+    HostTensorND host_o0, host_o1;
+    host_o0.copy_from(x86_oups->at(0)).sync();
+    host_o1.copy_from(x86_oups->at(1)).sync();
+
+    MGB_ASSERT_TENSOR_NEAR(*expect_o0, host_o0, 1e-6);
+    MGB_ASSERT_TENSOR_NEAR(*expect_o1, host_o1, 1e-6);
 }
 
 }  // namespace custom

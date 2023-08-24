@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "megbrain/comp_node.h"
-#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/custom/tensor.h"
 #include "megbrain/tensor.h"
 #include "megbrain_build_config.h"

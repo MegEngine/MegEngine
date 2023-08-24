@@ -3,7 +3,7 @@
 #if MGB_CUSTOM_OP
 
 #include "megbrain/comp_node.h"
-#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/custom/param_val.h"
 #include "megbrain/custom/tensor.h"
 
@@ -40,7 +40,7 @@ namespace custom {
 #define CUSTOM_INVALID_EXPR_EXCP(lhs, rhs, op)                       \
     mgb_assert(                                                      \
             lhs.m_type == rhs.m_type, "`%s` %s `%s` is not allowed", \
-            type2name[lhs.m_type].c_str(), #op, type2name[rhs.m_type].c_str())
+            ptype2name(lhs.m_type).c_str(), #op, ptype2name(rhs.m_type).c_str())
 
 #define CUSTOM_CASE_TO_GET_BINARY_OP_RHS_AND_CAL(dyn_type, static_type, op) \
     case (ParamDynType::dyn_type): {                                        \
@@ -177,6 +177,18 @@ namespace custom {
         break;                                             \
     }
 
+std::string ptype2name(ParamDynType ptype) {
+#define CUSTOM_REG_DYN_PARAMTYPE_NAME(dyn_type, static_type) \
+    {ParamDynType::dyn_type, #dyn_type},
+
+    static std::unordered_map<
+            ParamDynType, std::string, EnumHash<ParamDynType>, EnumCmp<ParamDynType>>
+            type2name = {CUSTOM_FOR_EACH_VALID_PARAMTYPE(CUSTOM_REG_DYN_PARAMTYPE_NAME){
+                    ParamDynType::Invalid, "Invalid"}};
+#undef CUSTOM_REG_DYN_PARAMTYPE_NAME
+    return type2name[ptype];
+}
+
 ParamVal::ParamVal() : m_ptr(nullptr, [](void*) -> void {}) {
     m_type = ParamDynType::Invalid;
 }
@@ -265,7 +277,7 @@ ParamDynType ParamVal::type(void) const {
 
 std::string ParamVal::str() const {
     std::stringstream ss;
-    ss << "type: " << type2name[m_type] << "\n"
+    ss << "type: " << ptype2name(m_type) << "\n"
        << "value: ";
     switch (m_type) {
         CUSTOM_FOR_EACH_BASIC_PARAMTYPE(CUSTOM_CASE_TO_PRINT_NONLIST)

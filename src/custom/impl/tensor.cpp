@@ -42,31 +42,33 @@ using TensorImpl = DeviceTensorND;
 #define TensorImplConstRef(rawptr) \
     static_cast<const TensorImpl&>(*reinterpret_cast<const TensorImpl*>(rawptr))
 
-static std::unordered_map<
-        DeviceImpl::DeviceType, std::string, EnumHash<DeviceImpl::DeviceType>,
-        EnumCmp<DeviceImpl::DeviceType>>
-        dev_benum2cstr;
-static std::unordered_map<
-        DeviceImpl::DeviceType, DeviceEnum, EnumHash<DeviceImpl::DeviceType>,
-        EnumCmp<DeviceImpl::DeviceType>>
-        dev_benum2cenum;
-static std::unordered_map<std::string, std::string> dev_cstr2bstr;
-static std::unordered_map<
-        DeviceEnum, std::string, EnumHash<DeviceEnum>, EnumCmp<DeviceEnum>>
-        dev_cenum2bstr;
+struct DeviceMapper {
+    using DeviceTy = DeviceImpl::DeviceType;
+    std::unordered_map<std::string, std::string> dev_cstr2bstr;
+    EnumMap<DeviceTy, std::string> dev_benum2cstr;
+    EnumMap<DeviceTy, DeviceEnum> dev_benum2cenum;
+    EnumMap<DeviceEnum, std::string> dev_cenum2bstr;
+    static DeviceMapper& inst();
 
-#define CUSTOM_BIND_DEVICE(custom_impl, builtin_device, builtin_str)            \
-    auto be2cs##custom_impl = dev_benum2cstr.emplace(                           \
-            DeviceImpl::DeviceType::builtin_device, std::string(#custom_impl)); \
-    auto be2ce##custom_impl = dev_benum2cenum.emplace(                          \
-            DeviceImpl::DeviceType::builtin_device, DeviceEnum::custom_impl);   \
-    auto cs2bs##custom_impl = dev_cstr2bstr.emplace(                            \
-            std::string(#custom_impl), std::string(builtin_str));               \
-    auto ce2bs##custom_impl =                                                   \
-            dev_cenum2bstr.emplace(DeviceEnum::custom_impl, std::string(builtin_str));
+private:
+    DeviceMapper();
+};
 
-CUSTOM_FOR_EACH_DEVICE_TYPE(CUSTOM_BIND_DEVICE)
+DeviceMapper::DeviceMapper() {
+#define CUSTOM_BIND_DEVICE(custom_impl, builtin_device, builtin_str)             \
+    dev_benum2cstr.emplace(DeviceTy::builtin_device, std::string(#custom_impl)); \
+    dev_benum2cenum.emplace(DeviceTy::builtin_device, DeviceEnum::custom_impl);  \
+    dev_cstr2bstr.emplace(std::string(#custom_impl), std::string(builtin_str));  \
+    dev_cenum2bstr.emplace(DeviceEnum::custom_impl, std::string(builtin_str));
+
+    CUSTOM_FOR_EACH_DEVICE_TYPE(CUSTOM_BIND_DEVICE)
 #undef CUSTOM_BIND_DEVICE
+}
+
+DeviceMapper& DeviceMapper::inst() {
+    static DeviceMapper dm;
+    return dm;
+}
 
 CUSTOM_PIMPL_CLS_DEFINE(Device)
 
@@ -81,6 +83,7 @@ Device::Device(const void* impl) : m_impl(nullptr, impl_deleter<DeviceImpl>) {
         return;
     }
 
+    auto&& dev_benum2cenum = DeviceMapper::inst().dev_benum2cenum;
     auto builtin_device_enum = DeviceImplConstRef(impl).device_type();
     mgb_assert(
             dev_benum2cenum.find(builtin_device_enum) != dev_benum2cenum.end(),
@@ -91,7 +94,7 @@ Device::Device(const void* impl) : m_impl(nullptr, impl_deleter<DeviceImpl>) {
 
 Device::Device(const std::string& device) : m_impl(nullptr, impl_deleter<DeviceImpl>) {
     mgb_assert(is_legal(device), "invalid device type: %s", device.c_str());
-    std::string builtin_device = dev_cstr2bstr[device];
+    std::string builtin_device = DeviceMapper::inst().dev_cstr2bstr[device];
     m_impl.reset(new DeviceImpl(DeviceImpl::load(builtin_device)));
 }
 
@@ -100,7 +103,7 @@ Device::Device(const char* device) : Device(std::string(device)) {}
 
 Device::Device(DeviceEnum device) : m_impl(nullptr, impl_deleter<DeviceImpl>) {
     mgb_assert(is_legal(device), "invalid device type");
-    std::string builtin_device = dev_cenum2bstr[device];
+    std::string builtin_device = DeviceMapper::inst().dev_cenum2bstr[device];
     m_impl.reset(new DeviceImpl(DeviceImpl::load(builtin_device)));
 }
 
@@ -110,6 +113,7 @@ std::string Device::str(void) const {
     }
 
     auto builtin_device_type = DeviceImplRef(m_impl.get()).device_type();
+    auto&& dev_benum2cstr = DeviceMapper::inst().dev_benum2cstr;
     auto iter = dev_benum2cstr.find(builtin_device_type);
     mgb_assert(
             iter != dev_benum2cstr.end(), "invalid device type %s\n",
@@ -123,6 +127,7 @@ DeviceEnum Device::enumv(void) const {
             "cannot get the enum value of invalid device");
 
     auto builtin_device_type = DeviceImplRef(m_impl.get()).device_type();
+    auto&& dev_benum2cenum = DeviceMapper::inst().dev_benum2cenum;
     auto iter = dev_benum2cenum.find(builtin_device_type);
     mgb_assert(
             iter != dev_benum2cenum.end(), "invalid device type %s\n",
@@ -131,16 +136,18 @@ DeviceEnum Device::enumv(void) const {
 }
 
 bool Device::is_legal(const std::string& device_type) {
+    auto&& dev_cstr2bstr = DeviceMapper::inst().dev_cstr2bstr;
     return dev_cstr2bstr.find(device_type) != dev_cstr2bstr.end();
 }
 
 bool Device::is_legal(DeviceEnum device_type) {
+    auto&& dev_cenum2bstr = DeviceMapper::inst().dev_cenum2bstr;
     return dev_cenum2bstr.find(device_type) != dev_cenum2bstr.end();
 }
 
 std::vector<std::string> Device::legal_devices(void) {
     std::vector<std::string> ret;
-    for (const auto& kv : dev_cstr2bstr) {
+    for (const auto& kv : DeviceMapper::inst().dev_cstr2bstr) {
         ret.emplace_back(kv.first);
     }
     return ret;
@@ -197,36 +204,37 @@ bool operator==(const Shape& lhs, const Shape& rhs) {
     return ShapeImplRef(lhs.m_impl.get()).eq_shape(ShapeImplRef(rhs.m_impl.get()));
 }
 
-static std::unordered_map<std::string, megdnn::DTypeEnum> dtype_cstr2benum;
-static std::unordered_map<
-        DTypeEnum, megdnn::DTypeEnum, EnumHash<DTypeEnum>, EnumCmp<DTypeEnum>>
-        dtype_cenum2benum;
-static std::unordered_map<
-        megdnn::DTypeEnum, std::string, EnumHash<megdnn::DTypeEnum>,
-        EnumCmp<megdnn::DTypeEnum>>
-        dtype_benum2cstr;
-static std::unordered_map<
-        megdnn::DTypeEnum, DTypeEnum, EnumHash<megdnn::DTypeEnum>,
-        EnumCmp<megdnn::DTypeEnum>>
-        dtype_benum2cenum;
-static std::unordered_map<
-        DTypeEnum, std::string, EnumHash<DTypeEnum>, EnumCmp<DTypeEnum>>
-        dtype_cenum2cstr;
+struct DTypeMapper {
+    using CustomEnum = DTypeEnum;
+    using BuiltinEnum = megdnn::DTypeEnum;
 
-#define CUSTOM_BIND_DTYPE(custom_impl, builtin_dtype, ctype)              \
-    auto cs2be##custom_impl = dtype_cstr2benum.emplace(                   \
-            std::string(#custom_impl), megdnn::DTypeEnum::builtin_dtype); \
-    auto ce2be##custom_impl = dtype_cenum2benum.emplace(                  \
-            DTypeEnum::custom_impl, megdnn::DTypeEnum::builtin_dtype);    \
-    auto be2cs##custom_impl = dtype_benum2cstr.emplace(                   \
-            megdnn::DTypeEnum::builtin_dtype, std::string(#custom_impl)); \
-    auto be2ce##custom_impl = dtype_benum2cenum.emplace(                  \
-            megdnn::DTypeEnum::builtin_dtype, DTypeEnum::custom_impl);    \
-    auto ce2cs##custom_impl = dtype_cenum2cstr.emplace(                   \
-            DTypeEnum::custom_impl, std::string(#custom_impl));
+    std::unordered_map<std::string, BuiltinEnum> dtype_cstr2benum;
+    EnumMap<DTypeEnum, BuiltinEnum> dtype_cenum2benum;
+    EnumMap<BuiltinEnum, std::string> dtype_benum2cstr;
+    EnumMap<BuiltinEnum, DTypeEnum> dtype_benum2cenum;
+    EnumMap<DTypeEnum, std::string> dtype_cenum2cstr;
+    static DTypeMapper& inst();
 
-CUSTOM_FOR_EACH_TENSOR_DATA_TYPE(CUSTOM_BIND_DTYPE)
+private:
+    DTypeMapper();
+};
+
+DTypeMapper::DTypeMapper() {
+#define CUSTOM_BIND_DTYPE(custom_dty, builtin_dty, ctype)                         \
+    dtype_cstr2benum.emplace(std::string(#custom_dty), BuiltinEnum::builtin_dty); \
+    dtype_cenum2benum.emplace(DTypeEnum::custom_dty, BuiltinEnum::builtin_dty);   \
+    dtype_benum2cstr.emplace(BuiltinEnum::builtin_dty, std::string(#custom_dty)); \
+    dtype_benum2cenum.emplace(BuiltinEnum::builtin_dty, DTypeEnum::custom_dty);   \
+    dtype_cenum2cstr.emplace(DTypeEnum::custom_dty, std::string(#custom_dty));
+
+    CUSTOM_FOR_EACH_TENSOR_DATA_TYPE(CUSTOM_BIND_DTYPE)
 #undef CUSTOM_BIND_DTYPE
+}
+
+DTypeMapper& DTypeMapper::inst() {
+    static DTypeMapper dm;
+    return dm;
+}
 
 CUSTOM_PIMPL_CLS_DEFINE(DType)
 
@@ -240,6 +248,7 @@ DType::DType(const void* impl) : m_impl(nullptr, impl_deleter<DTypeImpl>) {
 }
 
 DType::DType(const std::string& dtype) : m_impl(nullptr, impl_deleter<DTypeImpl>) {
+    auto&& dtype_cstr2benum = DTypeMapper::inst().dtype_cstr2benum;
     auto iter = dtype_cstr2benum.find(dtype);
     mgb_assert(iter != dtype_cstr2benum.end(), "invalid dtype %s", dtype.c_str());
     mgb_assert(
@@ -254,6 +263,7 @@ DType::DType(const char* dtype) : DType(std::string(dtype)) {}
 
 DType::DType(const std::string& dtype, float scale, uint8_t zero_point)
         : m_impl(nullptr, impl_deleter<DTypeImpl>) {
+    auto&& dtype_cstr2benum = DTypeMapper::inst().dtype_cstr2benum;
     auto iter = dtype_cstr2benum.find(dtype);
     mgb_assert(iter != dtype_cstr2benum.end(), "invalid dtype %s", dtype.c_str());
     mgb_assert(
@@ -289,6 +299,7 @@ DType::DType(const char* dtype, float scale, uint8_t zero_point)
         : DType(std::string(dtype), scale, zero_point) {}
 
 DType::DType(DTypeEnum dtype) : m_impl(nullptr, impl_deleter<DTypeImpl>) {
+    auto&& dtype_cenum2benum = DTypeMapper::inst().dtype_cenum2benum;
     auto iter = dtype_cenum2benum.find(dtype);
     mgb_assert(iter != dtype_cenum2benum.end(), "invalid dtype");
     mgb_assert(
@@ -298,11 +309,13 @@ DType::DType(DTypeEnum dtype) : m_impl(nullptr, impl_deleter<DTypeImpl>) {
 }
 
 DType::DType(DTypeEnum dtype, float scale, uint8_t zero_point)
-        : DType(dtype_cenum2cstr.find(dtype)->second, scale, zero_point) {}
+        : DType(DTypeMapper::inst().dtype_cenum2cstr.find(dtype)->second, scale,
+                zero_point) {}
 
 std::string DType::str(void) const {
     if (!DTypeImplRef(m_impl.get()).valid())
         return "invalid";
+    auto&& dtype_benum2cstr = DTypeMapper::inst().dtype_benum2cstr;
     auto iter = dtype_benum2cstr.find(DTypeImplRef(m_impl.get()).enumv());
     if (iter == dtype_benum2cstr.end())
         return "invalid";
@@ -310,6 +323,7 @@ std::string DType::str(void) const {
 }
 
 DTypeEnum DType::enumv(void) const {
+    auto&& dtype_benum2cenum = DTypeMapper::inst().dtype_benum2cenum;
     auto iter = dtype_benum2cenum.find(DTypeImplRef(m_impl.get()).enumv());
     mgb_assert(iter != dtype_benum2cenum.end(), "invalid dtype");
     return iter->second;
@@ -337,16 +351,18 @@ uint8_t DType::zero_point() const {
 }
 
 bool DType::is_legal(const std::string& dtype) {
+    auto&& dtype_cstr2benum = DTypeMapper::inst().dtype_cstr2benum;
     return dtype_cstr2benum.find(dtype) != dtype_cstr2benum.end();
 }
 
 bool DType::is_legal(const DTypeEnum& dtype) {
+    auto&& dtype_cenum2benum = DTypeMapper::inst().dtype_cenum2benum;
     return dtype_cenum2benum.find(dtype) != dtype_cenum2benum.end();
 }
 
 std::vector<std::string> DType::legal_dtypes(void) {
     std::vector<std::string> ret;
-    for (const auto& kv : dtype_cstr2benum)
+    for (const auto& kv : DTypeMapper::inst().dtype_cstr2benum)
         ret.emplace_back(kv.first);
     return ret;
 }

@@ -4,8 +4,8 @@
 
 #if MGB_CUSTOM_OP
 
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/custom/custom.h"
-#include "megbrain/custom/data_adaptor.h"
 #include "megbrain/custom/manager.h"
 #include "megbrain/graph/event.h"
 #include "megbrain/graph/helper.h"

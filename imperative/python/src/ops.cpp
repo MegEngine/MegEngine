@@ -3,7 +3,7 @@
 #include "./tensor.h"
 
 #include "megbrain/common.h"
-#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/imperative.h"
 #include "megbrain/imperative/graph_builder.h"
 #include "megbrain/imperative/ops/autogen.h"
@@ -725,9 +725,7 @@ PyObject* make_custom_op(PyObject* self, PyObject** args, Py_ssize_t nargs) {
 
     return obj;
 #else
-    mgb_assert(
-            false,
-            "Custom Op is disabled now, please build megengine with Custom Op open");
+    mgb_assert(false, "CustomOp disabled, please build megengine with CustomOp open");
     return nullptr;
 #endif
 }
@@ -737,46 +735,49 @@ PyObject* make_custom_op(PyObject* self, PyObject** args, Py_ssize_t nargs) {
 
 py::list install_custom(const std::string& name, const std::string& path) {
 #if MGB_CUSTOM_OP
-    py::list ret;
-    const auto& ops_in_lib = custom::LibManager::inst()->install(name, path);
-    for (const auto& op : ops_in_lib) {
-        ret.append(op);
-    }
+    const auto& ops_in_lib = custom::CustomOpManager::inst()->install(name, path);
+    py::list ret = py::cast(ops_in_lib);
     return ret;
 #else
-    mgb_assert(
-            false,
-            "Custom Op is disabled now, please build megengine with Custom Op open");
-    py::list ret;
-    return ret;
+    mgb_assert(false, "CustomOp disabled, please build megengine with CustomOp open");
+    return py::list{};
 #endif
 }
 
-bool uninstall_custom(const std::string& name) {
+py::list uninstall_custom(const std::string& name) {
 #if MGB_CUSTOM_OP
-    return custom::LibManager::inst()->uninstall(name);
+    const auto& ops_in_lib = custom::CustomOpManager::inst()->uninstall(name);
+    py::list ret = py::cast(ops_in_lib);
+    return ret;
 #else
-    mgb_assert(
-            false,
-            "Custom Op is disabled now, please build megengine with Custom Op open");
+    mgb_assert(false, "CustomOp disabled, please build megengine with CustomOp open");
     return false;
 #endif
 }
 
 py::list get_custom_op_list(void) {
 #if MGB_CUSTOM_OP
-    std::vector<std::string> all_ops = CustomOpDefFactory::inst()->op_list();
-    py::list ret;
-    for (auto& op : all_ops) {
-        ret.append(op);
+    std::vector<std::string> all_ops = custom::CustomOpManager::inst()->op_name_list();
+    py::list ret = py::cast(all_ops);
+    return ret;
+#else
+    mgb_assert(false, "CustomOp disabled, please build megengine with CustomOp open");
+    return py::list{};
+#endif
+}
+
+py::dict get_custom_op_lib_info(void) {
+#if MGB_CUSTOM_OP
+    auto&& libs = custom::CustomOpManager::inst()->lib_info();
+    py::dict ret;
+    for (auto&& [lib_name, lib_handle] : libs) {
+        py::list ops = py::cast(lib_handle->ops_in_lib());
+        ret[py::str(lib_name)] = ops;
     }
     return ret;
 #else
-    mgb_assert(
-            false,
-            "Custom Op is disabled now, please build megengine with Custom Op open");
-    py::list ret;
-    return ret;
+    mgb_assert(false, "CustomOp disabled, please build megengine with CustomOp open");
+    return py::list{};
 #endif
 }
 
@@ -792,6 +793,7 @@ void init_custom(pybind11::module m) {
     m.def("_install", &install_custom);
     m.def("_uninstall", &uninstall_custom);
     m.def("_get_custom_op_list", &get_custom_op_list);
+    m.def("_get_custom_op_lib_info", &get_custom_op_lib_info);
     m.def("get_custom_op_abi_tag", [](void) -> int {
         int ret = 0;
 #ifdef _GLIBCXX_USE_CXX11_ABI

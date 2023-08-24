@@ -3,6 +3,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace custom {
@@ -107,5 +108,8 @@ struct EnumCmp {
         return static_cast<size_t>(lhs) == static_cast<size_t>(rhs);
     }
 };
+
+template <typename Key, typename Value>
+using EnumMap = std::unordered_map<Key, Value, EnumHash<Key>, EnumCmp<Key>>;
 
 }  // namespace custom

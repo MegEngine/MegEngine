@@ -32,6 +32,39 @@ const char* dlerror(void) {
 }
 #endif
 
+CustomLib::CustomLib(const std::string& path, int mode = RTLD_LAZY)
+        : m_handle(nullptr, [](void* handle) { dlclose(handle); }) {
+    auto op_list_before_load = CustomOpManager::inst()->op_name_list();
+    std::unordered_set<std::string> op_set_before_load(
+            op_list_before_load.begin(), op_list_before_load.end());
+
+    m_handle.reset(dlopen(path.c_str(), mode));
+    mgb_assert(
+            m_handle != nullptr, "open custom op lib failed, error type: %s",
+            dlerror());
+
+    auto op_list_after_load = CustomOpManager::inst()->op_name_list();
+    for (auto& op : op_list_after_load) {
+        if (op_set_before_load.find(op) == op_set_before_load.end()) {
+            m_ops.emplace_back(op);
+        }
+    }
+}
+
+CustomLib::~CustomLib() {
+    for (auto& op : m_ops) {
+        CustomOpManager::inst()->erase(op);
+    }
+}
+
+const std::vector<std::string>& CustomLib::ops_in_lib(void) const {
+    return m_ops;
+}
+
+bool CustomLib::valid() const {
+    return m_handle != nullptr;
+}
+
 CustomOpManager* CustomOpManager::inst(void) {
     static CustomOpManager op_manager;
     return &op_manager;
@@ -39,12 +72,40 @@ CustomOpManager* CustomOpManager::inst(void) {
 
 CustomOpManager::~CustomOpManager() {
     mgb_assert(m_name2op.size() == m_id2op.size(), "Custom Op maintenance error!");
-    LibManager::inst()->m_custom_libs.clear();
+    {
+        MGB_LOCK_GUARD(m_lib_mtx);
+        m_custom_libs.clear();
+    }
+
+    mgb_assert(m_name2op.size() == m_id2op.size(), "Custom Op maintenance error!");
+    MGB_LOCK_GUARD(m_op_mtx);
+    m_name2op.clear();
+    m_id2op.clear();
+}
+
+const std::vector<std::string>& CustomOpManager::install(
+        const std::string& name, const std::string& path) {
+    MGB_LOCK_GUARD(m_lib_mtx);
+    LibHandle handle = std::make_shared<CustomLib>(path);
+    m_custom_libs.insert({name, handle});
+    return m_custom_libs[name]->ops_in_lib();
+}
+
+std::vector<std::string> CustomOpManager::uninstall(const std::string& name) {
+    MGB_LOCK_GUARD(m_lib_mtx);
+    std::vector<std::string> op_names = m_custom_libs[name]->ops_in_lib();
+    mgb_assert(m_custom_libs.erase(name) == 1, "uninstall error");
+    return op_names;
+}
+
+const std::unordered_map<std::string, LibHandle>& CustomOpManager::lib_info(
+        void) const {
+    return m_custom_libs;
 }
 
 std::shared_ptr<CustomOp> CustomOpManager::insert(
         const std::string& name, uint32_t version) {
-    MGB_LOCK_GUARD(m_mtx);
+    MGB_LOCK_GUARD(m_op_mtx);
     auto iter = m_name2op.find(name);
     if (iter != m_name2op.end()) {
         mgb_log_warn(
@@ -59,7 +120,7 @@ std::shared_ptr<CustomOp> CustomOpManager::insert(
 }
 
 bool CustomOpManager::erase(const std::string& name) {
-    MGB_LOCK_GUARD(m_mtx);
+    MGB_LOCK_GUARD(m_op_mtx);
     auto iter = m_name2op.find(name);
     if (iter == m_name2op.end()) {
         mgb_log_warn(
@@ -70,28 +131,6 @@ bool CustomOpManager::erase(const std::string& name) {
     m_id2op.erase(op->runtime_id());
     m_name2op.erase(op->op_type());
     return true;
-}
-
-bool CustomOpManager::erase(const RunTimeId& id) {
-    MGB_LOCK_GUARD(m_mtx);
-    auto iter = m_id2op.find(id);
-    if (iter == m_id2op.end()) {
-        mgb_log_warn("Erase Custom Op Failed! The Op has not been registered");
-        return false;
-    }
-    std::shared_ptr<const CustomOp> op = iter->second;
-    m_id2op.erase(op->runtime_id());
-    m_name2op.erase(op->op_type());
-    return true;
-}
-
-std::shared_ptr<CustomOp> CustomOpManager::find_or_reg(
-        const std::string& name, uint32_t version) {
-    auto iter = m_name2op.find(name);
-    if (iter == m_name2op.end()) {
-        return insert(name, version);
-    }
-    return std::const_pointer_cast<CustomOp, const CustomOp>(iter->second);
 }
 
 RunTimeId CustomOpManager::to_id(const std::string& name) const {
@@ -133,60 +172,6 @@ std::vector<RunTimeId> CustomOpManager::op_id_list(void) {
         ret.emplace_back(kv.first);
     }
     return ret;
-}
-
-CustomLib::CustomLib(const std::string& path, int mode = RTLD_LAZY)
-        : m_handle(nullptr, [](void* handle) { dlclose(handle); }) {
-    auto op_list_before_load = CustomOpManager::inst()->op_name_list();
-    std::unordered_set<std::string> op_set_before_load(
-            op_list_before_load.begin(), op_list_before_load.end());
-
-    m_handle.reset(dlopen(path.c_str(), mode));
-    mgb_assert(
-            m_handle != nullptr, "open custom op lib failed, error type: %s",
-            dlerror());
-
-    auto op_list_after_load = CustomOpManager::inst()->op_name_list();
-    for (auto& op : op_list_after_load) {
-        if (op_set_before_load.find(op) == op_set_before_load.end()) {
-            m_ops.emplace_back(op);
-        }
-    }
-}
-
-const std::vector<std::string>& CustomLib::ops_in_lib(void) const {
-    return m_ops;
-}
-
-CustomLib::~CustomLib() {
-    for (auto& op : m_ops) {
-        CustomOpManager::inst()->erase(op);
-    }
-}
-
-bool CustomLib::valid() const {
-    return m_handle != nullptr;
-}
-
-LibManager* LibManager::inst(void) {
-    static LibManager custom_libs;
-    return &custom_libs;
-}
-
-const std::vector<std::string>& LibManager::install(
-        const std::string& name, const std::string& path) {
-    MGB_LOCK_GUARD(m_mtx);
-    ;
-    LibHandle handle = std::make_shared<CustomLib>(path);
-    m_custom_libs.insert({name, handle});
-    return m_custom_libs[name]->ops_in_lib();
-}
-
-bool LibManager::uninstall(const std::string& name) {
-    MGB_LOCK_GUARD(m_mtx);
-    ;
-    mgb_assert(m_custom_libs.erase(name) == 1, "uninstall error");
-    return true;
 }
 
 std::shared_ptr<CustomOp> op_insert(std::string opname, uint32_t version) {

@@ -4,7 +4,7 @@
 #if MGB_CUSTOM_OP
 
 #include "megbrain/comp_node_env.h"
-#include "megbrain/custom/data_adaptor.h"
+#include "megbrain/custom/adaptor.h"
 #include "megbrain/custom/platform/custom_cuda.h"
 
 using namespace mgb;
