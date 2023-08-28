@@ -69,6 +69,8 @@ CompNode::DeviceType resolve_device_type(CompNode::DeviceType type) {
                 g_unspec_locator_type = DT::CUDA;
             } else if (ROCmCompNode::available()) {
                 g_unspec_locator_type = DT::ROCM;
+            } else if (CambriconCompNode::available()) {
+                g_unspec_locator_type = DT::CAMBRICON;
             } else {
                 g_unspec_locator_type = DT::CPU;
             }
