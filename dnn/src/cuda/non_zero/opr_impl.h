@@ -12,7 +12,7 @@ public:
     using NonZero::NonZero;
     virtual TensorND exec(
             _megdnn_tensor_in src, _megdnn_workspace workspace,
-            DynOutMallocPolicyCall malloc_policy);
+            DynOutMallocPolicyCall malloc_policy) override;
     size_t get_workspace_in_bytes(const TensorLayout& data) override;
 };
 
