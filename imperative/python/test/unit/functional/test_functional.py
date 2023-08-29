@@ -1339,6 +1339,28 @@ def test_cvt_color():
     np.testing.assert_allclose(y1.numpy(), out1, atol=1e-5)
 
 
+def test_flip():
+    inp_shape = (1, 4, 4, 1)
+    inp = np.arange(16, dtype=np.float32).reshape(inp_shape)
+    x = tensor(inp)
+    y = F.vision.flip(x, True, True)
+    out = np.flip(inp, axis=(1, 2))
+    np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
+
+
+@pytest.mark.parametrize("clockwise", [True, False])
+def test_rot90(clockwise):
+    inp_shape = (1, 4, 4, 1)
+    inp = np.arange(16, dtype=np.float32).reshape(inp_shape)
+    x = tensor(inp)
+    y = F.vision.rot90(x, clockwise=clockwise)
+    if clockwise:
+        out = np.rot90(inp, 3, (1, 2,),)
+    else:
+        out = np.rot90(inp, 1, (1, 2,),)
+    np.testing.assert_allclose(y.numpy(), out, atol=1e-5)
+
+
 @pytest.mark.parametrize("val", [2, [2,], [2, 3]])
 def test_ones(val):
     shp = tensor(val)

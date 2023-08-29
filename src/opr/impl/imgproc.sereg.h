@@ -176,6 +176,7 @@ MGB_SEREG_OPR(WarpPerspectiveBackwardMatV2, 0);
 MGB_SEREG_OPR(Rotate, 1);
 MGB_SEREG_OPR(CvtColor, 1);
 MGB_SEREG_OPR(GaussianBlur, 1);
+MGB_SEREG_OPR(Flip, 1);
 
 MGB_SEREG_OPR(ResizeBackward, 2);
 using RemapV1 = Remap;

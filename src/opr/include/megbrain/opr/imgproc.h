@@ -158,13 +158,16 @@ using Rotate = RotateForward;
 using CvtColor = CvtColorForward;
 using GaussianBlur = GaussianBlurForward;
 
+MGB_DEFINE_MEGDNN_OPR_WRAPPER_FWD1(FlipForward);
+using Flip = FlipForward;
+
 /* ============================= user set shape =========================== */
 MGB_DEFINE_OPR_CLASS(
         ResizeForward, intl::WorkspaceSizeInfer<intl::OutshapeBySymvarSCNOpr<
                                mixin::MegDNNOprHolderImpl<megdnn::ResizeForward>>>) // {
 public:
     ResizeForward(
-            VarNode* in_tensor, VarNode* out_shape, const Param& param,
+            VarNode * in_tensor, VarNode * out_shape, const Param& param,
             const OperatorNodeConfig& config);
 
     MGE_WIN_DECLSPEC_FUC static SymbolVar make(
@@ -184,13 +187,13 @@ private:
     void add_input_layout_constraint() override;
     void init_output_static_infer_desc() override;
     void outshape_by_symvar_do_get_output_shape(
-            TensorShape& dest, const ShapeInferInfo& shpinfo) override;
+            TensorShape & dest, const ShapeInferInfo& shpinfo) override;
 
     void scn_do_execute() override;
     size_t get_workspace_size_bytes(
-            const TensorShapeArray& input_shapes,
-            const TensorShapeArray& output_shapes) const override;
-    void record_execute_deps(ExecDependencyArray& deps) override;
+            const TensorShapeArray& input_shapes, const TensorShapeArray& output_shapes)
+            const override;
+    void record_execute_deps(ExecDependencyArray & deps) override;
 };
 using Resize = ResizeForward;
 

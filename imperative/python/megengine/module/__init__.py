@@ -46,7 +46,11 @@ from .vision import (
     CropAndPad,
     Cutmix,
     Emboss,
+    Flip,
     LinearContrast,
     Mixup,
+    Resize,
+    Rot90,
+    Rotate,
     Sharpen,
 )

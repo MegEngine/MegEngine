@@ -988,6 +988,20 @@ public:
     }
 };
 
+class Flip : public OpDefImplBase<Flip> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    bool vertical = false;
+    bool horizontal = false;
+    Flip() = default;
+    Flip(bool vertical_, bool horizontal_, std::string scope_ = {}): vertical(vertical_), horizontal(horizontal_) { set_scope(scope_); }
+    Flip(::megdnn::param::Flip packed_param_0): vertical(packed_param_0.vertical), horizontal(packed_param_0.horizontal) {}
+    ::megdnn::param::Flip param() const {
+        return {vertical, horizontal};
+    }
+};
+
 class GammaRNG : public OpDefImplBase<GammaRNG> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 
@@ -1848,6 +1862,19 @@ public:
     Resize3D(::megdnn::param::Resize3D packed_param_0): imode(packed_param_0.imode), format(packed_param_0.format), align_corners(packed_param_0.align_corners) {}
     ::megdnn::param::Resize3D param() const {
         return {imode, format, align_corners};
+    }
+};
+
+class Rotate : public OpDefImplBase<Rotate> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    bool clockwise = true;
+    Rotate() = default;
+    Rotate(bool clockwise_, std::string scope_ = {}): clockwise(clockwise_) { set_scope(scope_); }
+    Rotate(::megdnn::param::Rotate packed_param_0): clockwise(packed_param_0.clockwise) {}
+    ::megdnn::param::Rotate param() const {
+        return {clockwise};
     }
 };
 

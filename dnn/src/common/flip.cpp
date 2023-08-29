@@ -17,7 +17,7 @@ void FlipBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) {
     size_t iw = src.shape[2];
     size_t ic = src.shape[3];
 
-    dst = TensorLayout(TensorShape({in, ih, iw, ic}), src.dtype);
+    dst = TensorLayout{{in, ih, iw, ic}, src.dtype};
 }
 
 void FlipBase::check_layout_fwd(const TensorLayout& src, const TensorLayout& dst) {

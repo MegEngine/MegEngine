@@ -1214,6 +1214,13 @@ FillLikeInst
     .def_readwrite("value", &FillLike::value)
     .def_readwrite("comp_node", &FillLike::comp_node);
 
+py::class_<Flip, std::shared_ptr<Flip>, OpDef> FlipInst(m, "Flip");
+
+FlipInst
+    .def(py::init<bool, bool, std::string>(), py::arg("vertical") = false, py::arg("horizontal") = false, py::arg("scope") = {})
+    .def_readwrite("vertical", &Flip::vertical)
+    .def_readwrite("horizontal", &Flip::horizontal);
+
 py::class_<GammaRNG, std::shared_ptr<GammaRNG>, OpDef> GammaRNGInst(m, "GammaRNG");
 
 GammaRNGInst
@@ -1948,6 +1955,12 @@ Resize3DInst
     .def_readwrite("imode", &Resize3D::imode)
     .def_readwrite("format", &Resize3D::format)
     .def_readwrite("align_corners", &Resize3D::align_corners);
+
+py::class_<Rotate, std::shared_ptr<Rotate>, OpDef> RotateInst(m, "Rotate");
+
+RotateInst
+    .def(py::init<bool, std::string>(), py::arg("clockwise") = true, py::arg("scope") = {})
+    .def_readwrite("clockwise", &Rotate::clockwise);
 
 py::class_<SVD, std::shared_ptr<SVD>, OpDef> SVDInst(m, "SVD");
 

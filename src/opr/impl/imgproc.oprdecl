@@ -52,6 +52,13 @@ decl_opr('GaussianBlur',
          'http://docs.opencv.org/2.4/modules/imgproc/doc/filtering.html?highlight=gaussianblur#gaussianblur'
          ' for details.')
 
+decl_opr('Flip',
+    inputs=[
+        Doc('src', 'source image, in (batch, row, col, channel) format. '
+            'Note the channel size must be 1 or 3')],
+    params='Flip',
+    desc='Implement horizontal flipping of the input image.')
+
 decl_opr('Resize',
     inputs=[
         Doc('src', 'source image, in (batch, row, col, channel), '

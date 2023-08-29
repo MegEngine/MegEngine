@@ -22,6 +22,7 @@ from ..functional.elemwise import abs, add, clip, floor, log, sqrt
 from ..functional.math import sign
 from ..functional.nn import conv2d, pad
 from ..functional.tensor import broadcast_to
+from ..functional.vision import flip, resize, rot90, rotate
 from ..random.rng import RNG
 from ..tensor import Tensor
 from .module import Module
@@ -719,3 +720,161 @@ class CropAndPad(Module):
         res = apply(self.custom_func, inp, percent, pad_val)[0]
 
         return res
+
+
+class Flip(Module):
+    r"""Reverse an n-dimensional tensor according to the given parameters
+
+    Args:
+        vertical(bool, optional): Flip vertically or not. Default: True.
+        horizontal(bool, optional): Flip horizontally or not. Default: True.
+
+    Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(0, 4, dtype=np.float32).reshape(1, 2, 2, 1))
+        >>> flip = mge.module.Flip(vertical=True, horizontal=True)
+        >>> y = flip(x)
+        >>> y.numpy()
+        array([[[[3.],
+                [2.]],
+                [[1.],
+                 [0.]]]], dtype=float32)
+    """
+
+    def __init__(self, vertical=True, horizontal=True):
+        super().__init__()
+        self.vertical = vertical
+        self.horizontal = horizontal
+
+    def forward(self, inp):
+        assert isinstance(
+            inp, Tensor
+        ), "expected input is megengine.Tensor, got {}".format(type(inp))
+        return flip(inp, self.vertical, self.horizontal)
+
+
+class RandomHorizontalFlip(Module):
+    r"""Horizontally flip the given image randomly with a given probability.
+    Input format must be nhwc.
+
+    Args:
+        prob(float, optional): probability of the image being flipped. Default value is 0.5.
+    """
+
+    def __init__(self, prob=0.5):
+        super().__init__()
+        self.prob = prob
+
+    def forward(self, inp):
+        if np.random.rand(1) < self.prob:
+            return flip(inp, horizontal=True)
+        return inp
+
+
+class RandomVerticalFlip(Module):
+    r"""Vertically flip the given image randomly with a given probability.
+    Input format must be nhwc.
+
+    Args:
+        prob(float, optional): probability of the image being flipped. Default value is 0.5.
+    """
+
+    def __init__(self, prob=0.5):
+        super().__init__()
+        self.prob = prob
+
+    def forward(self, inp):
+        if np.random.rand(1) < self.prob:
+            return flip(inp, vertical=True)
+        return inp
+
+
+class Resize(Module):
+    r"""Resize the input image to the given size.
+    Input image is expected to have [N, C, H, W] or [N, H, W, C] shape.
+
+    Args:
+        size(Tensor): Desired output size.
+        format(String): Input tensor format;
+        imode(String): Interpolation mode.
+    
+    Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
+        >>> size = Tensor([2, 2])
+        >>> resize = mge.module.Resize(size)
+        >>> y = resize(x)
+        >>> y.numpy()
+        array([[[[ 2.5,  4.5],
+         [10.5, 12.5]]]], dtype=float32)
+    """
+
+    def __init__(self, size, format="NCHW", imode="linear"):
+        super().__init__()
+        self.size = Tensor(size)
+        self.format = format
+        self.imode = imode
+
+    def forward(self, inp):
+        assert isinstance(
+            inp, Tensor
+        ), "expected input is megengine.Tensor, got {}".format(type(inp))
+        if self.format not in ["NCHW", "NHWC"]:
+            raise RuntimeError(
+                "expect input Tensor format to be NCHW or NHWC, got format {}".format(
+                    self.format
+                )
+            )
+        return resize(inp, self.size, self.format, self.imode)
+
+
+class Rot90(Module):
+    r"""Rotate an n-D tensor by 90 degrees in the plane specified by dims axis. 
+
+    Args:
+        clockwise(bool, optional): Rotate 90° clockwise or 90° counterclockwise. Default: True.
+
+    Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(0, 4, dtype=np.float32).reshape(1, 2, 2, 1))
+        >>> rot90 = mge.module.Rot90(clockwise=True)
+        >>> y = rot90(x)
+        >>> y.numpy()
+        array([[[[2.],
+                [0.]],
+                [[3.],
+                 [1.]]]], dtype=float32)
+    """
+
+    def __init__(self, clockwise=True):
+        super().__init__()
+        self.clockwise = clockwise
+
+    def forward(self, inp):
+        assert isinstance(
+            inp, Tensor
+        ), "expected input is megengine.Tensor, got {}".format(type(inp))
+        return rot90(inp, self.clockwise)
+
+
+class Rotate(Module):
+    r"""Rotate a by given angle.
+
+    Args:
+        angle(float): rotation angle of the image.
+        format(str, optional): format of the input tensor, currently only supports NCHW and NHWC.
+        interp_mode(str, optional): interpoloation mode, currently only supports bilinear for NCHW format
+            and area mode for NHWC format.
+    """
+
+    def __init__(self, angle=0.0, format="NCHW", interp_mode="bilinear"):
+        super().__init__()
+        self.angle = angle
+        self.format = format
+        self.interp_mode = interp_mode
+
+    def forward(self, inp):
+        assert isinstance(
+            inp, Tensor
+        ), "expected input is megengine.Tensor, got {}".format(type(inp))
+        return rotate(inp, self.angle, self.format, self.interp_mode)

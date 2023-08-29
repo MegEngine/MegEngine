@@ -10838,6 +10838,133 @@ void _init_py_FillLike(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(FillLike::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(Flip) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Flip)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"vertical", serialization<decltype(opdef.vertical)>::dump(opdef.vertical)},
+            {"horizontal", serialization<decltype(opdef.horizontal)>::dump(opdef.horizontal)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Flip)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("vertical");
+        if (iter != state.end()) {
+            opdef.vertical = serialization<decltype(opdef.vertical)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("horizontal");
+        if (iter != state.end()) {
+            opdef.horizontal = serialization<decltype(opdef.horizontal)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Flip)
+
+int PyOp(Flip)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"vertical", "horizontal", "scope", NULL};
+    PyObject *vertical = NULL, *horizontal = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOO", const_cast<char**>(kwlist), &vertical, &horizontal, &scope))
+    return -1;
+
+    if (vertical) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Flip)*>(self)->inst().vertical =
+                    py::cast<decltype(Flip::vertical)>(py::handle(vertical));
+        } CATCH_ALL(-1)
+    }
+
+    if (horizontal) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Flip)*>(self)->inst().horizontal =
+                    py::cast<decltype(Flip::horizontal)>(py::handle(horizontal));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(Flip)::py_getsetters[] = {
+    {const_cast<char*>("vertical"), py_get_generic(Flip, vertical), py_set_generic(Flip, vertical), const_cast<char*>("vertical"), NULL},
+    {const_cast<char*>("horizontal"), py_get_generic(Flip, horizontal), py_set_generic(Flip, horizontal), const_cast<char*>("horizontal"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Flip)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Flip)::getstate, METH_NOARGS, "Flip getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Flip)::setstate, METH_VARARGS, "Flip setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Flip)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Flip)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Flip)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Flip)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, vertical: bool = ..., horizontal: bool = ...) -> None\n"
+};
+
+void _init_py_Flip(py::module m) {
+    using py_op = PyOp(Flip);
+    auto& py_type = PyOpType(Flip);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Flip";
+    py_type.tp_basicsize = sizeof(PyOp(Flip));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Flip";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Flip), &PyOp(Flip)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("Flip", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Flip::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(GammaRNG) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -20926,6 +21053,115 @@ void _init_py_Resize3D(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Resize3D::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(Rotate) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(Rotate)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"clockwise", serialization<decltype(opdef.clockwise)>::dump(opdef.clockwise)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(Rotate)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("clockwise");
+        if (iter != state.end()) {
+            opdef.clockwise = serialization<decltype(opdef.clockwise)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(Rotate)
+
+int PyOp(Rotate)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"clockwise", "scope", NULL};
+    PyObject *clockwise = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OO", const_cast<char**>(kwlist), &clockwise, &scope))
+    return -1;
+
+    if (clockwise) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(Rotate)*>(self)->inst().clockwise =
+                    py::cast<decltype(Rotate::clockwise)>(py::handle(clockwise));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(Rotate)::py_getsetters[] = {
+    {const_cast<char*>("clockwise"), py_get_generic(Rotate, clockwise), py_set_generic(Rotate, clockwise), const_cast<char*>("clockwise"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(Rotate)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(Rotate)::getstate, METH_NOARGS, "Rotate getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(Rotate)::setstate, METH_VARARGS, "Rotate setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(Rotate)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(Rotate)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(Rotate)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(Rotate)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, clockwise: bool = ...) -> None\n"
+};
+
+void _init_py_Rotate(py::module m) {
+    using py_op = PyOp(Rotate);
+    auto& py_type = PyOpType(Rotate);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.Rotate";
+    py_type.tp_basicsize = sizeof(PyOp(Rotate));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "Rotate";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(Rotate), &PyOp(Rotate)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("Rotate", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(Rotate::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(SVD) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -23828,6 +24064,7 @@ void _init_py_WhereBackward(py::module m) {
     _init_py_FastpathCopy(m); \
     _init_py_Fill(m); \
     _init_py_FillLike(m); \
+    _init_py_Flip(m); \
     _init_py_GammaRNG(m); \
     _init_py_GaussianRNG(m); \
     _init_py_GeneralNorm(m); \
@@ -23884,6 +24121,7 @@ void _init_py_WhereBackward(py::module m) {
     _init_py_Reshape(m); \
     _init_py_Resize(m); \
     _init_py_Resize3D(m); \
+    _init_py_Rotate(m); \
     _init_py_SVD(m); \
     _init_py_SetMeshIndexing(m); \
     _init_py_SetSubtensor(m); \

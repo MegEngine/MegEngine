@@ -419,6 +419,9 @@ MAKE_NODE_PROP_WITH_ZERO_SHAPE_1(CvtColorForward, 0)
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GaussianBlurForward);
 MEGDNN_OPR_INIT1(GaussianBlurForward, "gaussion_blur")
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(FlipForward);
+MEGDNN_OPR_INIT1(FlipForward, "flip")
+
 /* ======================= ResizeForward ======================= */
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ResizeForward);
 MEGDNN_OPR_INIT2(ResizeForward, "resize")

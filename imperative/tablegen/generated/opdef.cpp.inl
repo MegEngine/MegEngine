@@ -3690,6 +3690,46 @@ OP_TRAIT_REG(FillLike, FillLike)
     .props(FillLike_props_impl)
     .make_name(FillLike_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Flip);
+
+namespace {
+size_t Flip_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Flip>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.vertical));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.horizontal));
+    return val;
+}
+bool Flip_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<Flip>(),
+         &&b_ = rhs_.cast_final_safe<Flip>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.vertical != b_.vertical) return false;
+    if (a_.horizontal != b_.horizontal) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> Flip_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Flip>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("vertical", std::to_string(op_.vertical));
+    props_.emplace_back("horizontal", std::to_string(op_.horizontal));
+    return props_;
+}
+std::string Flip_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Flip>();
+    static_cast<void>(op_);
+    return "Flip";
+}
+} // anonymous namespace
+OP_TRAIT_REG(Flip, Flip)
+    .hash(Flip_hash_impl)
+    .is_same_st(Flip_is_same_st_impl)
+    .props(Flip_props_impl)
+    .make_name(Flip_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GammaRNG);
 
 namespace {
@@ -7192,6 +7232,43 @@ OP_TRAIT_REG(Resize3D, Resize3D)
     .is_same_st(Resize3D_is_same_st_impl)
     .props(Resize3D_props_impl)
     .make_name(Resize3D_make_name_impl);
+
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(Rotate);
+
+namespace {
+size_t Rotate_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Rotate>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.clockwise));
+    return val;
+}
+bool Rotate_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<Rotate>(),
+         &&b_ = rhs_.cast_final_safe<Rotate>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.clockwise != b_.clockwise) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> Rotate_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Rotate>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("clockwise", std::to_string(op_.clockwise));
+    return props_;
+}
+std::string Rotate_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<Rotate>();
+    static_cast<void>(op_);
+    return "Rotate";
+}
+} // anonymous namespace
+OP_TRAIT_REG(Rotate, Rotate)
+    .hash(Rotate_hash_impl)
+    .is_same_st(Rotate_is_same_st_impl)
+    .props(Rotate_props_impl)
+    .make_name(Rotate_make_name_impl);
 
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(SVD);
 

@@ -9,9 +9,9 @@ from ..core.ops import builtin
 from ..core.tensor import megbrain_graph, utils
 from ..core.tensor.utils import astensor1d
 from ..tensor import Tensor
-from .elemwise import floor
+from .elemwise import cos, floor, sin
 from .math import argsort
-from .tensor import broadcast_to, concat, expand_dims, reshape, transpose
+from .tensor import broadcast_to, concat, expand_dims, reshape, transpose, zeros
 
 __all__ = [
     "correlation",
@@ -24,6 +24,10 @@ __all__ = [
     "roi_pooling",
     "warp_affine",
     "warp_perspective",
+    "flip",
+    "rotate",
+    "rot90",
+    "resize",
 ]
 
 
@@ -657,3 +661,155 @@ def nvof(src: Tensor, precision: int = 1) -> Tensor:
 
     op = builtin.NvOf(precision=precision)
     return apply(op, src)[0]
+
+
+def flip(inp: Tensor, vertical: bool = True, horizontal: bool = True,) -> Tensor:
+    r"""Reverse an n-dimensional tensor according to the given parameters
+
+    Args:
+        inp(Tensor): input images, format must be nhwc.
+        vertical(bool, optional): Flip vertically or not. Default: True.
+        horizontal(bool, optional): Flip horizontally or not. Default: True.
+
+    Returns:
+        Reversed result.
+
+    Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(0, 4, dtype=np.float32).reshape(1, 2, 2, 1))
+        >>> y = F.vision.flip(x)
+        >>> y.numpy()
+        array([[[[3.],
+                [2.]],
+                [[1.],
+                 [0.]]]], dtype=float32)
+    """
+    op = builtin.Flip(horizontal=horizontal, vertical=vertical)
+    (result,) = apply(op, inp)
+    return result
+
+
+def rot90(inp: Tensor, clockwise: bool = True,) -> Tensor:
+    r"""Rotate an n-D tensor by 90 degrees.
+
+    Args:
+        inp(Tensor): input image, format must be nwhc.
+        clockwise(bool, optional): Rotate 90° clockwise or 90° counterclockwise. Default: True.
+
+    Returns:
+        rotated result.
+
+    Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(0, 4, dtype=np.float32).reshape(1, 2, 2, 1))
+        >>> y = F.vision.rot90(x)
+        >>> y.numpy()
+        array([[[[2.],
+                [0.]],
+                [[3.],
+                 [1.]]]], dtype=float32)
+    """
+    op = builtin.Rotate(clockwise=clockwise)
+    (result,) = apply(op, inp)
+    return result
+
+
+def rotate(
+    inp: Tensor,
+    angle: float = 0.0,
+    format: str = "NCHW",
+    interp_mode: str = "bilinear",
+) -> Tensor:
+    r"""Rotate a tensor by given angle.
+
+    Args:
+        inp(Tensor): input image, format must be NCHW or NHWC.
+        angle(float): rotation angle of the image.
+        format(str, optional): format of the input tensor, currently only supports NCHW and NHWC.
+        interp_mode(str, optional): interpoloation mode, currently only supports bilinear for NCHW format
+            and area mode for NHWC format.
+
+    Returns:
+        rotated result.
+    """
+    if format == "NCHW":
+        assert (
+            interp_mode == "bilinear"
+        ), "Currently NCHW format only supports bilinear mode."
+        interp_mode = interp_mode[2:]
+        height, width = inp.shape[2:]
+    elif format == "NHWC":
+        assert interp_mode == "area", "Currently NHWC format only supports area mode."
+        height, width = inp.shape[1:3]
+
+    angle = angle / 180.0 * np.pi
+
+    rotate_matrix = Tensor(
+        [
+            [
+                [
+                    cos(angle),
+                    -sin(angle),
+                    (1 - cos(angle)) * ((width - 1) / 2)
+                    + sin(angle) * ((height - 1) / 2),
+                ],
+                [
+                    sin(angle),
+                    cos(angle),
+                    -sin(angle) * ((width - 1) / 2)
+                    + (1 - cos(angle)) * ((height - 1) / 2),
+                ],
+            ]
+        ]
+    )
+
+    out_shape = (height, width)
+    output = warp_affine(
+        inp,
+        rotate_matrix,
+        out_shape,
+        border_mode="constant",
+        format=format,
+        interp_mode=interp_mode,
+    )
+
+    return output
+
+
+def resize(
+    inp: Tensor,
+    size: Iterable[int],
+    format: str = "NCHW",
+    imode: str = "bilinear",
+    max_size: Optional[int] = None,
+) -> Tensor:
+    r"""Resize the input image to the given size.
+
+    Args:
+        inp(Tensor): input images.
+        size(Tensor): Desired output size.
+        format(str, optional): default="NCHW", "NHWC" is also supported.
+        imode(str, optional): interpolation mode, default="bilinear", "nearest" and "bicubic" are also supported.
+        max_size(int, optional): The maximum allowed for the longer edge of the resized image. If the longer edge
+            of the image is greater than ``max_size`` after being resized according to ``size``, ``size`` will be 
+            overruled so that the longer edge is equal to ``max_size``.
+    Returns:
+        resized result.
+
+    Examples:
+        >>> import numpy as np
+        >>> x = Tensor(np.arange(0, 16, dtype=np.float32).reshape(1, 1, 4, 4))
+        >>> size = Tensor([2, 2])
+        >>> y = F.vision.resize(x, size)
+        >>> y.numpy()
+        array([[[[ 2.5,  4.5],
+         [10.5, 12.5]]]], dtype=float32)
+    """
+    if imode in ["bilinear", "bicubic"]:
+        imode = imode[2:]
+    op = builtin.Resize(format=format, imode=imode)
+    if max_size is not None:
+        size = [max_size if x > max_size else x for x in size]
+    size = Tensor(size)
+    (result,) = apply(op, inp, size)
+    return result

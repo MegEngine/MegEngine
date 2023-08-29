@@ -594,6 +594,31 @@ TEST(TestOprImgproc, GaussianBlurForward) {
             .run({TensorShape{N, 10, 9, C}}, opt);
 }
 
+TEST(TestOprImgproc, FlipForward) {
+    constexpr size_t N = 2, C = 3;
+
+    opr::Flip::Param param;
+    using Checker = AutoOprChecker<1, 1>;
+    auto make_graph = [&](const Checker::SymInpArray& inputs) -> Checker::SymOutArray {
+        return {opr::Flip::make(inputs[0], param)};
+    };
+    auto fwd = [&](Checker::NumOutArray& dest, Checker::NumInpArray inp) {
+        TensorLayout out_layout;
+        auto opr = megdnn_naive_handle()->create_operator<megdnn::Flip>();
+        opr->param() = param;
+        opr->deduce_layout(inp[0]->layout(), out_layout);
+        dest[0].resize(out_layout);
+        opr->exec(inp[0]->as_megdnn(), dest[0].as_megdnn(), {});
+    };
+
+    Checker::RunOptions opt;
+    Checker(make_graph, fwd, CompNode::load("cpu1"))
+            .set_output_allow_grad(0, false)
+            .run({TensorShape{N, 4, 5, C}}, opt)
+            .run({TensorShape{N, 6, 5, C}}, opt)
+            .run({TensorShape{N, 10, 9, C}}, opt);
+}
+
 TEST(TestOprImgproc, ResizeForward) {
     constexpr size_t N = 2, C = 3;
 

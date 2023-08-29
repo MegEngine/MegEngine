@@ -17,7 +17,7 @@ void RotateBase::deduce_layout_fwd(const TensorLayout& src, TensorLayout& dst) {
     size_t iw = src.shape[2];
     size_t ic = src.shape[3];
 
-    dst = TensorLayout(TensorShape({in, iw, ih, ic}), src.dtype);
+    dst = TensorLayout{{in, iw, ih, ic}, src.dtype};
 }
 
 void RotateBase::check_layout_fwd(const TensorLayout& src, const TensorLayout& dst) {

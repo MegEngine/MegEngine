@@ -114,6 +114,10 @@ def Resize: MgbHashableOp<"Resize", [ResizeParam]>;
 
 def Resize3D: MgbHashableOp<"Resize3D", [Resize3DParam]>;
 
+def Rotate: MgbHashableOp<"Rotate", [RotateParam]>;
+
+def Flip: MgbHashableOp<"Flip", [FlipParam]>;
+
 def IndexingOneHot: MgbHashableOp<"IndexingOneHot", [AxisParam]> {
   let extraArguments = (ins
     MgbI32Attr:$ndim
