@@ -102,7 +102,9 @@ class CambriconCompNode::CompNodeImpl final : public CompNode::Impl {
     struct StaticData;
     static StaticData* sd;
     static Spinlock sd_mtx;
-
+#if !MGB_BUILD_SLIM_SERVING
+    std::mutex m_update_mem;
+#endif
     //! set to true when m_locator is assigned; set to false if init
     //! failed
     bool m_initialized = false;
@@ -132,10 +134,7 @@ class CambriconCompNode::CompNodeImpl final : public CompNode::Impl {
 public:
     CompNodeImpl() : Impl(static_free_device, static_free_host) {}
 
-    void* alloc_device(size_t size) override {
-        activate();
-        return m_mem_alloc->alloc(size);
-    }
+    void* alloc_device(size_t size) override;
 
     void free_device(void* ptr);
 
@@ -200,15 +199,33 @@ public:
         return {tot, free};
     }
 
+#if !MGB_BUILD_SLIM_SERVING
+    size_t get_used_memory() override;
+
+    size_t get_max_used_memory() override;
+
+    size_t get_reserved_memory() override;
+
+    size_t get_max_reserved_memory() override;
+
+    void reset_max_used_memory() override;
+    void reset_max_reserved_memory() override;
+#endif
+
     Locator locator() override { return m_locator; }
 
     Locator locator_logical() override { return m_locator_logical; }
+#if !MGB_BUILD_SLIM_SERVING
+    std::unordered_map<void*, size_t> ptr2size;
+#endif
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(CambriconCompNode::CompNodeImpl);
 
 struct CambriconCompNodeImpl::DeviceInfo {
     int dev_num = -1;
     int dev;
+    std::atomic_size_t m_used_mem{0};
+    std::atomic_size_t m_max_used_mem{0};
     std::unique_ptr<mem_alloc::DevMemAlloc> mem_alloc;
 
     bool init_done() const { return mem_alloc.get(); }
@@ -298,13 +315,65 @@ void CambriconCompNodeImpl::fini() {
     m_initialized = false;
 }
 
+void* CambriconCompNodeImpl::alloc_device(size_t size) {
+    activate();
+#if MGB_BUILD_SLIM_SERVING
+    return m_mem_alloc->alloc(size);
+#else
+    void* ptr = m_mem_alloc->alloc(size);
+    {
+        MGB_LOCK_GUARD(m_update_mem);
+        ptr2size[ptr] = size;
+        m_device_info->m_used_mem += size;
+        if (m_device_info->m_used_mem > m_device_info->m_max_used_mem) {
+            m_device_info->m_max_used_mem = m_device_info->m_used_mem.load();
+        }
+    }
+    return ptr;
+#endif
+}
+
 void CambriconCompNodeImpl::free_device(void* ptr) {
     if (check_global_finalized())
         return;
 
     activate();
+#if !MGB_BUILD_SLIM_SERVING
+    {
+        MGB_LOCK_GUARD(m_update_mem);
+        mgb_assert(ptr2size.find(ptr) != ptr2size.end(), "ptr %p not found!", ptr);
+        m_device_info->m_used_mem -= ptr2size.at(ptr);
+        ptr2size.erase(ptr);
+    }
+#endif
     m_mem_alloc->free(ptr);
 }
+
+#if !MGB_BUILD_SLIM_SERVING
+size_t CambriconCompNodeImpl::get_used_memory() {
+    return m_device_info->m_used_mem.load();
+}
+
+size_t CambriconCompNodeImpl::get_max_used_memory() {
+    return m_device_info->m_max_used_mem.load();
+}
+
+void CambriconCompNodeImpl::reset_max_used_memory() {
+    m_device_info->m_max_used_mem = 0;
+}
+
+size_t CambriconCompNodeImpl::get_reserved_memory() {
+    return m_device_info->mem_alloc->get_used_memory();
+}
+
+size_t CambriconCompNodeImpl::get_max_reserved_memory() {
+    return m_device_info->mem_alloc->get_max_used_memory();
+}
+
+void CambriconCompNodeImpl::reset_max_reserved_memory() {
+    m_device_info->mem_alloc->reset_max_used_memory();
+}
+#endif
 
 void CambriconCompNodeImpl::peer_copy_to(
         Impl* dest_impl, void* dest, const void* src, size_t size) {
