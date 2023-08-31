@@ -52,6 +52,14 @@ class Sigmoid(Module):
     .. math::
 
         \text{Sigmoid}(x) = \frac{1}{1 + \exp(-x)}
+    
+    
+    Shape:
+        *``inputs``: :math:`(*)` where :math:`*` means any member of addition dimensions.
+        *``outpus``: :math:`(*)` same shape as the inputs.
+    
+    Returns:
+        Return type: module. The instance of the ``Sigmoid`` module.
 
     Examples:
         >>> import numpy as np

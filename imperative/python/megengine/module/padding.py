@@ -8,14 +8,17 @@ class Pad(Module):
     r"""Pads the input tensor.
 
     Args:
-        pad_width: A tuple. Each element in the tuple is the tuple of 2-elements,
+        pad_width(Tuple[Tuple[int, int], ...]): A tuple. Each element in the tuple is the tuple of 2-elements,
             the 2 elements represent the padding size on both sides of the current dimension, ``(front_offset, back_offset)``
-        mode: One of the following string values. Default: ``'constant'``
+        mode(str): One of the following string values. Default: ``'constant'``
 
             * ``'constant'``: Pads with a constant value.
             * ``'reflect'``: Pads with the edge values of tensor.
             * ``'replicate'``: Pads with the reflection of the tensor mirrored on the first and last values of the tensor along each axis.
-        constant_val: Fill value for ``'constant'`` padding. Default: 0
+        constant_val(float): Fill value for ``'constant'`` padding. Default: 0
+
+    Returns:
+        Return type: module. The instance of the ``Pad`` module.
 
     Examples:
 

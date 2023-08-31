@@ -37,6 +37,18 @@ class AdaptiveMaxPool2d(_AdaptivePoolNd):
     * stride: (floor(IH / OH), floor(IW / OW))
     * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
 
+    Args:
+        oshp(Union[Tuple[int, int], int, Tensor]): the target output shape of the image of the form Height * Width.
+            Can be tuple (H, W) or a single H for a square image H * H.
+        
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})` or :math:`(C, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, H_{out}, W_{out})` or :math:`(C, H_{out}, W_{out})`, where
+          :math:`(H_{out}, W_{out})=\text{output\_shape}`.
+
+    Returns:
+        Return type: module. The instance of the ``AdaptiveMaxPool2d`` module.
+
     Examples:
         >>> import numpy as np
         >>> m = M.AdaptiveMaxPool2d((2, 2))
@@ -68,6 +80,18 @@ class AdaptiveAvgPool2d(_AdaptivePoolNd):
     * padding: (0, 0)
     * stride: (floor(IH / OH), floor(IW / OW))
     * kernel_size: (IH - (OH - 1) * stride_h, IW - (OW - 1) * stride_w)
+
+    Args:
+        oshp(Union[Tuple[int, int], int, Tensor]): the target output shape of the image of the form Height * Width.
+            Can be tuple (H, W) or a single H for a square image H * H.
+
+    Shape:
+        - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})` or :math:`(C, D_{in}, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})` or :math:`(C, D_{out}, H_{out}, W_{out})`,
+          where :math:`(D_{out}, H_{out}, W_{out})=\text{output\_shape}`.
+
+    Returns:
+        Return type: module. The instance of the ``AdaptiveAvgPool2d`` module.
 
     Examples:
         >>> import numpy as np

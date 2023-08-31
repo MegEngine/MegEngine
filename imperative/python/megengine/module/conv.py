@@ -570,27 +570,51 @@ class ConvTranspose2d(_ConvNd):
     connectivity pattern.
 
     Args:
-        in_channels: number of input channels.
-        out_channels: number of output channels.
-        kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
+        in_channels(int): number of input channels.
+        out_channels(int): number of output channels.
+        kernel_size(Union[int, Tuple[int, int]]): size of weight on spatial dimensions. If ``kernel_size`` is
             an :class:`int`, the actual kernel size would be
             ``(kernel_size, kernel_size)``.
-        stride: stride of the 2D convolution operation. Default: 1
-        padding: size of the paddings added to the input on both sides of its
-            spatial dimensions. Only zero-padding is supported. Default: 0
-        output_padding: size of paddings appended to output. Default: 0
-        dilation: dilation of the 2D convolution operation. Default: 1
-        groups: number of groups into which the input and output channels are divided,
+        stride(Union[int, Tuple[int, int]]): stride of the 2D convolution operation. Default: 1.
+        padding(Union[int, Tuple[int, int]]): size of the paddings added to the input on both sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0.
+        output_padding(Union[int, Tuple[int, int]]): size of paddings appended to output. Default: 0.
+        dilation(Union[int, Tuple[int, int]]): dilation of the 2D convolution operation. Default: 1.
+        groups(int): number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
             ``in_channels`` and ``out_channels`` must be divisible by groups,
             and the shape of weight should be ``(groups, in_channels // groups,
-            out_channels // groups, height, width)``. Default: 1
-        bias: wether to add a bias onto the result of convolution. Default: True
-            conv_mode: Supports `cross_correlation`. Default: `cross_correlation`
-        compute_mode: When set to "default", no special requirements will be
+            out_channels // groups, height, width)``. Default: 1.
+        bias(bool): wether to add a bias onto the result of convolution. Default: True
+            conv_mode: Supports `cross_correlation`. Default: `cross_correlation`.
+        compute_mode(str): When set to "default", no special requirements will be
             placed on the precision of intermediate results. When set to "float32",
             "float32" would be used for accumulator and intermediate result, but only
-            effective when input and output are of float16 dtype.
+            effective when input and output are of float16 dtype. Default: 'default'.
+    
+    Shape:
+        - Input: :math:`(N, C_{in}, H_{in}, W_{in})` or :math:`(C_{in}, H_{in}, W_{in})`
+        - Output: :math:`(N, C_{out}, H_{out}, W_{out})` or :math:`(C_{out}, H_{out}, W_{out})`, where
+
+        .. math::
+              H_{out} = (H_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0]
+                        \times (\text{kernel\_size}[0] - 1) + \text{output\_padding}[0] + 1
+        .. math::
+              W_{out} = (W_{in} - 1) \times \text{stride}[1] - 2 \times \text{padding}[1] + \text{dilation}[1]
+                        \times (\text{kernel\_size}[1] - 1) + \text{output\_padding}[1] + 1
+        
+    Returns:
+        Return type: module. The instance of the ``ConvTranspose2d`` module.
+
+    Examples:
+        >>> import torch
+        >>> import megengine
+        >>> conv_transpose = megengine.module.conv.ConvTranspose2d(3, 64, 3, stride=2, padding=1)
+        >>> input = megengine.tensor(torch.randn(16, 3, 32, 32))
+        >>> output = conv_transpose.forward(input)
+        >>> print(output.numpy().shape)
+        (16, 64, 63, 63)
+    
 
     Note:
         * ``weight`` usually has shape ``(in_channels, out_channels, height, width)`` ,
@@ -904,22 +928,48 @@ class ConvTranspose3d(_ConvNd):
     preserving the connectivity pattern.
 
     Args:
-        in_channels: number of input channels.
-        out_channels: number of output channels.
-        kernel_size: size of weight on spatial dimensions. If ``kernel_size`` is
+        in_channels(int): number of input channels.
+        out_channels(int): number of output channels.
+        kernel_size(Union[int, Tuple[int, int, int]]): size of weight on spatial dimensions. If ``kernel_size`` is
             an :class:`int`, the actual kernel size would be
             ``(kernel_size, kernel_size, kernel_size)``.
-        stride: stride of the 3D convolution operation. Default: 1
-        padding: size of the paddings added to the input on all sides of its
-            spatial dimensions. Only zero-padding is supported. Default: 0
-        output_padding: size of paddings appended to output. Default: 0
-        dilation: dilation of the 3D convolution operation. Default: 1
-        groups: number of groups into which the input and output channels are divided,
+        stride(Union[int, Tuple[int, int, int]]): stride of the 3D convolution operation. Default: 1.
+        padding(union[int, Tuple[int, int, int]]): size of the paddings added to the input on all sides of its
+            spatial dimensions. Only zero-padding is supported. Default: 0.
+        output_padding(Union[int, Tuple[int, int, int]]): size of paddings appended to output. Default: 0.
+        dilation(Union[int, tuple[int, int, int]]): dilation of the 3D convolution operation. Default: 1.
+        groups(int): number of groups into which the input and output channels are divided,
             so as to perform a ``grouped convolution``. When ``groups`` is not 1,
             ``in_channels`` and ``out_channels`` must be divisible by groups,
             and the shape of weight should be ``(groups, in_channels // groups,
-            out_channels // groups, depth, height, width)``. Default: 1
-        bias: wether to add a bias onto the result of convolution. Default: True
+            out_channels // groups, depth, height, width)``. Default: 1.
+        bias(bool): wether to add a bias onto the result of convolution. Default: True.
+
+    Shape:
+        - Input: :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})` or :math:`(C_{in}, D_{in}, H_{in}, W_{in})`
+        - Output: :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` or
+          :math:`(C_{out}, D_{out}, H_{out}, W_{out})`, where
+
+        .. math::
+              D_{out} = (D_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0]
+                        \times (\text{kernel\_size}[0] - 1) + \text{output\_padding}[0] + 1
+        .. math::
+              H_{out} = (H_{in} - 1) \times \text{stride}[1] - 2 \times \text{padding}[1] + \text{dilation}[1]
+                        \times (\text{kernel\_size}[1] - 1) + \text{output\_padding}[1] + 1
+        .. math::
+              W_{out} = (W_{in} - 1) \times \text{stride}[2] - 2 \times \text{padding}[2] + \text{dilation}[2]
+                        \times (\text{kernel\_size}[2] - 1) + \text{output\_padding}[2] + 1
+    Returns:
+        Return type: module. The instance of the ``ConvTranspose3d`` module.
+
+    Examples:
+        >>> import torch
+        >>> import megengine
+        >>> conv_transpose = megengine.module.conv.ConvTranspose3d(3, 64, 3, stride=2, padding=1)
+        >>> input = megengine.tensor(torch.randn(16, 3, 32, 32, 32))
+        >>> output = conv_transpose.forward(input)
+        >>> print(output.numpy().shape)
+        (16, 64, 63, 63, 63)
 
     Note:
         * ``weight`` usually has shape ``(in_channels, out_channels, depth, height, width)`` .

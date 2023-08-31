@@ -48,9 +48,24 @@ class MaxPool2d(_PoolNd):
     both sides for :attr:`padding` number of points.
 
     Args:
-        kernel_size: the size of the window.
-        stride: the stride of the window. Default value is ``kernel_size``.
-        padding: implicit zero padding to be added on both sides.Default: 0.
+        kernel_size(Union[int, Tuple[int, int]]): the size of the window.
+        stride(Union[int, Tuple[int, int]]): the stride of the window. Default value is ``kernel_size``.
+        padding(Union[int, Tuple[int, int]]): implicit zero padding to be added on both sides.Default: 0.
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})` or :math:`(C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` or :math:`(C, H_{out}, W_{out})`, where
+
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in} + 2 * \text{padding[0]} - \text{dilation[0]}
+                    \times (\text{kernel\_size[0]} - 1) - 1}{\text{stride[0]}} + 1\right\rfloor
+
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in} + 2 * \text{padding[1]} - \text{dilation[1]}
+                    \times (\text{kernel\_size[1]} - 1) - 1}{\text{stride[1]}} + 1\right\rfloor
+
+    Returns:
+        Return type: module. The instance of the ``MaxPool2d`` module.
 
     Examples:
         >>> import numpy as np
@@ -60,6 +75,7 @@ class MaxPool2d(_PoolNd):
         >>> oup.numpy()
         array([[[[10., 11.],
                  [14., 15.]]]], dtype=float32)
+
     """
 
     def forward(self, inp):
@@ -82,12 +98,27 @@ class AvgPool2d(_PoolNd):
     both sides for :attr:`padding` number of points.
 
     Args:
-        kernel_size: the size of the window.
-        stride: the stride of the window. Default value is ``kernel_size``.
-        padding: implicit zero padding to be added on both sides.Default: 0.
-        mode: whether to include the padding values while calculating the average, set
+        kernel_size(Union[int, Tuple[int, int]]): the size of the window.
+        stride(Union[int, Tuple[int, int]]): the stride of the window. Default value is ``kernel_size``.
+        padding(Union[int, Tuple[int, int]]): implicit zero padding to be added on both sides.Default: 0.
+        mode(str): whether to include the padding values while calculating the average, set
             to "average" will do counting.
             Default: "average_count_exclude_padding"
+    
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})` or :math:`(C, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, H_{out}, W_{out})` or :math:`(C, H_{out}, W_{out})`, where
+
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in}  + 2 \times \text{padding}[0] -
+                \text{kernel\_size}[0]}{\text{stride}[0]} + 1\right\rfloor
+
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in}  + 2 \times \text{padding}[1] -
+                \text{kernel\_size}[1]}{\text{stride}[1]} + 1\right\rfloor
+
+    Returns:
+        Return type: module. The instance of the ``AvgPool2d`` module.
 
     Examples:
         >>> import numpy as np
