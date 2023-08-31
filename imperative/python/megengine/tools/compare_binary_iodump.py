@@ -33,6 +33,7 @@ def load_tensor_binary(fobj):
         # 7: _mgb.intb4,
         8: None,
         9: np.float16,
+        13: np.uint16,
         # quantized dtype start from 100000
         # see MEGDNN_PARAMETERIZED_DTYPE_ENUM_BASE in
         # dnn/include/megdnn/dtype.h
