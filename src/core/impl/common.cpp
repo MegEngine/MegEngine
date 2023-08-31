@@ -23,8 +23,9 @@ namespace {
 
 LogLevel config_default_log_level() {
     //! some sdk do not call mgb::get_version explicitly, so we force show version for
-    //! debug, mgb_log level is info, sdk may config a higher, need export
-    //! RUNTIME_OVERRIDE_LOG_LEVEL=0 to force change log level to show version
+    //! debug, mgb_log level is info, if you can not see corresponding log, please set
+    //! RUNTIME_OVERRIDE_LOG_LEVEL=0 to force change log level. also you can do cmd:
+    //! strings xxxxx.so | grep "init Engine with version" to check version
     auto v = get_version();
     mgb_log("init Engine with version: %d.%d.%d(%d) @(%s)", v.major, v.minor, v.patch,
             v.is_dev, GIT_FULL_HASH);
