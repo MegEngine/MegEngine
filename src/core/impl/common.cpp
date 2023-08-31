@@ -1,8 +1,10 @@
 #include "megbrain/common.h"
+#include "git_full_hash_header.h"
 #include "megbrain/exception.h"
 #include "megbrain/system.h"
 #include "megbrain/utils/thread.h"
 
+#include "megbrain/version.h"
 #include "megdnn/basic_types.h"
 
 #include <cstdio>
@@ -18,7 +20,14 @@
 using namespace mgb;
 
 namespace {
+
 LogLevel config_default_log_level() {
+    //! some sdk do not call mgb::get_version explicitly, so we force show version for
+    //! debug, mgb_log level is info, sdk may config a higher, need export
+    //! RUNTIME_OVERRIDE_LOG_LEVEL=0 to force change log level to show version
+    auto v = get_version();
+    mgb_log("init Engine with version: %d.%d.%d(%d) @(%s)", v.major, v.minor, v.patch,
+            v.is_dev, GIT_FULL_HASH);
     auto default_level = LogLevel::ERROR;
     //! env to config LogLevel
     //!  DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3, NO_LOG = 4
