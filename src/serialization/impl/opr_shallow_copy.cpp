@@ -21,6 +21,8 @@ namespace {
 //! dump single opr to memory for shallow copy
 class OprDumpContextMemory final : public OprDumpContextRawPOD {
     std::vector<uint8_t> m_buf;
+    using DumpConfig = GraphDumpConfig;
+    DumpConfig m_config;
 
     void write_raw(const void* data, size_t size) override {
         auto pos = m_buf.size();
@@ -38,9 +40,7 @@ class OprDumpContextMemory final : public OprDumpContextRawPOD {
         mgb_throw(GraphError, "OprDumpContextMemory does not support dump tensor");
     }
 
-    const GraphDumpConfig& config() const override {
-        mgb_throw(GraphError, "OprDumpContextMemory has no associated config");
-    }
+    const GraphDumpConfig& config() const override { return m_config; }
 
 public:
     OprDumpContextMemory() : OprDumpContextRawPOD(false) {}

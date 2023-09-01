@@ -425,7 +425,10 @@ cg::OperatorNodeBase* opr_shallow_copy_add_update(
             ->owner_opr();
 }
 
-MGB_SEREG_OPR_CONDITION(Elemwise, 0, false);
+MGB_SEREG_OPR_V1_WITH_CONVERTER(
+        Elemwise, 0,
+        (mgb::serialization::OprLoadDumpImplV2<opr::Elemwise, 0>::replace_opr),
+        nullptr);
 MGB_SEREG_OPR_V2_HASH_WITHOUT_TAIL_0(
         Elemwise, 0,
         (mgb::serialization::OprLoadDumpImplV2<opr::Elemwise, 0>::replace_opr),

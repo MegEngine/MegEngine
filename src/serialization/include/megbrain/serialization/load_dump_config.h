@@ -63,20 +63,24 @@ struct GraphDumpConfig {
     //! format and then dump
     bool no_change_graph;
 
+    //! whether dump to compat older megbrain version
+    std::string compat_older_version;
+
     GraphDumpConfig(
             int keep_var_name_ = 1, bool keep_param_name_ = false,
             bool keep_opr_priority_ = false, bool keep_op_name_ = true,
             const std::shared_ptr<UserDataContainer>& user_data_ =
                     std::make_shared<UserDataContainer>(),
             const TensorValueDumper& tensor_value_dumper_ = {},
-            bool no_change_graph_ = false)
+            bool no_change_graph_ = false, std::string compat_older_version_ = "")
             : keep_var_name{keep_var_name_},
               keep_param_name{keep_param_name_},
               keep_opr_priority{keep_opr_priority_},
               keep_op_name{keep_op_name_},
               user_data{user_data_},
               tensor_value_dumper{tensor_value_dumper_},
-              no_change_graph{no_change_graph_} {}
+              no_change_graph{no_change_graph_},
+              compat_older_version{compat_older_version_} {}
 };
 
 //! config for loading a whole graph; setup in GraphLoader

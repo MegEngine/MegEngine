@@ -72,6 +72,41 @@ struct OprMaker<opr::CheckNonFinite, 0> {
 };
 
 template <>
+struct OprLoadDumpImpl<opr::CheckNonFinite, 0> {
+    using Opr = opr::CheckNonFinite;
+    using PersisParam = opr::CheckNonFinite::Param;
+    static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
+        ctx.write_param<PersisParam>(opr.cast_final_safe<Opr>().param());
+    }
+
+    static void dump_checknonfinite_v0(
+            serialization::OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
+        using EmptyParam = megdnn::param::Empty;
+        if (ctx.config().compat_older_version == "8.14") {
+            EmptyParam empty;
+            ctx.write_param<EmptyParam>(empty);
+        } else {
+            ctx.write_param<PersisParam>(opr.cast_final_safe<Opr>().param());
+        }
+    }
+
+    static cg::OperatorNodeBase* replace_opr(
+            cg::OperatorNodeBase* opr, const VarNodeArray& inputs) {
+        for (size_t i = 0; i < inputs.size(); i++) {
+            opr->output(i)->add_flag(VarNode::Flag::VOLATILE_CONTENT);
+        }
+        return opr;
+    }
+
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
+        return OprMaker<opr::CheckNonFinite, 0>::make(
+                ctx.read_param<PersisParam>(), inputs, ctx.graph(), config);
+    }
+};
+
+template <>
 struct OprMaker<opr::Where, 3> {
     using Opr = opr::Where;
     using Param = Opr::Param;
@@ -140,7 +175,9 @@ MGB_SEREG_OPR(ArgsortBackward, 3);
 MGB_SEREG_OPR(CondTake, 2);
 MGB_SEREG_OPR(NonZero, 1);
 MGB_SEREG_OPR(TopK, 2);
-MGB_SEREG_OPR_CONDITION(Where, 3, false);
+MGB_SEREG_OPR_V1_WITH_CONVERTER(
+        Where, 3, (mgb::serialization::OprLoadDumpImplV2<opr::Where, 3>::replace_opr),
+        nullptr)
 MGB_SEREG_OPR_V2_HASH_WITHOUT_TAIL_0(
         Where, 3, (mgb::serialization::OprLoadDumpImplV2<opr::Where, 3>::replace_opr),
         VERSION_1, VERSION_1);
@@ -153,8 +190,12 @@ MGB_SEREG_OPR(CumsumV1, 1);
 #if MGB_CUDA
 MGB_SEREG_OPR(NvOf, 1);
 #endif
-MGB_SEREG_OPR(CheckNonFinite, 0);
-
+MGB_SEREG_OPR_V1_WITH_CONVERTER(
+        CheckNonFinite, 0,
+        (mgb::serialization::OprLoadDumpImpl<opr::CheckNonFinite, 0>::replace_opr),
+        (mgb::serialization::OprLoadDumpImpl<
+                opr::CheckNonFinite, 0>::dump_checknonfinite_v0));
+MGB_SEREG_OPR_V2_HASH_WITHOUT_TAIL_0(CheckNonFinite, 0, nullptr, VERSION_1, VERSION_1);
 }  // namespace opr
 }  // namespace mgb
 

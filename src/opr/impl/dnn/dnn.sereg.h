@@ -19,6 +19,7 @@
 #include "megbrain/opr/dnn/sliding_window_transpose.h"
 #include "megbrain/opr/dnn/softmax.h"
 #include "megbrain/opr/dnn/tqt.h"
+#include "megbrain/opr/internal/indexing_helper.h"
 #include "megbrain/opr/io.h"
 #include "megbrain/opr/tensor_manip.h"
 #include "megbrain/serialization/oss_opr_load_dump.h"
@@ -587,6 +588,119 @@ struct OprMaker<opr::GroupNorm, 0> {
             mgb_assert(i.size() == 1);
             return opr::GroupNorm::make(i[0], param, config)[0].node()->owner_opr();
         }
+    }
+};
+
+template <>
+struct OprLoadDumpImpl<opr::Softmax, 1> {
+    using Opr = opr::Softmax;
+    using PersisParam = opr::Softmax::Param;
+    using ElemwiseParam = opr::Elemwise::Param;
+    static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
+        ctx.write_param<PersisParam>(opr.cast_final_safe<Opr>().param());
+    }
+
+    static cg::OperatorNodeBase* replace_opr(
+            cg::OperatorNodeBase* opr, const VarNodeArray& inputs) {
+        int32_t axis = opr->cast_final_safe<Opr>().param().axis;
+        auto input_var = inputs[0];
+        auto max_reduce_out =
+                opr::Reduce::make(input_var, {megdnn::Reduce::Mode::MAX, axis});
+        auto elemwise_sub_out = opr::Elemwise::make(
+                {input_var, max_reduce_out}, {ElemwiseParam::Mode::SUB});
+        auto elemwise_exp_out =
+                opr::Elemwise::make({elemwise_sub_out}, {ElemwiseParam::Mode::EXP});
+        auto sum_reduce_out =
+                opr::Reduce::make(elemwise_exp_out, {megdnn::Reduce::Mode::SUM, axis});
+        auto out = opr::Elemwise::make(
+                {elemwise_exp_out, sum_reduce_out}, {ElemwiseParam::Mode::TRUE_DIV});
+        return out.node()->owner_opr();
+    }
+
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
+        return OprMaker<opr::Softmax, 1>::make(
+                ctx.read_param<PersisParam>(), inputs, ctx.graph(), config);
+    }
+};
+
+template <>
+struct OprLoadDumpImpl<opr::LayerNorm, 0> {
+    using Opr = opr::LayerNorm;
+    using PersisParam = opr::LayerNorm::Param;
+    using ElemwiseParam = opr::Elemwise::Param;
+    static void dump(OprDumpContext& ctx, const cg::OperatorNodeBase& opr) {
+        ctx.write_param<PersisParam>(opr.cast_final_safe<Opr>().param());
+    }
+
+    static cg::OperatorNodeBase* replace_opr(
+            cg::OperatorNodeBase* opr, const VarNodeArray& inputs) {
+        auto norm_dim = opr->cast_final_safe<Opr>().param().normalized_dim;
+        float eps = opr->cast_final_safe<Opr>().param().eps;
+        OperatorNodeConfig config{inputs[0]->comp_node()};
+        auto inp_shape_out = opr::GetVarShape::make(inputs[0]);
+        auto inp_ndim = inputs[0]->shape().ndim;
+        int32_t end_dim = inp_ndim - norm_dim;
+        auto end_dim_var = opr::ImmutableTensor::make(
+                *inputs[0]->owner_graph(), DTypeScalar(static_cast<dt_int32>(end_dim)),
+                config);
+        opr::indexing::IndexDesc desc(1);
+        desc[0].end = end_dim_var;
+        auto subtensor_out = opr::Subtensor::make(inp_shape_out, desc);
+        auto const_var = opr::ImmutableTensor::make(
+                *inputs[0]->owner_graph(), DTypeScalar(static_cast<dt_int32>(-1)),
+                config);
+        auto concat_out = opr::Concat::make({subtensor_out, const_var}, 0);
+        auto reshape_inp = opr::Reshape::make(inputs[0], concat_out, end_dim);
+        auto reduce_mean_out =
+                opr::Reduce::make(reshape_inp, {opr::Reduce::Mode::MEAN, -1});
+        auto reduce_sum_sqr_out =
+                opr::Reduce::make(reshape_inp, {opr::Reduce::Mode::SUM_SQR, -1});
+        auto x2s_shape_out = opr::GetVarShape::make(reduce_sum_sqr_out);
+        auto inp_shape_reduce_out =
+                opr::Reduce::make(inp_shape_out, {opr::Reduce::Mode::PRODUCT, 0});
+        auto reduce_shape_reduce_out =
+                opr::Reduce::make(x2s_shape_out, {opr::Reduce::Mode::PRODUCT, 0});
+        auto div_out = opr::Elemwise::make(
+                {inp_shape_reduce_out, reduce_shape_reduce_out},
+                {ElemwiseParam::Mode::FLOOR_DIV});
+        auto reduce_size = opr::TypeCvt::make(div_out, inputs[0]->dtype(), {});
+        auto powc_n1 = opr::PowC::make(reduce_size, -1);
+        auto eps_var = opr::ImmutableTensor::make(
+                *inputs[0]->owner_graph(), DTypeScalar(static_cast<dt_float32>(eps)),
+                config);
+        auto fma_out1 = opr::Elemwise::make(
+                {reduce_sum_sqr_out, powc_n1, eps_var},
+                {ElemwiseParam::Mode::FUSE_MUL_ADD3});
+        auto powc_2 = opr::PowC::make(reduce_mean_out, 2);
+        auto inv_sqrt_var = opr::PowC::make(
+                opr::Elemwise::make({fma_out1, powc_2}, {ElemwiseParam::Mode::SUB}),
+                -0.5);
+        auto neg_mean_out =
+                opr::Elemwise::make({reduce_mean_out}, {ElemwiseParam::Mode::NEGATE});
+        auto tmp_var = opr::Elemwise::make(
+                {neg_mean_out, inv_sqrt_var}, {ElemwiseParam::Mode::MUL});
+        auto fma_out2 = opr::Elemwise::make(
+                {reshape_inp, inv_sqrt_var, tmp_var},
+                {ElemwiseParam::Mode::FUSE_MUL_ADD3});
+        auto res = opr::Reshape::make(fma_out2, inp_shape_out);
+        if (inputs.size() == 3) {
+            auto mul_temp =
+                    opr::Elemwise::make({res, inputs[1]}, {ElemwiseParam::Mode::MUL});
+            auto res = opr::Elemwise::make(
+                    {mul_temp, inputs[2]}, {ElemwiseParam::Mode::ADD});
+            return res.node()->owner_opr();
+        } else {
+            return res.node()->owner_opr();
+        }
+    }
+
+    static cg::OperatorNodeBase* load(
+            OprLoadContext& ctx, const cg::VarNodeArray& inputs,
+            const OperatorNodeConfig& config) {
+        return OprMaker<opr::LayerNorm, 0>::make(
+                ctx.read_param<PersisParam>(), inputs, ctx.graph(), config);
     }
 };
 
@@ -1209,22 +1323,25 @@ MGB_SEREG_OPR(TQT, 2);
 MGB_SEREG_OPR(TQTBackward, 3);
 MGB_SEREG_OPR(LSQ, 4);
 MGB_SEREG_OPR(LSQBackward, 5);
-MGB_SEREG_OPR(LayerNorm, 0);
+MGB_SEREG_OPR_WITH_CONVERTER(
+        LayerNorm, 0,
+        (mgb::serialization::OprLoadDumpImpl<opr::LayerNorm, 0>::replace_opr));
 MGB_SEREG_OPR(LayerNormBackward, 0);
 MGB_SEREG_OPR(GeneralNorm, 0);
 MGB_SEREG_OPR(GeneralNormBackward, 0);
-MGB_SEREG_OPR(GroupNorm, 0);
-MGB_SEREG_OPR(GroupNormBackward, 0);
-MGB_SEREG_OPR(InstanceNorm, 0);
-MGB_SEREG_OPR(InstanceNormBackward, 0);
 MGB_SEREG_OPR(RNNCellForward, 6);
 MGB_SEREG_OPR(LSTMCellForward, 7);
 MGB_SEREG_OPR(RNNForward, 3);
 MGB_SEREG_OPR(RNNBackward, 7);
 MGB_SEREG_OPR(LSTMForward, 4);
 MGB_SEREG_OPR(LSTMBackward, 9);
-MGB_SEREG_OPR(Softmax, 1);
+MGB_SEREG_OPR_WITH_CONVERTER(
+        Softmax, 1,
+        (mgb::serialization::OprLoadDumpImpl<opr::Softmax, 1>::replace_opr));
 MGB_SEREG_OPR(SoftmaxBackward, 2);
+MGB_SEREG_OPR_WITH_CONVERTER(
+        GroupNorm, 0,
+        (mgb::serialization::OprLoadDumpImplV2<opr::GroupNorm, 0>::replace_opr));
 MGB_SEREG_OPR_V2(
         GroupNorm, 0,
         (mgb::serialization::OprLoadDumpImplV2<opr::GroupNorm, 0>::replace_opr),
@@ -1233,10 +1350,21 @@ MGB_SEREG_OPR_V2(
         GroupNormBackward, 0,
         (mgb::serialization::OprLoadDumpImplV2<opr::GroupNormBackward, 0>::replace_opr),
         VERSION_2, CURRENT_VERSION);
+MGB_SEREG_OPR_WITH_CONVERTER(
+        GroupNormBackward, 0,
+        (mgb::serialization::OprLoadDumpImplV2<
+                opr::GroupNormBackward, 0>::replace_opr));
+MGB_SEREG_OPR_WITH_CONVERTER(
+        InstanceNorm, 0,
+        (mgb::serialization::OprLoadDumpImplV2<opr::InstanceNorm, 0>::replace_opr));
 MGB_SEREG_OPR_V2(
         InstanceNorm, 0,
         (mgb::serialization::OprLoadDumpImplV2<opr::InstanceNorm, 0>::replace_opr),
         VERSION_2, CURRENT_VERSION);
+MGB_SEREG_OPR_WITH_CONVERTER(
+        InstanceNormBackward, 0,
+        (mgb::serialization::OprLoadDumpImplV2<
+                opr::InstanceNormBackward, 0>::replace_opr));
 MGB_SEREG_OPR_V2(
         InstanceNormBackward, 0,
         (mgb::serialization::OprLoadDumpImplV2<

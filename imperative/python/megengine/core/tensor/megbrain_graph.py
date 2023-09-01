@@ -378,7 +378,8 @@ def dump_graph(
     append_json=False,
     metadata=None,
     dump_format=None,
-    model_version: int = 2
+    model_version: int = 2,
+    compat_older_version: str = None,
 ) -> Tuple[bytes, CompGraphDumpResult]:
     r"""serialize the computing graph of `output_vars` and get byte result.
 
@@ -407,9 +408,12 @@ def dump_graph(
         append_json: will be check when `strip_info_file` is not None. if set
             true, the information for code strip will be append to strip_info_file.
             if set false, will rewrite strip_info_file
-        dump_format: using different dump formats.
+        dump_format: using different dump formats. the open source MegEngine
+                defaults to the FBS_V2 format, there are two format FBS_V2 and FBS to choose,
+                internal MegEngine have an other choice of internal proprietary formats
         model_version: the model version of "FBS_V2", begin with version 2, this
             works only when dump format is "FBS_V2".
+        compat_older_version: the specified megbrain version which is less than 8.16 for model forward compatibility, only support "8.14" currently. Default: None.
 
     Note:
         The underlying C++ API only accepts a var list. If a dict is given,
@@ -426,6 +430,17 @@ def dump_graph(
         * ``params`` list of names of dumped params
         * ``outputs`` names of output vars
     """
+    if compat_older_version:
+        compat_older_version = compat_older_version.strip()
+        assert (
+            compat_older_version == "8.14"
+        ), "Forward compatibility for older version only support 8.14 currently."
+        assert (
+            not no_change_graph
+        ), "forward compatibility for mgb8.14 will change the graph."
+        assert (
+            dump_format == "FBS"
+        ), "forward compatibility for older version only works when dump_format is FBS"
     if isinstance(output_vars, dict):
         used_vars = set()
         for name, var in output_vars.items():
@@ -463,6 +478,7 @@ def dump_graph(
         metadata,
         dump_format,
         model_version,
+        compat_older_version,
         stat,
         inputs,
         outputs,

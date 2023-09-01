@@ -1002,6 +1002,7 @@ class trace:
         input_transform=None,
         dump_format: str = None,
         model_version: int = 2,
+        compat_older_version: str = None,
         **kwargs
     ):
         r"""Serializes trace to file system.
@@ -1066,6 +1067,7 @@ class trace:
                 internal MegEngine have an other choice of internal proprietary formats
             model_version: the model version of FBS_V2, begin with version 2, this
                 works only when dump format is FBS_V2.
+            compat_older_version: the specified megbrain version which is less than 8.16 for model forward compatibility, only support "8.14" currently. Default: None.
 
 
         Keyword Arguments:
@@ -1110,6 +1112,17 @@ class trace:
         * enable_fuse_preprocess: whether to fuse astype\pad_channel\dimshuffle and
           etc opr
         """
+        if compat_older_version:
+            compat_older_version = compat_older_version.strip()
+            assert (
+                compat_older_version == "8.14"
+            ), "Forward compatibility for older version only support 8.14 currently."
+            assert (
+                not no_change_graph
+            ), "forward compatibility for mgb8.14 will change the graph."
+            assert (
+                dump_format == "FBS"
+            ), "forward compatibility for older version only works when dump_format is FBS"
         if not self._capture_as_const:
             raise ValueError(
                 "you must specify capture_as_const=True at __init__ to use dump"
@@ -1223,6 +1236,7 @@ class trace:
             metadata=metadata,
             dump_format=dump_format,
             model_version=model_version,
+            compat_older_version=compat_older_version,
         )
         file.write(dump_content)
 

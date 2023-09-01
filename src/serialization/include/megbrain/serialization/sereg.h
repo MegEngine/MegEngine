@@ -169,6 +169,26 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
         }                                                                              \
     } while (0)
 
+#define MGB_SEREG_OPR_INTL_CALL_ADD_WITH_CONVERTER(                                    \
+        _cls, _dump, _load, _convert, _registerv2)                                     \
+    do {                                                                               \
+        ::mgb::serialization::OprRegistry::add(                                        \
+                {_cls::typeinfo(),                                                     \
+                 MGB_HASH_STR(#_cls),                                                  \
+                 _MGB_SEREG_OPR_NAME_FROM_CLS(_cls),                                   \
+                 _dump,                                                                \
+                 _load,                                                                \
+                 {},                                                                   \
+                 MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION(#_cls),                       \
+                 _convert});                                                           \
+        if (_registerv2) {                                                             \
+            ::mgb::serialization::OprRegistryV2::versioned_add(                        \
+                    {_cls::typeinfo(), MGB_HASH_STR_WITHOUT_TAIL_0_AND_VERSION(#_cls), \
+                     _MGB_SEREG_OPR_NAME_FROM_CLS(_cls), _dump, _load, nullptr},       \
+                    ::mgb::VERSION_1, ::mgb::VERSION_1);                               \
+        }                                                                              \
+    } while (0)
+
 //! call OprRegistryV2::versioned_add for new serialization, in which convert the
 //! function converter the Operator to the compatiable
 #define MGB_SEREG_OPR_INTL_CALL_ADD_V2(                                       \
@@ -213,6 +233,35 @@ struct OprRegistryCaller : public OprRegistryCallerDefaultImpl<Callee> {};
     MGB_SEREG_OPR_INTL_CALL_ENTRY(_cls, _OprReg##_cls)
 
 #define MGB_SEREG_OPR(_cls, _arity) MGB_SEREG_OPR_CONDITION(_cls, _arity, true)
+
+#define MGB_SEREG_OPR_CONDITION_WITH_CONVERTER(                                 \
+        _cls, _arity, _cvter, _dumper, _registerv2)                             \
+    namespace {                                                                 \
+    namespace ser = ::mgb::serialization;                                       \
+    struct _OprReg##_cls {                                                      \
+        using Impl = ser::OprLoadDumpImpl<_cls, _arity>;                        \
+        static ser::OprWithOutputAccessor wrap_loader(                          \
+                ser::OprLoadContext& ctx, const mgb::cg::VarNodeArray& inputs,  \
+                const mgb::cg::OperatorNodeConfig& config) {                    \
+            return ser::OprWithOutputAccessor(Impl::load(ctx, inputs, config)); \
+        }                                                                       \
+        static void entry() {                                                   \
+            if (_dumper) {                                                      \
+                MGB_SEREG_OPR_INTL_CALL_ADD_WITH_CONVERTER(                     \
+                        _cls, _dumper, wrap_loader, _cvter, _registerv2);       \
+            } else {                                                            \
+                MGB_SEREG_OPR_INTL_CALL_ADD_WITH_CONVERTER(                     \
+                        _cls, Impl::dump, wrap_loader, _cvter, _registerv2);    \
+            }                                                                   \
+        }                                                                       \
+    };                                                                          \
+    }                                                                           \
+    MGB_SEREG_OPR_INTL_CALL_ENTRY(_cls, _OprReg##_cls)
+
+#define MGB_SEREG_OPR_V1_WITH_CONVERTER(_cls, _arity, _cvter, _dumper) \
+    MGB_SEREG_OPR_CONDITION_WITH_CONVERTER(_cls, _arity, _cvter, _dumper, false)
+#define MGB_SEREG_OPR_WITH_CONVERTER(_cls, _arity, _cvter) \
+    MGB_SEREG_OPR_CONDITION_WITH_CONVERTER(_cls, _arity, _cvter, nullptr, true)
 
 //! new dump/load function should implement in OprLoadDumpImplV2, _converter is
 //! optional , if not implement pass nullptr

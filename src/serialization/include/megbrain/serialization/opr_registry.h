@@ -44,6 +44,10 @@ using OprShallowCopy = thin_function<cg::OperatorNodeBase*(
         const OprShallowCopyContext& ctx, const cg::OperatorNodeBase& opr,
         const VarNodeArray& inputs, const OperatorNodeConfig& config)>;
 
+//! Convert some modified Opr to compatible Opr
+using OprConvertToCompatible = thin_function<cg::OperatorNodeBase*(
+        cg::OperatorNodeBase*, const VarNodeArray&)>;
+
 //! record of a single operator
 struct OprRegistry {
     Typeinfo* type;
@@ -53,6 +57,7 @@ struct OprRegistry {
     OprLoaderWrapper loader;
     OprShallowCopy shallow_copy;  //!< set to empty to use default impl
     uint64_t unversioned_type_id;
+    OprConvertToCompatible converter = nullptr;
 
     MGE_WIN_DECLSPEC_FUC static void add(const OprRegistry& record);
     /*!
@@ -92,10 +97,6 @@ struct OprRegistry {
     recorded_serialized_oprs(bool begin_record, bool end_record);
 #endif
 };
-
-//! Convert some modified Opr to compatible Opr
-using OprConvertToCompatible = thin_function<cg::OperatorNodeBase*(
-        cg::OperatorNodeBase*, const VarNodeArray&)>;
 
 //! record of a single operator
 struct OprRegistryV2 {

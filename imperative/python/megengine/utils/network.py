@@ -176,6 +176,8 @@ class Network:
         append=False,
         user_info: Any = None,
         enable_metadata=True,
+        dump_format: str = None,
+        compat_older_version: str = None,
         **kwargs
     ):
         r"""Serializes graph to file.
@@ -203,9 +205,21 @@ class Network:
                 will skip all optimize options if this is False. Default: True
             user_info: any type object, which will be pickled to bytes.
             enable_metadata: whether to save metadata into output file.
+            dump_format: using different dump formats. the open source MegEngine
+                defaults to the FBS_V2 format, there are two format FBS_V2 and FBS to choose,
+                internal MegEngine have an other choice of internal proprietary formats
+            compat_older_version: the specified megbrain version which is less than 8.16 for model forward compatibility, only support "8.14" currently. Default: None.
 
         See more detials in :meth:`~.trace.dump`.
         """
+        if compat_older_version:
+            compat_older_version = compat_older_version.strip()
+            assert (
+                compat_older_version == "8.14"
+            ), "Forward compatibility for older version only support 8.14 currently."
+            assert (
+                dump_format == "FBS"
+            ), "forward compatibility for older version only works when dump_format is FBS"
 
         def _set_var_name(var):
             graph_var = G.VarNode(var.var)
@@ -244,6 +258,8 @@ class Network:
             strip_info_file=strip_info_file,
             append_json=append_json,
             metadata=metadata,
+            dump_format=dump_format,
+            compat_older_version=compat_older_version,
         )
         if isinstance(file, str):
             permission = "wb" if append == False else "ab"

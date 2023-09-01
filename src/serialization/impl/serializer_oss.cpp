@@ -22,6 +22,8 @@
 #include "megbrain/serialization/serializer.h"
 #include "serializer_oss_common.h"
 
+#include "megbrain/gopt/framework.h"
+
 #include <flatbuffers/flatbuffers.h>
 
 #include <cerrno>
@@ -76,6 +78,8 @@ class GraphDumperOSS final : public GraphDumper, OprDumpContextFlatBuffers {
     std::vector<flatbuffers::Offset<fbs::Blob>> m_blobs;
     std::vector<fbs::OperatorParam> m_cur_opr_param_type;
     std::vector<flatbuffers::Offset<void>> m_cur_opr_param;
+
+    SymbolVarArray converter_all_opr_to_compatiable(const SymbolVarArray& output_vars);
 
     void init_oprs_to_dump(const SymbolVarArray& endpoints);
     flatbuffers::Offset<fbs::Metadata> build_metadata(const Metadata& metadata);
@@ -233,7 +237,13 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
     }
 
     fbs::OperatorBuilder builder(m_builder);
-    builder.add_type_id(registry->persist_type_id);
+    if (m_config.compat_older_version == "8.14") {
+        // for forward compatibility with megbrain v8.14, which uses unversioned_type_id
+        // to load operations
+        builder.add_type_id(registry->unversioned_type_id);
+    } else {
+        builder.add_type_id(registry->persist_type_id);
+    }
     builder.add_inputs(inputs);
     if (m_config.keep_opr_priority) {
         builder.add_priority(opr->node_prop().attribute().priority);
@@ -256,6 +266,26 @@ flatbuffers::Offset<fbs::Operator> GraphDumperOSS::build_single_opr(
     return builder.Finish();
 }
 
+SymbolVarArray GraphDumperOSS::converter_all_opr_to_compatiable(
+        const SymbolVarArray& output_vars) {
+    gopt::GraphOptimizer optimizer;
+    VarNodeArray rets_var;
+    for (auto& symbolvar : output_vars) {
+        rets_var.push_back(symbolvar.node());
+    }
+    optimizer.add_pass(PassConvertToCompatible<OprRegistry>::make(
+            output_vars, [](cg::OperatorNodeBase* opr) -> const void* {
+                return OprRegistry::find_by_type(opr->dyn_typeinfo());
+            }));
+    optimizer.apply_inplace(rets_var);
+
+    SymbolVarArray dst_vars;
+    for (auto& var : rets_var) {
+        dst_vars.push_back({var});
+    }
+    return dst_vars;
+}
+
 GraphDumper::DumpResult GraphDumperOSS::dump(
         const SymbolVarArray& output_vars, const DumpConfig& config,
         const Metadata& metadata) {
@@ -271,10 +301,20 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     m_used_param_names.clear();
     m_nr_shared_tensor = 0;
 
+    auto new_output_vars = output_vars;
+    if (!config.no_change_graph) {
+        new_output_vars = converter_all_opr_to_compatiable(output_vars);
+        mgb_assert(output_vars.size() == new_output_vars.size());
+        for (size_t id = 0; id < output_vars.size(); id++) {
+            auto& new_var = new_output_vars[id];
+            new_var.rename(output_vars[id].node()->name());
+        }
+    }
+
     // process output vars
     bool keep_output_var_name = m_config.keep_var_name >= 1;
     std::unordered_set<std::string> output_var_names;
-    for (auto i : output_vars) {
+    for (auto i : new_output_vars) {
         mgb_assert(
                 !i.node()->contain_flag(VarNode::Flag::VOLATILE_CONTENT),
                 "can not dump var with VOLATILE_CONTENT flag: %s",
@@ -287,10 +327,15 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
 
     // Write magic
     uint32_t magic = MGB_MAGIC;
+    if (m_config.compat_older_version == "8.14") {
+        magic = MAGIC_V0;
+    }
     m_file->write(&magic, sizeof(magic));
 
     // write FeatureBits
-    FeatureBits64::write(*m_file);
+    if (m_config.compat_older_version.empty()) {
+        FeatureBits64::write(*m_file);
+    }
     // Padding
     uint32_t reserved = 0;
     m_file->write(&reserved, sizeof(reserved));
@@ -304,7 +349,7 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
     auto fbmeta = build_metadata(metadata);
 
     // Dump operators
-    init_oprs_to_dump(output_vars);
+    init_oprs_to_dump(new_output_vars);
     std::vector<flatbuffers::Offset<fbs::Operator>> oprs;
     for (auto&& i : m_oprs_to_dump) {
         record_opr_dumped(i.second->persist_type_id, i.second->name, 0);
@@ -314,8 +359,8 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
 
     // Dump output vars
     std::vector<fbs::OutputVar> output_vars_idx;
-    output_vars_idx.reserve(output_vars.size());
-    for (auto i : output_vars) {
+    output_vars_idx.reserve(new_output_vars.size());
+    for (auto i : new_output_vars) {
         output_vars_idx.emplace_back(m_var2id.at(i.node()), i.node()->id());
     }
     auto fb_output_vars = m_builder.CreateVectorOfStructs(output_vars_idx);
@@ -346,9 +391,9 @@ GraphDumper::DumpResult GraphDumperOSS::dump(
 
     // Finalize DumpResult
     auto&& ret = m_cur_rst;
-    for (size_t i = 0; i < output_vars.size(); i++) {
+    for (size_t i = 0; i < new_output_vars.size(); i++) {
         ret.outputs.emplace_back(
-                keep_output_var_name ? output_vars[i].node()->cname()
+                keep_output_var_name ? new_output_vars[i].node()->cname()
                                      : ssprintf("unnamed%zu", i));
     }
     ret.content_hash = graph_hash;

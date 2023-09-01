@@ -17,86 +17,6 @@
 
 namespace mgb {
 namespace serialization {
-
-/*!
- * \brief replace the the opr who has the replace_opr methord in OprLoadDumpImplV2
- */
-class PassConvertToCompatible : public gopt::Pass {
-    ThinHashMap<
-            Typeinfo*, thin_function<cg::OperatorNodeBase*(
-                               cg::OperatorNodeBase*, const VarNodeArray&)>>
-            m_opr_replace_func;
-    gopt::VarReplaceCheckFlag m_var_replace_check_flag =
-            gopt::VarReplaceCheckFlag::CHECK_ALL;
-
-public:
-    const char* name() const override { return "PassConvertToCompatible"; };
-
-    PassConvertToCompatible& set_var_replace_check_flag(
-            gopt::VarReplaceCheckFlag flag) {
-        m_var_replace_check_flag = flag;
-        return *this;
-    }
-
-    void apply(gopt::OptState& state) const override {
-        state.set_var_replace_check_flag(m_var_replace_check_flag);
-        auto rewriter = state.graph().make_rewriter();
-
-        auto on_opr = [this, &rewriter](cg::OperatorNodeBase* opr) {
-            auto it = m_opr_replace_func.find(opr->dyn_typeinfo());
-            if (it != m_opr_replace_func.end()) {
-                VarNodeArray new_inp;
-                new_inp.clear();
-                new_inp.reserve(opr->input().size());
-                for (auto i : opr->input()) {
-                    new_inp.push_back(rewriter.get_var(i));
-                }
-                auto new_opr = (it->second)(opr, new_inp);
-
-                auto &&origin_out = opr->output(), &&cur_out = new_opr->output();
-                if (opr == new_opr) {
-                    rewriter.auto_replace_outputs(opr);
-                } else {
-                    for (size_t i = 0; i < std::min(origin_out.size(), cur_out.size());
-                         i++) {
-                        rewriter.replace_var(origin_out[i], cur_out[i], nullptr);
-                    }
-                }
-            } else {
-                rewriter.auto_replace_outputs(opr);
-            }
-        };
-        state.graph().iter(on_opr);
-        rewriter.apply_inplace();
-    }
-
-    static std::unique_ptr<PassConvertToCompatible> make(
-            const SymbolVarArray& output_vars) {
-        auto ret = std::make_unique<PassConvertToCompatible>();
-        // iterate oprs to init
-        auto on_opr = [&](cg::OperatorNodeBase* opr) {
-            if (!GraphDumper::should_remove_in_dump(opr)) {
-                auto registry = OprRegistryV2::versioned_find_by_typeinfo(
-                        opr->dyn_typeinfo(), CURRENT_VERSION);
-                mgb_throw_if(
-                        !registry,
-                        cg::OperatorNodeExcExtraInfo::ExcMaker{opr}.make<MegBrainError>,
-                        "serialization as FlatBuffers is not supported for "
-                        "operator %s, typeinfo %p",
-                        opr->dyn_typeinfo()->name, opr->dyn_typeinfo());
-                if (registry->converter) {
-                    ret->m_opr_replace_func[opr->dyn_typeinfo()] = registry->converter;
-                }
-            }
-        };
-        cg::DepOprIter dep_opr_iter{on_opr};
-        for (auto i : output_vars) {
-            dep_opr_iter.add(i.node()->owner_opr());
-        }
-        return ret;
-    };
-};
-
 namespace {
 fbs::v2::TensorFormat get_flatbuffer_tensor_format_type(
         const TensorLayout::Format& format) {
@@ -357,7 +277,11 @@ SymbolVarArray GraphDumperOSSV2::converter_all_opr_to_compatiable(
     for (auto& symbolvar : output_vars) {
         rets_var.push_back(symbolvar.node());
     }
-    optimizer.add_pass(PassConvertToCompatible::make(output_vars));
+    optimizer.add_pass(PassConvertToCompatible<OprRegistryV2>::make(
+            output_vars, [](cg::OperatorNodeBase* opr) -> const void* {
+                return OprRegistryV2::versioned_find_by_typeinfo(
+                        opr->dyn_typeinfo(), CURRENT_VERSION);
+            }));
     optimizer.apply_inplace(rets_var);
 
     SymbolVarArray dst_vars;

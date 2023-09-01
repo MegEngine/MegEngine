@@ -387,8 +387,9 @@ void init_graph_rt(py::module m) {
              bool keep_opr_name, bool keep_param_name, bool keep_opr_priority,
              bool no_change_graph, std::optional<_SerializationMetadata> metadata,
              std::optional<_SerializationFormat> dump_format,
-             std::optional<int> model_version, py::list& stat, py::list& inputs,
-             py::list& outputs, py::list& params) {
+             std::optional<int> model_version,
+             std::optional<std::string> compat_older_version, py::list& stat,
+             py::list& inputs, py::list& outputs, py::list& params) {
               std::vector<uint8_t> buf;
               ser::GraphDumpFormat format = ser::GraphDumpFormat::FLATBUFFERS_V2;
               int version = 2;
@@ -405,6 +406,10 @@ void init_graph_rt(py::module m) {
               ser::GraphDumper::DumpConfig config{
                       keep_var_name, keep_param_name, keep_opr_priority, keep_opr_name};
               config.no_change_graph = no_change_graph;
+              if (compat_older_version) {
+                  mgb_assert(!no_change_graph);
+                  config.compat_older_version = compat_older_version.value();
+              }
 
               ser::GraphDumper::DumpResult rst;
               if (metadata)
