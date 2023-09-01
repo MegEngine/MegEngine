@@ -859,7 +859,10 @@ def hsigmoid(x):
 
 
 def relu(x):
-    r"""Element-wise `max(x, 0)`."""
+    r"""Applies the rectified linear unit function element-wise.
+
+    See :class:`~.module.ReLU` for more details.
+    """
     return _elwise(x, mode=Elemwise.Mode.RELU)
 
 
@@ -876,7 +879,7 @@ def prelu(x, y):
 def leaky_relu(inp: Tensor, negative_slope: float = 0.01) -> Tensor:
     r"""Element-wise LeakyReLU function
 
-    Refer to :class:`~.LeakyReLU` for more information.
+    Refer to :class:`~.module.LeakyReLU` for more information.
     """
     return _elwise(inp, negative_slope, mode=Elemwise.Mode.PRELU)
 
@@ -1017,13 +1020,7 @@ def _get_softmax_axis(ndim: int) -> int:
 
 
 def softmax(inp: Tensor, axis: Optional[int] = None) -> Tensor:
-    r"""Applies a :math:`\text{softmax}(x)` function. :math:`\text{softmax}(x)` is defined as:
-
-    .. math::
-            \text{softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
-
-    It is applied to all elements along axis, and rescales elements so that
-    they stay in the range `[0, 1]` and sum to 1.
+    r"""Applies a :math:`\text{softmax}(x)` function.
 
     See :class:`~.module.Softmax` for more details.
 

@@ -215,9 +215,45 @@ class SyncBatchNorm(_BatchNorm):
 
 
 class BatchNorm1d(_BatchNorm):
-    r"""Applies Batch Normalization over a 2D/3D tensor.
+    r"""Applies Batch Normalization over a 2D or 3D input.
 
-    Refer to :class:`~.BatchNorm2d` for more information.
+    .. math::
+
+        y = \frac{x - \mathrm{E}[x]}{\sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
+
+    The mean and standard-deviation are calculated per-dimension over
+    the mini-batches and :math:`\gamma` and :math:`\beta` are learnable parameter vectors
+    of size `C` (where `C` is the number of features or channels of the input). By default, the
+    elements of :math:`\gamma` are set to 1 and the elements of :math:`\beta` are set to 0. The
+    standard-deviation is calculated via the biased estimator, equivalent to `torch.var(input, unbiased=False)`.
+
+    By default, during training this layer keeps running estimates of its
+    computed mean and variance, which are then used for normalization during
+    evaluation. The running estimates are kept with a default :attr:`momentum`
+    of 0.9.
+
+    If :attr:`track_running_stats` is set to ``False``, this layer then does not
+    keep running estimates, and batch statistics are instead used during
+    evaluation time as well.
+
+    Because the Batch Normalization is done over the `C` dimension, computing statistics
+    on `(N, L)` slices, it's common terminology to call this Temporal Batch Normalization.
+
+    .. note::
+
+        The update formula for ``running_mean`` and ``running_var`` (taking ``running_mean`` as an example) is
+
+        .. math::
+
+            \textrm{running_mean} = \textrm{momentum} \times \textrm{running_mean} + (1 - \textrm{momentum}) \times \textrm{batch_mean}
+
+        which could be defined differently in other frameworks. Most notably, ``momentum`` of 0.1 in PyTorch
+        is equivalent to ``mementum`` of 0.9 here.
+
+    Shape:
+        - Input: :math:`(N, C)` or :math:`(N, C, L)`, where :math:`N` is the batch size,
+          :math:`C` is the number of features or channels, and :math:`L` is the sequence length
+        - Output: :math:`(N, C)` or :math:`(N, C, L)` (same shape as input)
     """
 
     def _check_input_ndim(self, inp):
@@ -281,6 +317,10 @@ class BatchNorm2d(_BatchNorm):
             the batch mean and batch variance to normalize the input. The parameter takes effect
             only when the module is initilized with track_running_stats as True.
             Default: False
+
+    Shape:
+        - Input: :math:`(N, C, H, W)`
+        - Output: :math:`(N, C, H, W)` (same shape as input)
 
     Examples:
         >>> import numpy as np

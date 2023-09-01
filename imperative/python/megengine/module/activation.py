@@ -18,7 +18,12 @@ class Softmax(Module):
 
     Args:
         axis: Along which axis softmax will be applied. By default,
-            softmax will apply along the highest ranked axis.
+            softmax will be applyed along the highest ranked axis.
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
 
     Examples:
         >>> import numpy as np
@@ -106,10 +111,10 @@ class GELU(Module):
 
 
 class ReLU(Module):
-    r"""Applies the element-wise function:
+    r"""Applies the rectified linear unit function element-wise:
 
     .. math::
-        \text{ReLU}(x) = \max(x, 0)
+        \text{ReLU}(x) = (x)^+ = \max(x, 0)
 
     Examples:
         >>> import numpy as np

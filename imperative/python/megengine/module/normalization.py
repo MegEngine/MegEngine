@@ -86,12 +86,12 @@ class InstanceNorm(Module):
     :math:`\\gamma` and :math:`\\beta` are learnable affine transform parameters of
     attr:`num_channels` if :attr:`affine` is ``True``.
     Note that InstanceNorm equals using GroupNorm with num_groups = num_channels.
-    
+
     Args:
         num_channels (int): number of channels expected in input
         eps: a value added to the denominator for numerical stability. Default: 1e-5
         affine: this module has learnable affine parameters (weight, bias) when affine is set to be True.
-        
+
     Shape:
         - Input: :math:`(N, C, H, W)` (now only support NCHW format tensor)
         - Output: :math:`(N, C, H, W)` (same shape as input)
@@ -135,17 +135,23 @@ class InstanceNorm(Module):
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs
     Refer to `Layer Normalization <https://arxiv.org/pdf/1607.06450v1.pdf>`_
-    
+
     .. math::
             y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
-            
+
     The mean and standard-deviation are calculated separately over the last
     certain number dimensions which have to be of the shape specified by
     :attr:`normalized_shape`.
     :math:`\\gamma` and :math:`\\beta` are learnable affine transform parameters of
     :attr:`normalized_shape` if :attr:`affine` is ``True``.
     The standard-deviation is calculated via the biased estimator.
-    
+
+    .. note::
+
+        Unlike Batch Normalization and Instance Normalization, which applies
+        scalar scale and bias for each entire channel/plane,
+        Layer Normalization applies per-element scale and bias.
+
     Args:
         normalized_shape(int or tuple): input shape from an expected input of size
             size :math:`[*, normalized\_shape[0], normalized\_shape[1], ..., normalized\_shape[-1]]`.
