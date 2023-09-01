@@ -123,7 +123,9 @@ class Optimizer(metaclass=ABCMeta):
             initializer = np.zeros(param.shape, dtype=np.float32)
         state_dict = self._state.setdefault(param, {})
         assert state_name not in state_dict
-        state = Tensor(initializer, no_cache=True, format=param.format)
+        state = Tensor(initializer, no_cache=True)
+        if param.format == "nhwc" and param.shape == state.shape:
+            state.format = "nhwc"
         state_dict[state_name] = state
 
     @abstractmethod

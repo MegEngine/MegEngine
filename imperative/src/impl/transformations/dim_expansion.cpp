@@ -33,6 +33,7 @@ ValueRefList conv1d_rule(const OpDef& op, Span<ValueRef> inputs) {
 
 ValueRefList bn1d_rule(const OpDef& op, Span<ValueRef> inputs) {
     size_t ndim = inputs.at(0).shape()->ndim;
+    CompNode device = *inputs.at(0).device();
     bool need_expand = (ndim == 2 || ndim == 3);
     if (!need_expand)
         return imperative::apply(op, inputs);
@@ -43,13 +44,18 @@ ValueRefList bn1d_rule(const OpDef& op, Span<ValueRef> inputs) {
         axis.insert(axis.begin(), (int32_t)2);
     }
     converted[0] = imperative::apply(ApplyOp(*AddAxis::make(axis)), inputs[0])[0];
+    if (device.device_type() == CompNode::DeviceType::CAMBRICON) {
+        converted[0] = imperative::apply(SetFormat("nhwc"), converted[0])[0];
+    }
     for (size_t i = 1; i < inputs.size(); ++i) {
         converted[i] = inputs[i];
     }
-
     std::reverse(std::begin(axis), std::end(axis));
     auto outputs = imperative::apply(op, converted);
     size_t idx = outputs.size() - 1;
+    if (device.device_type() == CompNode::DeviceType::CAMBRICON) {
+        outputs[idx] = imperative::apply(SetFormat("nchw"), outputs[idx])[0];
+    }
     outputs[idx] = imperative::apply(ApplyOp(*RemoveAxis::make(axis)), outputs[idx])[0];
     return outputs;
 }

@@ -174,12 +174,12 @@ def register_hook_module(module):
 
 def _mean(inp):
     inp = Tensor(inp).astype(np.float32)
-    return F.mean(inp).numpy()
+    return np.mean(inp.numpy())
 
 
 def _std(inp):
     inp = Tensor(inp).astype(np.float32)
-    return F.std(inp).numpy()
+    return np.std(inp.numpy())
 
 
 def dict2table(list_of_dict, header):
