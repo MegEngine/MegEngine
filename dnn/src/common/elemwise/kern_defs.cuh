@@ -151,7 +151,8 @@ struct ElemwiseKern;
     DEF_KERN(dt_int32, _mode, _imp); \
     DEF_KERN(dt_int16, _mode, _imp); \
     DEF_KERN(dt_int8, _mode, _imp);  \
-    DEF_KERN(dt_uint8, _mode, _imp);
+    DEF_KERN(dt_uint8, _mode, _imp); \
+    DEF_KERN(dt_uint16, _mode, _imp);
 
 //! define kernel for all ctypes
 #define DEF_KERN_ALL(_mode, _imp) \

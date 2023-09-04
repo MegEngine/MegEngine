@@ -897,3 +897,14 @@ def test_partial_trace_fwd_bwd():
     for _ in range(3):
         out = func(tensor(1.0))
     np.testing.assert_equal(gt.numpy(), out.numpy())
+
+
+def test_dump_uint16_elemwise():
+    @trace(symbolic=True, capture_as_const=True)
+    def fun(data):
+        pred = data * tensor(2, dtype="uint16")
+        return pred
+
+    data = tensor(np.random.rand(1, 4, 512, 512) * 256).astype("uint16")
+    fun(data)
+    fun.dump(io.BytesIO(), arg_names=["data"])

@@ -7,7 +7,9 @@ void ElemwiseForwardImpl::on_arity_dispatched() {
     auto src = make_elemwise_op_param<arity>();
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(on_arity_dispatched_cb_dtype)
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(on_arity_dispatched_cb_dtype)
-    on_arity_dispatched_cb_dtype(::megdnn::dtype::Bool) megdnn_throw("bad dtype");
+    on_arity_dispatched_cb_dtype(::megdnn::dtype::Bool)
+            on_arity_dispatched_cb_dtype(::megdnn::dtype::Uint16)
+                    megdnn_throw("bad dtype");
 }
 
 template <int arity>
@@ -15,7 +17,7 @@ void ElemwiseForwardImpl::on_arity_dispatched_no_bool() {
     auto src = make_elemwise_op_param<arity>();
     MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(on_arity_dispatched_cb_dtype)
     MEGDNN_FOREACH_COMPUTING_DTYPE_INT(on_arity_dispatched_cb_dtype)
-    megdnn_throw("bad dtype");
+    on_arity_dispatched_cb_dtype(::megdnn::dtype::Uint16) megdnn_throw("bad dtype");
 }
 
 #define FOREACH MEGDNN_FOREACH_ELEMWISE_MODE_UNARY_INT

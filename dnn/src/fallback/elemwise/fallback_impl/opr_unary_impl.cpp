@@ -54,7 +54,10 @@ void ElemwiseImpl::exec_UNARY_INT() {
     case DTypeTrait<_dt>::enumv: \
         return unary_kern<_dt, mode>(param);
 
-    SWITCH_DTYPE(INT, cb)
+    switch (m_dst->layout.dtype.enumv()) {
+        MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
+        cb(::megdnn::dtype::Uint16) default : megdnn_throw("bad dtype");
+    }
 
 #undef cb
 }

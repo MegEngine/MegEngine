@@ -76,6 +76,60 @@ TYPED_TEST(CUDA_ELEMWISE, run) {
     elemwise::run_test<TypeParam>(this->handle_cuda());
 }
 
+TEST_F(CUDA, ELEMWISE_UINT16) {
+    Checker<ElemwiseForward> checker(handle_cuda());
+    using Mode = ElemwiseForward::Param::Mode;
+    UniformIntRNG ui_rng{0, 255};
+    auto run_unary = [&](size_t N, Mode mode, DType dtype) {
+        checker.set_param(mode).set_dtype(0, dtype);
+        checker.execs({{N}, {}});
+    };
+#define RUN_UNARY_UINT16(_dt)          \
+    run_unary(100, Mode::RELU, _dt);   \
+    run_unary(100, Mode::RELU6, _dt);  \
+    run_unary(100, Mode::NEGATE, _dt); \
+    run_unary(100, Mode::SIGN, _dt);   \
+    run_unary(100, Mode::SQUARE, _dt); \
+    run_unary(100, Mode::ABS, _dt);
+    checker.set_rng(0, &ui_rng);
+    RUN_UNARY_UINT16(dtype::Uint16());
+#undef RUN_UNARY_UINT16
+    auto run_binary = [&](size_t N, size_t C, size_t H, size_t W, Mode mode,
+                          DType dtype) {
+        checker.set_param(mode).set_dtype(0, dtype).set_dtype(1, dtype);
+        checker.execs({{5}, {5}, {}});
+        checker.execs({{4}, {4}, {}});
+        checker.execs({{4}, {1}, {}});
+        checker.execs({{N, C / 4, H, W, 4}, {N, C / 4, H, W, 4}, {}});
+        checker.execs({{N, C / 4, H, W, 4}, {1, C / 4, 1, 1, 4}, {}});
+        checker.execs({{N, C / 32, H, W, 32}, {N, C / 32, H, W, 32}, {}});
+        checker.execs({{N, C / 32, H, W, 32}, {1, C / 32, 1, 1, 32}, {}});
+        checker.execs({{3, 5, 7}, {3, 5, 7}, {}});
+        checker.execs({{3, 5, 7}, {3, 5, 1}, {}});
+        checker.execs({{3, 5, 1}, {3, 5, 7}, {}});
+        checker.execs({{1}, {3, 5, 7}, {}});
+        checker.execs({{3, 5, 7}, {1}, {}});
+    };
+#define RUN_BINARY_UINT16(_dt)                          \
+    run_binary(4, 32, 10, 10, Mode::ADD, _dt);          \
+    run_binary(4, 32, 10, 10, Mode::MUL, _dt);          \
+    run_binary(4, 32, 10, 10, Mode::MAX, _dt);          \
+    run_binary(4, 32, 10, 10, Mode::MIN, _dt);          \
+    run_binary(4, 32, 10, 10, Mode::SUB, _dt);          \
+    run_binary(4, 32, 10, 10, Mode::EQ, _dt);           \
+    run_binary(4, 32, 10, 10, Mode::LEQ, _dt);          \
+    run_binary(4, 32, 10, 10, Mode::LT, _dt);           \
+    run_binary(4, 32, 10, 10, Mode::PRELU, _dt);        \
+    run_binary(4, 32, 10, 10, Mode::RMULH, _dt);        \
+    run_binary(4, 32, 10, 10, Mode::TANH_GRAD, _dt);    \
+    run_binary(4, 32, 10, 10, Mode::SIGMOID_GRAD, _dt); \
+    run_binary(4, 32, 10, 10, Mode::SWITCH_GT0, _dt);   \
+    run_binary(4, 32, 10, 10, Mode::FUSE_ADD_RELU, _dt);
+    checker.set_rng(0, &ui_rng).set_rng(1, &ui_rng);
+    RUN_BINARY_UINT16(dtype::Uint16());
+#undef RUN_BINARY_UINT16
+}
+
 TEST_F(CUDA, ELEMWISE_IBYTE) {
     Checker<ElemwiseForward> checker(handle_cuda());
     using Mode = ElemwiseForward::Param::Mode;

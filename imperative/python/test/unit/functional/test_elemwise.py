@@ -53,6 +53,14 @@ def test_multiply():
     )
 
 
+def test_multiply_uint16():
+    x = np.random.rand(1, 4, 512, 512) * 255
+    y_mge = F.mul(mge.tensor(x.astype("uint16")), mge.tensor(2, dtype="uint16")).numpy()
+    y_np = x.astype("uint16") * np.array([2], dtype="uint16")
+    np.testing.assert_allclose(y_mge, y_np)
+    assert y_mge.dtype == np.uint16
+
+
 def test_div():
     np.testing.assert_allclose(
         F.div(tensor([3.0, 4.0]), 2).numpy(),

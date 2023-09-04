@@ -125,7 +125,7 @@ void mgb::static_cast_dtype(
                 src_type);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
-        cb(::megdnn::dtype::Bool)
+        cb(::megdnn::dtype::Bool) cb(::megdnn::dtype::Uint16)
 #undef cb
 #define cb(_name, _bits)                                                             \
     case DTypeTrait<dtype::_name##_bits>::enumv:                                     \
@@ -154,6 +154,7 @@ void mgb::static_cast_dtype_safe(
                 src_type);
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
+        cb(::megdnn::dtype::Uint16)
 #undef cb
 #define cb(_name, _bits)                                                             \
     case DTypeTrait<dtype::_name##_bits>::enumv:                                     \
@@ -161,12 +162,13 @@ void mgb::static_cast_dtype_safe(
                 dest,                                                                \
                 static_cast<const DTypeTrait<dtype::_name##_bits>::ctype*>(storage), \
                 nr_elem, src_type);
-        MEGDNN_FOREACH_LOWBIT_DTYPE(cb)
+                MEGDNN_FOREACH_LOWBIT_DTYPE(cb)
 #undef cb
 
-        default:
-            mgb_throw(
-                    ConversionError, "can not convert from dtype %s", src_type.name());
+                        default
+                : mgb_throw(
+                          ConversionError, "can not convert from dtype %s",
+                          src_type.name());
     }
 }
 

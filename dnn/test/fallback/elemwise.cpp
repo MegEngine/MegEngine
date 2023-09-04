@@ -100,7 +100,59 @@ TEST_F(FALLBACK, ELEMWISE_FORWARD_TERNARY) {
     run();
 }
 
-TEST_F(FALLBACK, ELEMWISE_FORWARD_NCHW44_INT8_INT16_INT32) {
+TEST_F(FALLBACK, ELEMWISE_UINT16_MUL) {
+    using Mode = ElemwiseForward::Param::Mode;
+    Checker<ElemwiseForward> checker(handle());
+    checker.set_param(Mode::MUL);
+
+    auto run = [&] {
+        //! nchw44
+        checker.execs({{1, 3, 1, 1, 4}, {1, 3, 2, 2, 4}, {}});
+        checker.execs({{1, 3, 1, 1, 4}, {2, 3, 2, 2, 4}, {}});
+        checker.execs({{1, 8, 1, 1, 4}, {3, 8, 5, 3, 4}, {}});
+        checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.execs({{1, 2, 1, 1, 4}, {1, 2, 5, 7, 4}, {}});
+
+        //! nchw44
+        checker.execs({{1, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{2, 3, 2, 2, 4}, {1, 3, 1, 1, 4}, {}});
+        checker.execs({{3, 8, 5, 3, 4}, {1, 8, 1, 1, 4}, {}});
+        checker.execs({{3, 4, 5, 7, 4}, {3, 4, 5, 7, 4}, {}});
+        checker.execs({{1, 2, 5, 7, 4}, {1, 2, 1, 1, 4}, {}});
+
+        //! nchw88
+        checker.execs({{1, 3, 1, 1, 8}, {1, 3, 2, 2, 8}, {}});
+        checker.execs({{1, 3, 1, 1, 8}, {2, 3, 2, 2, 8}, {}});
+        checker.execs({{1, 8, 1, 1, 8}, {3, 8, 5, 3, 8}, {}});
+        checker.execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+        checker.execs({{1, 2, 1, 1, 8}, {1, 2, 5, 7, 8}, {}});
+
+        //! nchw88
+        checker.execs({{1, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.execs({{2, 3, 2, 2, 8}, {1, 3, 1, 1, 8}, {}});
+        checker.execs({{3, 8, 5, 3, 8}, {1, 8, 1, 1, 8}, {}});
+        checker.execs({{3, 4, 5, 7, 8}, {3, 4, 5, 7, 8}, {}});
+        checker.execs({{1, 2, 5, 7, 8}, {1, 2, 1, 1, 8}, {}});
+
+        checker.execs({{3, 4, 7}, {3, 4, 7}, {}});
+        checker.execs({{1, 4, 1, 1}, {3, 4, 5, 7}, {}});
+        checker.execs({{1, 4, 1}, {3, 4, 7}, {}});
+        checker.execs({{3, 4, 5, 7}, {3, 4, 5, 7}, {}});
+        checker.execs({{1, 7}, {1, 7}, {}});
+        checker.execs({{1, 2, 1}, {1, 2, 2}, {}});
+        checker.execs({{1, 2, 2}, {1, 2, 2}, {}});
+        checker.execs({{3, 4, 1}, {3, 4, 1}, {}});
+        checker.execs({{3, 4, 5}, {1}, {}});
+        checker.execs({{1}, {3, 4, 5}, {}});
+    };
+
+    // case int
+    checker.set_dtype(0, dtype::Uint16());
+    checker.set_dtype(1, dtype::Uint16());
+    run();
+}
+
+TEST_F(FALLBACK, ELEMWISE_FORWARD_NCHW44_INT8_INT16_UINT16_INT32) {
     using Mode = ElemwiseForward::Param::Mode;
     Checker<ElemwiseForward> checker(handle());
 
@@ -148,6 +200,9 @@ TEST_F(FALLBACK, ELEMWISE_FORWARD_NCHW44_INT8_INT16_INT32) {
     run();
     checker.set_dtype(0, dtype::Int16());
     checker.set_dtype(1, dtype::Int16());
+    run();
+    checker.set_dtype(0, dtype::Uint16());
+    checker.set_dtype(1, dtype::Uint16());
     run();
     checker.set_dtype(0, dtype::Int32());
     checker.set_dtype(1, dtype::Int32());

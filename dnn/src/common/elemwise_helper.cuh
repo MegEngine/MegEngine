@@ -22,6 +22,10 @@ template <>
 struct MulType<uint8_t> {
     typedef uint16_t type;
 };
+template <>
+struct MulType<uint16_t> {
+    typedef uint32_t type;
+};
 
 }  // namespace
 
