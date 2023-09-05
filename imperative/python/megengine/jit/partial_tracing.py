@@ -112,9 +112,10 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
         inp_grad_maps = OrderedDict()  # x, dx map
         out_grad_maps = OrderedDict()  # y, dy map
         traced = False  # if wrapped function has been traced
-        compiled = False  # if wrapped function has been compiled
         custom_autodiff = None
         outdef = None  # treedef of forward return value
+        check_shape = backend == "xla"
+        shape_hash = None
         from ..core.autodiff.grad import Function
 
         class CustomAutodiff(Function):
@@ -161,18 +162,23 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                 else:
                     return rst
 
+        def get_shape_hash(*tensors):
+            return hash(tuple([t._tuple_shape for t in tensors]))
+
         def wrapped_func(*args, **kwargs):
             from ..traced_module.pytree import tree_flatten
             from ..module import Module
 
             nonlocal traced
-            nonlocal compiled
             nonlocal custom_autodiff
             nonlocal outdef
+            nonlocal shape_hash
 
             if not traced:
                 traced = True
                 fargs = trace_obj.flatten_inputs(*args, **kwargs)
+                if check_shape:
+                    shape_hash = get_shape_hash(*fargs)
                 for t in fargs:
                     inp_grad_maps[t] = get_grad_slot(t)
                 del fargs
@@ -207,7 +213,7 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
 
                 _add_backward_callback(enter_trace)
                 return ret
-            elif not compiled:
+            else:
                 if custom_autodiff is None:
                     _process_fwd_bwd_trace_result(
                         trace_obj, backward_trace_obj, inp_grad_maps, out_grad_maps
@@ -217,6 +223,8 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                     else:
                         custom_autodiff = CustomFwd(trace_obj, backward_trace_obj)
                 fargs = trace_obj.flatten_inputs(*args, **kwargs)
+                if check_shape and get_shape_hash(*fargs) != shape_hash:
+                    return trace_obj.__wrapped__(*args, **kwargs)
                 del args
                 del kwargs
                 if outdef is None:
