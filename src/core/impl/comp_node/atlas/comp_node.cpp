@@ -81,6 +81,7 @@ public:
     }
 
     void* alloc_host(size_t size) override {
+        activate();
         void* ptr;
         MGB_ATLAS_CHECK(aclrtMallocHost(&ptr, size));
         return ptr;
@@ -306,6 +307,7 @@ class AtlasCompNode::EventImpl final : public EventImplHelper {
     }
 
     void host_wait_cv() override {
+        m_comp_node_impl->activate();
         MGB_ATLAS_CHECK(aclrtSynchronizeEvent(m_atlas_event));
         if (m_used_for_sync) {
             MGB_ATLAS_CHECK(aclrtResetEvent(
@@ -354,8 +356,8 @@ std::unique_ptr<CompNode::Event> AtlasCompNodeImpl::create_event(size_t flags) {
 void AtlasCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
     if (cn_impl->dyn_typeinfo() == AtlasCompNodeImpl::typeinfo()) {
         auto imp = static_cast<AtlasCompNodeImpl*>(cn_impl);
+        imp->m_env.atlas_env().activate();
         auto stream = imp->m_env.atlas_env().stream;
-        imp->activate();
         MGB_ATLAS_CHECK(aclrtStreamWaitEvent(stream, m_atlas_event));
         if (m_used_for_sync) {
             MGB_ATLAS_CHECK(aclrtResetEvent(
@@ -365,6 +367,7 @@ void AtlasCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
     }
     if (cn_impl->env().property().type == DeviceType::CPU) {
         auto waiter = [this]() {
+            m_comp_node_impl->m_env.atlas_env().activate();
             MGB_ATLAS_CHECK(aclrtSynchronizeEvent(m_atlas_event));
             if (m_used_for_sync) {
                 MGB_ATLAS_CHECK(aclrtResetEvent(
