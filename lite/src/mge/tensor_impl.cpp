@@ -102,7 +102,11 @@ TensorImplDft::TensorImplDft(
 
 LiteDeviceType TensorImplDft::get_device_type() const {
     if (is_host()) {
-        return get_device_from_locator(m_host_tensor->comp_node().locator());
+        // not return get_device_from_locator(m_host_tensor->comp_node().locator());
+        // May cause incorrect memory operations. For example, creating another tensor
+        // based on this tensor may create an cuda memory if LITE_CUDA is returned. And
+        // what is expected should be LITE_CPU memory, even if it is pinned memory.
+        return LiteDeviceType::LITE_CPU;
     } else {
         return get_device_from_locator(m_dev_tensor->comp_node().locator());
     }

@@ -571,17 +571,6 @@ TEST(TestTensor, ConcatDevice) {
     check(1);
     check(2);
 }
-
-TEST(TestTensor, CudaOutputDevice) {
-    Layout layout{{1, 4}, 2};
-    bool is_pinned_host = true;
-    Tensor tensor(LiteDeviceType::LITE_CUDA, layout, is_pinned_host);
-    // If is_pinned_host is true, when calling update_from_implement(), the device type
-    // should always be updated with
-    // get_device_from_locator(m_host_tensor->comp_node().locator()).
-    tensor.update_from_implement();
-    ASSERT_EQ(tensor.get_device_type(), LiteDeviceType::LITE_CUDA);
-}
 #endif
 #endif
 
