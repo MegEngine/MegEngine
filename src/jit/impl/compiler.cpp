@@ -67,29 +67,30 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
     }
     MGB_LOCK_GUARD(holder->mtx);
     auto&& compiler = holder->dev2compiler[comp_node.device_type()];
-    auto backend = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
+    std::string backend = gopt::JITFusionPass::get_jit_backend_str();
     mgb_assert(
-            backend,
+            !backend.empty(),
             "code issue happened, need call config_jit_backends before get compiler");
     //! please keep logic with JITFusionPass::Impl::config_jit_backends
+    mgb_log_debug("Compiler: JIT backend: %s", backend.c_str());
     if (!compiler) {
         switch (comp_node.device_type()) {
 #if MGB_CUDA
             case CompNode::DeviceType::CUDA:
 #if MGB_JIT_HALIDE
-                if (!strcmp(backend, "HALIDE")) {
+                if (!strcmp(backend.c_str(), "HALIDE")) {
                     compiler = std::make_unique<HalideCudaCompiler>();
                     break;
                 }
 #endif
 #if MGB_JIT_MLIR
-                if (!strcmp(backend, "MLIR")) {
+                if (!strcmp(backend.c_str(), "MLIR")) {
                     compiler =
                             std::make_unique<MLIRCompiler>(CompNode::DeviceType::CUDA);
                     break;
                 }
 #endif
-                if (!strcmp(backend, "NVRTC")) {
+                if (!strcmp(backend.c_str(), "NVRTC")) {
                     compiler = std::make_unique<CudaCompiler>();
                     break;
                 }
@@ -101,7 +102,7 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
 #endif
             case CompNode::DeviceType::CPU:
 #if MGB_JIT_MLIR
-                if (!strcmp(backend, "MLIR")) {
+                if (!strcmp(backend.c_str(), "MLIR")) {
                     compiler =
                             std::make_unique<MLIRCompiler>(CompNode::DeviceType::CPU);
                     break;
@@ -117,7 +118,7 @@ Compiler* Compiler::get(ComputingGraph& graph, CompNode comp_node) {
                         InternalError,
                         "unsupported JIT config: "
                         "comp_node=%s backend_setting=%s",
-                        comp_node.to_string().c_str(), backend);
+                        comp_node.to_string().c_str(), backend.c_str());
         }
     }
 

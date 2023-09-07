@@ -19,6 +19,9 @@ using namespace mgb;
 using namespace gopt;
 using namespace jit;
 
+//! default is null string
+std::string JITFusionPass::jit_backend_str = "";
+
 class JITFusionPass::Impl final {
     using Mode = opr::Elemwise::Mode;
     using DepType = OperatorNodeBase::NodeProp::DepType;
@@ -83,13 +86,13 @@ public:
 };
 
 void JITFusionPass::Impl::config_jit_backends(CompNode comp_node) const {
-#define ENV_CB(VALUE)                                                          \
-    if (!backend || !strcmp(backend, VALUE)) {                                 \
-        if (!backend) {                                                        \
-            mgb_log_debug("config jit default backend to %s", VALUE);          \
-            setenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str(), VALUE, 1); \
-        }                                                                      \
-        break;                                                                 \
+#define ENV_CB(VALUE)                                                 \
+    if (!backend || !strcmp(backend, VALUE)) {                        \
+        if (!backend) {                                               \
+            mgb_log_debug("config jit default backend to %s", VALUE); \
+            JITFusionPass::set_jit_backend_str(VALUE);                \
+        }                                                             \
+        break;                                                        \
     }
 
     auto backend = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
@@ -384,16 +387,16 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
         return false;
     }
 
-    auto backend = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
+    std::string backend = JITFusionPass::get_jit_backend_str();
     mgb_assert(
-            backend,
+            !backend.empty(),
             "code issue happened, need call config_jit_backends before check opr can "
             "be fused");
     // float elemwise
     if (auto elem = gopt::try_cast_as_op<opr::Elemwise>(opr)) {
         bool ret = true;
 #if MGB_JIT_MLIR
-        if (!strcmp(backend, "MLIR")) {
+        if (!strcmp(backend.c_str(), "MLIR")) {
             switch (elem->param().mode) {
 #define cb(_, _mode)                 \
     case opr::Elemwise::Mode::_mode: \
@@ -436,7 +439,7 @@ bool JITFusionPass::Impl::can_be_fused(cg::OperatorNodeBase* opr) const {
     }
 
     //! TINYOPENCL and MLIR only support elemwise now
-    if (strcmp(backend, "MLIR") && strcmp(backend, "TINYOPENCL")) {
+    if (strcmp(backend.c_str(), "MLIR") && strcmp(backend.c_str(), "TINYOPENCL")) {
         if (opr->same_type<opr::PowC>()) {
             return true;
         }

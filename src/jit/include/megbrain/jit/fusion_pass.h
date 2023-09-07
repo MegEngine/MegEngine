@@ -65,6 +65,32 @@ public:
             const JITConfig& jit_config = {});
     const char* name() const override;
     void apply(OptState& opt) const override;
+
+    //! define jit backend string to support config jit backend by API
+    //! env: MGB_JIT_BACKEND with high priority than API
+    static std::string jit_backend_str;
+
+    /*!
+     * \brief set jit backend string
+     * \param[backend_str] backend_str backend string
+     */
+    static void set_jit_backend_str(const std::string& backend_str) {
+        jit_backend_str = backend_str;
+    }
+
+    /*!
+     * \brief get jit backend string
+     * \return backend string
+     */
+    static std::string get_jit_backend_str() {
+        std::string ret = jit_backend_str;
+        auto user_env = ::std::getenv(ssprintf("%c%cB_JIT_BACKEND", 'M', 'G').c_str());
+        if (user_env) {
+            ret = user_env;
+        }
+
+        return ret;
+    };
 };
 
 }  // namespace gopt
