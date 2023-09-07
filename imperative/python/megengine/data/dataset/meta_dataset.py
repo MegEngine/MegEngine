@@ -56,9 +56,12 @@ class Dataset(ABC):
 
 
 class StreamDataset(Dataset):
-    r"""An abstract class for stream data.
-
-    __iter__ method is aditionally needed.
+    r"""All datasets that represent an iterable of data samples should subclass it. 
+    Such form of datasets is particularly useful when data come from a stream.
+    All subclasses should overwrite __iter__(), which would return an iterator of samples in this dataset.
+    
+    Returns:
+        Dataset: An iterable Dataset.
 
     Examples:
 
@@ -109,6 +112,13 @@ class ArrayDataset(Dataset):
     One or more numpy arrays are needed to initiate the dataset.
     And the dimensions represented sample number are expected to be the same.
 
+    Args:
+        Arrays(dataset and labels): the datas and labels to be returned iteratively.
+
+    Returns:
+        Tuple: A set of raw data and corresponding label.
+
+
     Examples:
 
         .. code-block:: python
@@ -151,6 +161,12 @@ class ConcatDataset(Dataset):
 
     This dataset is used for assembleing multiple map-style
     datasets.
+
+    Args:
+        datasets(list of Dataset): list of datasets to be composed.
+
+    Returns:
+        Dataset: A Dataset which composes fields of multiple datasets.
 
     Examples:
 

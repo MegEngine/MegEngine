@@ -83,8 +83,8 @@ def raise_timeout_error():
 
 
 class DataLoader:
-    r"""Provides a convenient way to iterate on a given dataset.
-    The process is as follows:
+    r"""Data loader. Combines a dataset and a sampler, and provides a convenient way
+    to iterate on a given dataset. The process is as follows:
 
     .. mermaid::
        :align: center
@@ -95,9 +95,6 @@ class DataLoader:
           Indices -- Dataset.__getitem__ --> Samples
           Samples -- Transform + Collator --> mini-batch
 
-    DataLoader combines a :class:`~.Dataset` with
-    :class:`~.Sampler`, :class:`~.Transform` and :class:`~.Collator`,
-    make it flexible to get minibatch continually from a dataset.
     See :ref:`data-guide` for more details.
 
     Args:
@@ -116,6 +113,12 @@ class DataLoader:
             When enabling, each worker will collect data from different dataset in order to speed up the whole loading process.
             See ref:`streamdataset-example` for more details
 
+    Examples:
+        >>> import megengine.data as data
+        >>> dataset = CustomDataset()         # doctest: +SKIP
+        >>> dataloader = DataLoader(dataset)  # doctest: +SKIP
+        >>> for batch_data in DataLoader:     # doctest: +SKIP
+        >>>     print(batch_data.shape)       # doctest: +SKIP
 
     .. admonition:: The effect of enabling preload
        :class: warning

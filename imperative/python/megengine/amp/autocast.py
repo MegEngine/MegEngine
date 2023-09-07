@@ -8,12 +8,15 @@ class autocast:
     r"""A class to control autocast mode for amp as a context manager or a decorator.
 
     Args:
-        enabled: Whether autocast mode is enabled.
-        low_prec_dtype: Set amp autocast mode's lower precision dtype. It will change
+        enabled: whether autocast mode is enabled.
+        low_prec_dtype: set amp autocast mode's lower precision dtype. It will change
             the target dtype in tensor casting for better speed and memory. Default: float16.
-        high_prec_dtype: Set amp autocast mode's higher precision dtype. It will
+        high_prec_dtype: set amp autocast mode's higher precision dtype. It will
             change the target dtype in tensor casting for better precision. Default: float32.
 
+    Return:
+        None
+    
     Examples:
         .. code-block::
 

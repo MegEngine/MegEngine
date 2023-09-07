@@ -18,6 +18,9 @@ def save(obj, f, pickle_module=pickle, pickle_protocol=pickle.DEFAULT_PROTOCOL):
         pickle_module: the module to use for pickling.
         pickle_protocol: the protocol to use for pickling.
 
+    Return:
+        None.
+
     .. admonition:: If you are using MegEngine with different Python versions
        :class: warning
 
@@ -115,6 +118,9 @@ def load(f, map_location=None, pickle_module=pickle):
         f: a string of file name or a text file object from which to load.
         map_location: defines device mapping. See examples for usage.
         pickle_module: the module to use for pickling.
+
+    Return:
+        None.
 
     Note:
        

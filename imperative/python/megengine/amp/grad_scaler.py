@@ -13,12 +13,15 @@ class GradScaler:
     :class:`~.autocast` mode.
 
     Args:
-        init_scale: Initial scale factor.
-        growth_factor: Factor that the scale is multiplied by in actual
+        init_scale: initial scale factor.
+        growth_factor: factor that the scale is multiplied by in actual
             :meth:`update` stage. If growth_factor is 0, scale_factor will not update.
-        backoff_factor: Factor that the scale is multiplied by when encountering
+        backoff_factor: factor that the scale is multiplied by when encountering
             overflow grad.
-        growth_interval: The interval between two scale update stages.
+        growth_interval: the interval between two scale update stages.
+
+    Returns:
+        gradScaler object.
 
     Example:
         .. code-block::
