@@ -93,11 +93,21 @@ def quantize_qat(
     Args:
         module: root module to do convert recursively.
         inplace: whether to convert submodules in-place.
-        qconfig: an instance of :class:`~.QConfig` to be set as submodules' qconfig.
-            default is ``ema_fakequant_qconfig``.
+        qconfig: an instance of :class:`~.QConfig` to be set as submodules' quant config. Default: ``ema_fakequant_qconfig``.
         mapping: a dict indicating how to convert custom modules from Module to QATModule.
             Will be combined with internal default convert mapping dict.
+
+    Returns:
+        Return type: Module. Quantized module.
+
+    Examples:
+        >>> import megengine.quantization as Q
+        >>> model = Net()                                           # doctest: +SKIP
+        >>> Q.quantize_qat(model, qconfig=Q.ema_fakequant_qconfig)  # doctest: +SKIP
     """
+    assert isinstance(inplace, bool) and isinstance(
+        qconfig, QConfig
+    ), "the type of input args(inplace and qconfig) is wrong, please check them."
 
     if not inplace:
         module = deepcopy(module)

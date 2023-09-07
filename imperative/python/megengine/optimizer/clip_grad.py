@@ -17,12 +17,17 @@ def clip_grad_norm(
     concatenated into a single vector. Gradients are modified in-place.
 
     Args:
-        tensors: an iterable of Tensors or a single Tensor.
+        tensors: an iterable of Tensors or a single Tensor that will have gradients normalized.
         max_norm: max norm of the gradients.
-        ord: type of the used p-norm. Can be ``'inf'`` for infinity norm.
+        ord: type of the used p-norm. Can be ``'inf'`` for infinity norm. Default: 2.0
 
     Returns:
-      total norm of the parameters (viewed as a single vector).
+        Return type: Tensor of an iterable of Tensors. Total norm of the parameter gradients (viewed as a single vector).
+    
+    Examples:
+        >>> import megengine.optimizer as optim
+        >>> net = Net()                                                                 # doctest: +SKIP
+        >>> original_norm = optim.clip_grad_norm(net.parameters(), max_norm=1.0, ord=2) # doctest: +SKIP
     """
     push_scope("clip_grad_norm")
     if isinstance(tensors, Tensor):
@@ -58,6 +63,14 @@ def clip_grad_value(
         tensors: an iterable of Tensors or a single Tensor.
         lower: minimum allowed value of the gradients.
         upper: maximum allowed value of the gradients.
+    
+    Returns:
+        None.
+    
+    Examples:
+        >>> import megengine.optimizer as optim
+        >>> net = Net()                                                 # doctest: +SKIP
+        >>> optim.clip_grad_value(net.parameters(), lower=-2, upper=5)  # doctest: +SKIP
     """
     push_scope("clip_grad_value")
     if isinstance(tensors, Tensor):

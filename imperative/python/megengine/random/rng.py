@@ -485,7 +485,7 @@ class RNG:
                 int32, int16 and float32 are supported. Default: int32
 
         Returns:
-            the output tensor.
+            The output tensor.
 
         Examples:
             >>> import numpy as np
@@ -521,6 +521,9 @@ class RNG:
 
         Args:
             inp: input tensor.
+        
+        Returns:
+            None.
 
         Examples:
             >>> import numpy as np
@@ -574,6 +577,18 @@ def _random_seed_generator():
 
 
 def seed(seed: int):
+    r"""Sets the seed for generating random numbers globally.
+    
+    Args:
+        seed: the number to be set for generating random numbers.
+
+    Returns:
+        None.
+
+    Examples:
+        >>> import megengine.random as rand
+        >>> rand.seed(0)
+    """
     global _rng  # pylint: disable=global-statement
     _rng = MT19937(seed=seed)
     _set_global_rng_seed(seed)

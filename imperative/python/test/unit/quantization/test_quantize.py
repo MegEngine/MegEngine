@@ -182,7 +182,7 @@ def test_enable_and_disable_all():
     x = Tensor(np.random.randint(1, 10, size=(3, 3)).astype(np.float32))
     net = FloatNet()
     y1 = net(x).numpy()
-    net = quantize_qat(net, min_max_fakequant_qconfig)
+    net = quantize_qat(net, qconfig=min_max_fakequant_qconfig)
 
     init_observer(net, x)
 
