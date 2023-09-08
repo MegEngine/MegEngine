@@ -2445,9 +2445,32 @@ def trace_module(
     r"""Traces module ``mod`` and returns corresponding :class:`TracedModule`.
 
     Args:
-        mod: the module will be converted to :class:`TracedModule`.
-        args: the positional arguments passed to forward method of ``mod``.
-        kwargs: the keyword arguments passed to forward method of ``mod``.
+        mod(:attr:`.module.Module`): the module will be converted to :class:`TracedModule`.
+        args(Tuple[Any]]): the positional arguments passed to forward method of ``mod``.
+        kwargs(Dict[str, Any]): the keyword arguments passed to forward method of ``mod``.
+    
+    Returns: 
+        Return type: TracedModule. The TracedModule object convert from input Module ``mod``.
+
+
+    Examples:
+
+        .. code-block:: python
+
+            import megengine.functional as F
+            import megengine.module as M
+            import megengine as mge
+            from model import resnet18
+
+            # resnet : Module
+            resnet = resnet18()
+
+            import megengine.traced_module as tm
+            inp = F.zeros(shape=(1,3,224,224))
+
+            # traced_resnet : TracedModule
+            traced_resnet =  tm.trace_module(resnet, inp)
+
     """
     assert active_module_tracer() is None
     assert isinstance(mod, Module)

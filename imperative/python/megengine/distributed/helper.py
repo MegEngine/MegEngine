@@ -180,8 +180,8 @@ def bcast_list_(inps: list, group: Group = WORLD):
     r"""Broadcast tensors between given group.
 
     Args:
-        inps: input tensors.
-        group: communication group.
+        inps(List[Tensor]): input tensors.
+        group(:attr:`.distributed.group.Group, optional): communication group. Default: WORLD.
     """
     for inp in inps:
         inp._reset(_bcast_param(inp, group))
@@ -191,9 +191,20 @@ class AllreduceCallback:
     r"""Allreduce Callback with tensor fusion optimization.
 
     Args:
-        reduce_method: the method to reduce gradiants.
-        group: communication group.
-        backend: override distributed backend in allreduce
+        reduce_method(str): the method to reduce gradiants. ``reduce_method`` should be "sum" or "mean".
+        group(:attr:`.distributed.group.Group, optional): communication group. Default: WORLD.
+        backend(str, optional): override distributed backend in allreduce. If ``backend`` is None, will use the backend set in ``dist.launcher``. Default: None.
+
+    Examples:
+
+        .. code-block:: python
+
+            import megengine as mge
+            import megengine.autodiff as ad
+            import megengine.distributed as dist
+
+            gm = ad.GradManager()
+            gm.attach(linear_cls.parameters(), callbacks=[dist.make_allreduce_cb("sum")])
     """
 
     def __init__(self, reduce_method: str, group: Group = WORLD, backend: str = None):

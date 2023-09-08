@@ -58,16 +58,23 @@ def _run_wrapped(
 
 
 class launcher:
-    r"""Decorator for launching multiple processes in single-machine multi-gpu training.
+    r"""Decorator for launching multiple processes in single-machine/multi-machine multi-gpu training.
 
     Args:
-        func: the function you want to launch in distributed mode.
-        n_gpus: how many devices each node.
-        world_size: how many devices totally.
-        rank_start: start number for rank.
-        master_ip: ip address for master node (where the rank 0 is).
-        port: server port for distributed server.
-        backend: set default collective communication backend.
+        func(Callable): the function you want to launch in distributed mode.
+        n_gpus(Number): how many devices each node. If ``n_gpus`` is None,  ``n_gpus`` will be 
+            the device count of current node. Default: None.
+        world_size(Number): how many devices totally. If ``world_size`` is None, ``world_size`` will be 
+            ``n_gpus``. Default: None.
+        rank_start(Number): the start rank number in current node. For single-machine multi-gpu training, rank_start 
+            should be ``0``. For multi-machine training, ``rank_start`` of Machine ``i`` should be ``i * n_gpus``. Default: 0
+        master_ip(str): ip address for master node (where the rank 0 is placed). Default: "localhost".
+        port(Number): server port for distributed server. Default: 0.
+        backend(str)): set default collective communication backend. ``backend`` should be "nccl" or "rccl". Default: "nccl".
+    
+    .. seealso::
+        * Examples of distributed training using ``launcher`` decorator can be found in :ref:`_distributed-guide`
+    
     """
 
     def __new__(cls, *args, **kwargs):

@@ -99,20 +99,22 @@ class trace:
     * accelerated evalutaion via :meth:`.__call__`
 
     Args:
-        function: the function will be traced.
-        symbolic: whether to apply symbolic execution for tracing. Default: False
-        capture_as_const: capture global vars or closures as const value. Default: False
+        function(Callable): the function will be traced.
+        symbolic(bool): whether to apply symbolic execution for tracing. Default: False
+        capture_as_const(bool): capture global vars or closures as const value. Default: False
         record_only: if True, won't run even if call the function. Default: False
-        sublinear_memory_config: configuration for sublinear memory optimization.
+        sublinear_memory_config(SublinearMemoryConfig): configuration for sublinear memory optimization.
             If not None, it enables sublinear memory optimization with given setting.
-        profiling: whether to profile compiled trace. Default: False
-        opt_level: optimization level for compiling trace. Default: 2
-        graph_opt_config: configuration for graph optimization. Default: None
-        symbolic_shape: whether to use symbolic shape for tracing. Default: True
-        without_host: if True, will run python code of wrapped function on the first call,
+        dtr_config(DTRConfig): configuration for DTR sublinear memory optimization.
+            If not None, it enables DTR optimization with given setting.
+        profiling(bool): whether to profile compiled trace. Default: False
+        opt_level(int): optimization level for compiling trace. Default: 2
+        graph_opt_config(GraphOptimizationConfig): configuration for graph optimization. Default: None
+        symbolic_shape(bool): whether to use symbolic shape for tracing. Default: True
+        without_host(bool): if True, will run python code of wrapped function on the first call,
             and run the compiled graph/function on subsequent calls. if False, will run python code every time.
             Default: False
-        imperative: if True, will use imperative runtime to execute captured op seq. Default: False
+        imperative(bool): if True, will use imperative runtime to execute captured op seq. Default: False
     """
 
     third_party_backend = False
