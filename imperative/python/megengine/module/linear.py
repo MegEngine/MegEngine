@@ -17,11 +17,14 @@ class Linear(Module):
     where :math:`y_i= \sum_j W_{ij} x_j + b_i`
 
     Args:
-        in_features: size of each input sample.
-        out_features: size of each output sample.
-        bias: if it's ``False``, the layer will not learn an additional ``bias``.
-            Default: ``True``
+        in_features(:class:`int`): size of each input sample.
+        out_features(:class:`int`): size of each output sample.
+        bias(:class:`bool`): if it's ``False``, the layer will not learn an additional ``bias``.
+            Default: ``True``.
 
+    Shape:
+        - x: :math:`(*, H_{in})`, where * means any number of dimensions including none where :math:`H_{in}` = in_features.
+        - y: :math:`(*, H_{out})`, where all but the last dimension are the same shape as the input where :math:`H_{out} = out_features.
 
     Examples:
         >>> import numpy as np
