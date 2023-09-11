@@ -229,23 +229,23 @@ void run_exponential(Handle* handle) {
     TensorLayout ly{TensorShape{200000 * 5}, dtype()};
 
     Tensor<ctype> out(handle, ly);
-    Tensor<ctype> lam(handle, ly);
+    Tensor<ctype> rate(handle, ly);
 
-    auto lam_ptr = lam.ptr();
+    auto rate_ptr = rate.ptr();
     for (int i = 0; i < 5; ++i) {
         for (int j = 0; j < 200000; ++j) {
-            lam_ptr[i * 200000 + j] = ctype(i + 1);
+            rate_ptr[i * 200000 + j] = ctype(i + 1);
         }
     }
-    opr->exec(lam.tensornd(), out.tensornd(), {});
+    opr->exec(rate.tensornd(), out.tensornd(), {});
 
     auto ptr = out.ptr();
     for (int i = 0; i < 5; ++i) {
         auto stat = get_mean_var(ptr + i * 200000, 200000, ctype(i + 1));
         float mean = 1.0 / (i + 1);
-        float std = 1.0 / ((i +  1) * (i + 1));
+        float var = 1.0 / ((i +  1) * (i + 1));
         ASSERT_LE(std::abs(stat.first - mean), 0.01);
-        ASSERT_LE(std::abs(stat.second - std), 0.01);
+        ASSERT_LE(std::abs(stat.second - var), 0.01);
     }
 }
 

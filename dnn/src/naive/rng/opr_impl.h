@@ -153,7 +153,7 @@ class ExponentialRNGImpl : public ExponentialRNG {
 public:
     using ExponentialRNG::ExponentialRNG;
 
-    void exec(_megdnn_tensor_in lam, _megdnn_tensor_inout dst, _megdnn_workspace)
+    void exec(_megdnn_tensor_in rate, _megdnn_tensor_inout dst, _megdnn_workspace)
             override;
 
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {

@@ -119,7 +119,7 @@ TEST(TestImperative, ExponentialRNGBasic) {
         for (int i = 0; i < 5 * 3000; ++i)
             lam_ptr[i] = 2;
         SmallVector<TensorPtr> inputs{Tensor::make(lam)};
-        check_rng_with_input_basic<ExponentialRNG>(cn, inputs, 123);
+        check_rng_with_input_basic<ExponentialRNG>(cn, inputs, 123, 1.f, dtype::Float32());
     }
 }
 

@@ -191,7 +191,7 @@ public:
     ExponentialRNGImpl(Handle* handle);
 
     void exec(
-            _megdnn_tensor_in lam, _megdnn_tensor_out dst, _megdnn_workspace) override;
+            _megdnn_tensor_in rate, _megdnn_tensor_out dst, _megdnn_workspace) override;
 
     size_t get_workspace_in_bytes(const TensorLayout&, const TensorLayout&) override {
         return 0;

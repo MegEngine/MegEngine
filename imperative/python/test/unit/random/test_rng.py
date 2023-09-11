@@ -15,6 +15,7 @@ from megengine.core._imperative_rt.ops import (
 from megengine.core.autodiff.grad import Grad
 from megengine.core.ops.builtin import (
     BetaRNG,
+    ExponentialRNG,
     GammaRNG,
     GaussianRNG,
     PermutationRNG,
@@ -206,6 +207,32 @@ def test_permutation_op():
     test_permutation_op_dtype(np.float32)
     test_permutation_op_dtype(np.int32)
     test_permutation_op_dtype(np.int16)
+
+
+@pytest.mark.skipif(
+    get_device_count("xpu") <= 2, reason="xpu counts need > 2",
+)
+def test_exponential_op():
+    set_global_seed(1024)
+    rate = F.full([8, 9, 11, 12], value=2, dtype="float32")
+    op = ExponentialRNG(seed=get_global_rng_seed())
+    (output,) = apply(op, rate)
+    expected_mean = 1.0 / rate
+    expected_std = np.sqrt(1.0 / rate ** 2)
+    assert np.fabs(output.numpy().mean() - expected_mean) < 1e-1
+    assert np.fabs(np.sqrt(output.numpy().var()) - expected_std) < 1e-1
+    assert str(output.device) == str(CompNode("xpux"))
+
+    cn = CompNode("xpu2")
+    seed = 233333
+    h = new_rng_handle(cn, seed)
+    rate = F.full([8, 9, 11, 12], value=2, dtype="float32", device=cn)
+    op = ExponentialRNG(seed=seed, handle=h)
+    (output,) = apply(op, rate)
+    delete_rng_handle(h)
+    assert np.fabs(output.numpy().mean() - expected_mean) < 1e-1
+    assert np.fabs(np.sqrt(output.numpy().var()) - expected_std) < 1e-1
+    assert str(output.device) == str(cn)
 
 
 @pytest.mark.skipif(

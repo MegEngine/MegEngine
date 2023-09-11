@@ -191,22 +191,22 @@ void run_exponential(Handle* handle) {
     TensorLayout ly{TensorShape{200000 * 5}, T()};
 
     SyncedTensor<ctype> out(handle, ly);
-    SyncedTensor<ctype> lam(handle, ly);
-    auto lam_ptr = lam.ptr_mutable_host();
+    SyncedTensor<ctype> rate(handle, ly);
+    auto rate_ptr = rate.ptr_mutable_host();
     for (int i = 0; i < 5; ++i) {
         for (int j = 0; j < 200000; ++j) {
-            lam_ptr[i * 200000 + j] = ctype(i + 1);
+            rate_ptr[i * 200000 + j] = ctype(i + 1);
         }
     }
-    opr->exec(lam.tensornd_dev(), out.tensornd_dev(), {});
+    opr->exec(rate.tensornd_dev(), out.tensornd_dev(), {});
 
     auto ptr = out.ptr_mutable_host();
     for (int i = 0; i < 5; ++i) {
         auto stat = get_mean_var(ptr + i * 200000, 200000, ctype(i + 1));
         float mean = 1.0 / (i + 1);
-        float std = 1.0 / ((i + 1) * (i + 1));
+        float var = 1.0 / ((i + 1) * (i + 1));
         ASSERT_LE(std::abs(stat.first - mean), 0.01);
-        ASSERT_LE(std::abs(stat.second - std), 0.01);
+        ASSERT_LE(std::abs(stat.second - var), 0.01);
     }
 }
 
