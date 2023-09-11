@@ -85,10 +85,14 @@ def test_compatibility():
     getattr(t, "qparams")
     new_args = t.__getnewargs__()
     assert (
-        len(new_args) == 3
+        len(new_args) == 7
         and isinstance(new_args[0], np.ndarray)
         and new_args[1] == np.int32
         and isinstance(new_args[2], str)
+        and new_args[3] == False
+        and new_args[4] == False
+        and new_args[5] is None
+        and isinstance(new_args[6], str)
     ), "Modify Tensor __getnewargs__ may break pickle serialization compatible"
     state = t.__getstate__()
     assert set(state.keys()) == set(

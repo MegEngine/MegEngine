@@ -183,6 +183,10 @@ def test_serialization():
     assert np.all(newargs[0] == x.numpy())
     assert newargs[1] == x.dtype
     assert newargs[2] == x.device.logical_name
+    assert newargs[3] == False
+    assert newargs[4] == False
+    assert newargs[5] is None
+    assert newargs[6] == x.format
     assert not states
     x.qparams
     states = x.__getstate__()
@@ -199,6 +203,20 @@ def test_qparams():
     assert x.qparams is x2.qparams and x2.qparams.scale.numpy() == 1.0
     x3 = copy.deepcopy(x)
     assert x.qparams is not x3.qparams and x3.qparams.scale.numpy() == 1.0
+
+
+def test_format():
+    x_np = np.random.rand(2, 4, 6, 8).astype("float32")
+    x = Tensor(x_np)
+    assert x.format == "default"
+    x.format = "nhwc"
+    assert x.format == "nhwc"
+    x2 = copy.copy(x)
+    assert x2.format == "nhwc"
+    np.testing.assert_allclose(x.numpy(), x2.numpy())
+    x3 = copy.deepcopy(x)
+    assert x3.format == "nhwc"
+    np.testing.assert_allclose(x.numpy(), x3.numpy())
 
 
 def test_name():
