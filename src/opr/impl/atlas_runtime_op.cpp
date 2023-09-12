@@ -367,6 +367,7 @@ void AtlasRuntimeOpr::scn_do_execute() {
         //! prepare output
         auto model_outputs = aclmdlCreateDataset();
         mgb_assert(model_outputs != nullptr, "failed to create atlas output dataset.");
+        std::vector<aclTensorDesc*> tensor_desc_holder(nr_outputs, nullptr);
         for (size_t i = 0; i < nr_outputs; i++) {
             auto value_pair = output_getter.get(batch, i);
             size_t output_size = value_pair.second;
@@ -382,16 +383,17 @@ void AtlasRuntimeOpr::scn_do_execute() {
                     i, output(i)->cname());
             aclmdlAddDatasetBuffer(model_outputs, output_db);
 
-            if (m_dyn_batch_output[i]) {
-                auto tensor_ndim = output(0)->shape().ndim;
+            if (!enable_dynamic_batch && m_dyn_batch_output[i]) {
+                auto tensor_ndim = output(i)->shape().ndim;
                 std::vector<int64_t> tensor_shape(tensor_ndim, 0);
                 for (size_t j = 0; j < tensor_ndim; j++) {
-                    tensor_shape[j] = output(0)->shape()[j];
+                    tensor_shape[j] = output(i)->shape()[j];
                 }
                 aclTensorDesc* tensorDesc = aclCreateTensorDesc(
                         aclmdlGetOutputDataType(m_model_desc, i), tensor_ndim,
                         tensor_shape.data(), aclmdlGetOutputFormat(m_model_desc, i));
                 aclmdlSetDatasetTensorDesc(model_outputs, tensorDesc, i);
+                tensor_desc_holder[i] = tensorDesc;
             }
         }
 
@@ -434,6 +436,11 @@ void AtlasRuntimeOpr::scn_do_execute() {
             }
             aclDataBuffer* db_ptr = aclmdlGetDatasetBuffer(model_outputs, i);
             MGB_ATLAS_CHECK(aclDestroyDataBuffer(db_ptr));
+        }
+        for (size_t i = 0; i < tensor_desc_holder.size(); ++i) {
+            if (tensor_desc_holder[i] != nullptr) {
+                aclDestroyTensorDesc(tensor_desc_holder[i]);
+            }
         }
         MGB_ATLAS_CHECK(aclmdlDestroyDataset(model_inputs));
         MGB_ATLAS_CHECK(aclmdlDestroyDataset(model_outputs));
@@ -480,12 +487,13 @@ void AtlasRuntimeOpr::get_output_var_shape(
         }
     }
 
+    m_dyn_batch_output.resize(out_shape.size());
     for (size_t i = 0; i < out_shape.size(); ++i) {
         aclmdlIODims output_dims;
         MGB_ATLAS_CHECK(aclmdlGetOutputDims(m_model_desc, i, &output_dims));
         out_shape[i] = acl_shape_to_mgb_shape_for_output(
                 m_model_desc, i, output(i)->dtype().size(), output_dims, batch_size);
-        m_dyn_batch_output.push_back(output_dims.dims[0] == -1);
+        m_dyn_batch_output[i] = output_dims.dims[0] == -1;
     }
 }
 
