@@ -7,7 +7,7 @@ import pytest
 
 import megengine as mge
 import megengine.functional as F
-from megengine import Parameter, Tensor, tensor
+from megengine import Parameter, Tensor, amp, tensor
 from megengine.device import get_device_count
 from megengine.module import (
     BatchNorm1d,
@@ -396,6 +396,22 @@ def test_state_dict():
         del state_dict["dense0.bias"]
         with pytest.raises(KeyError):
             mlp1.load_state_dict(state_dict)
+
+
+def test_format_after_load_state_dict():
+    m1 = MyModule3()
+
+    with BytesIO() as fout:
+        mge.save(m1.state_dict(), fout)
+        fout.seek(0)
+        state_dict = mge.load(fout)
+        m2 = MyModule3()
+        m2 = amp.convert_module_format(m2, False)
+        for _, param in m2.named_tensors():
+            assert param.format == "nhwc"
+        m2.load_state_dict(state_dict, strict=False)
+        for _, param in m2.named_tensors():
+            assert param.format == "nhwc"
 
 
 class AssertModule(Module):

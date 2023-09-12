@@ -221,7 +221,15 @@ class Tensor(_Tensor, ArrayMethodMixin):
 
     def __getnewargs__(self):
         r"""__getnewargs__ will be called for pickle serialization or deep copy"""
-        return (self.numpy(), self.dtype, self.device.logical_name, False, False, None, self.format)
+        return (
+            self.numpy(),
+            self.dtype,
+            self.device.logical_name,
+            False,
+            False,
+            None,
+            self.format,
+        )
 
     def __getstate__(self):
         r"""__getstate__ will be called for pickle serialization or deep copy"""

@@ -617,7 +617,11 @@ class Module(metaclass=ABCMeta):
                     )
             var._reset(
                 type(var)(
-                    to_be_load, dtype=to_be_load.dtype, device=var.device, no_cache=True
+                    to_be_load,
+                    dtype=to_be_load.dtype,
+                    device=var.device,
+                    no_cache=True,
+                    format=var.format,
                 )
             )
             loaded.append(k)
