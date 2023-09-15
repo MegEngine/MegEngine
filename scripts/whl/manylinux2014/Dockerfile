@@ -11,3 +11,4 @@ RUN ./setup_mirror.sh "$platform"
 ADD init_image.sh /tmp
 RUN /tmp/init_image.sh x86_64 && rm -f /tmp/init_image.sh
 
+ENV PATH=${PATH}:/usr/local/neuware/bin

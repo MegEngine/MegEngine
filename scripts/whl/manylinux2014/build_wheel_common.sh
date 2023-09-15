@@ -10,9 +10,10 @@ local_path=$(dirname $(readlink -f $0))
 CUDNN_LIB_DIR="/opt/cudnn/lib64/"
 CUDA_LIB_DIR="/usr/local/cuda/lib64/"
 TensorRT_LIB_DIR="/opt/tensorrt/lib/"
+NEUWARE_LIB_DIR="/usr/local/neuware/lib64"
 
 SDK_NAME="unknown"
-x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118"
+x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118 neuware113"
 aarch64_support_version="cu102_JetsonNano cu111 cpu cu118"
 docker_tag="env_manylinux2014:latest"
 
@@ -63,7 +64,7 @@ fi
 echo "Build with ${SDK_NAME}"
 
 if [ $SDK_NAME == "cu101" ];then
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.10.1"
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=OFF -DMGE_WITH_CUBLAS_SHARED=OFF"
     BUILD_GCC8="ON"
@@ -71,6 +72,7 @@ if [ $SDK_NAME == "cu101" ];then
     REQUIR_CUDNN_VERSION="7.6.3"
     REQUIR_TENSORRT_VERSION="6.0.1.5"
     REQUIR_CUBLAS_VERSION="10.2.1.243"
+    BUILD_WHL_WITH_CUDA="ON"
 
 elif [ $SDK_NAME == "cu102_JetsonNano" ];then
     # Jetson Nano B01 version
@@ -79,7 +81,7 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
     REQUIR_TENSORRT_VERSION="8.0.1.6"
     REQUIR_CUBLAS_VERSION="10.2.3.300"
 
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.10.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.10:\
         ${CUDA_LIB_DIR}/libcublas.so.10:\
@@ -95,6 +97,7 @@ elif [ $SDK_NAME == "cu102_JetsonNano" ];then
 
 
     EXTRA_CMAKE_FLAG="-DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_53,code=sm_53\" "
+    BUILD_WHL_WITH_CUDA="ON"
 
 elif [ $SDK_NAME == "cu111" ];then
     BUILD_GCC8="ON"
@@ -113,7 +116,7 @@ elif [ $SDK_NAME == "cu111" ];then
         exit -1
     fi
 
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
         ${CUDA_LIB_DIR}/libnvrtc-builtins.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
@@ -137,6 +140,7 @@ elif [ $SDK_NAME == "cu111" ];then
             -gencode arch=compute_86,code=sm_86 \
             -gencode arch=compute_86,code=compute_86\" "
     fi
+    BUILD_WHL_WITH_CUDA="ON"
 
 elif [ $SDK_NAME == "cu111_cudnn821_tensorRT825" ];then
     BUILD_GCC8="ON"
@@ -146,7 +150,7 @@ elif [ $SDK_NAME == "cu111_cudnn821_tensorRT825" ];then
     REQUIR_CUBLAS_VERSION="11.2.1.74"
    
 
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.1:\
         ${CUDA_LIB_DIR}/libnvrtc-builtins.so.11.1:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
@@ -168,11 +172,11 @@ elif [ $SDK_NAME == "cu111_cudnn821_tensorRT825" ];then
         -gencode arch=compute_80,code=sm_80 \
         -gencode arch=compute_86,code=sm_86 \
         -gencode arch=compute_86,code=compute_86\" "
-
+    BUILD_WHL_WITH_CUDA="ON"
 
 elif [ $SDK_NAME == "cu112" ];then
     BUILD_GCC8="ON"
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libnvrtc-builtins.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
@@ -197,6 +201,7 @@ elif [ $SDK_NAME == "cu112" ];then
     REQUIR_CUDNN_VERSION="8.0.4"
     REQUIR_TENSORRT_VERSION="7.2.2.3"
     REQUIR_CUBLAS_VERSION="11.3.1.68"
+    BUILD_WHL_WITH_CUDA="ON"
 
 
 elif [ $SDK_NAME == "cu114" ];then
@@ -207,7 +212,7 @@ elif [ $SDK_NAME == "cu114" ];then
     REQUIR_CUBLAS_VERSION="11.6.5.2"
 
 
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
@@ -226,6 +231,7 @@ elif [ $SDK_NAME == "cu114" ];then
         -gencode arch=compute_80,code=sm_80 \
         -gencode arch=compute_86,code=sm_86 \
         -gencode arch=compute_86,code=compute_86\" "
+    BUILD_WHL_WITH_CUDA="ON"
 
 elif [ $SDK_NAME == "cu118" ];then
     BUILD_GCC8="ON"
@@ -245,7 +251,7 @@ elif [ $SDK_NAME == "cu118" ];then
         docker_tag="ubuntu2004:latest"
     fi
 
-    CUDA_COPY_LIB_LIST="\
+    COPY_LIB_LIST="\
         ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
         ${CUDA_LIB_DIR}/libcublasLt.so.11:\
         ${CUDA_LIB_DIR}/libcublas.so.11:\
@@ -287,19 +293,39 @@ elif [ $SDK_NAME == "cu118" ];then
                 -gencode arch=compute_89,code=compute_89\" "
         fi
     fi
+    BUILD_WHL_WITH_CUDA="ON"
+else
+    BUILD_WHL_WITH_CUDA="OFF"
+fi
 
+if [ $SDK_NAME == "neuware113" ];then
+    echo "use $SDK_NAME with cambricon support"
+    BUILD_GCC8="ON"
+    COPY_LIB_LIST="\
+        ${NEUWARE_LIB_DIR}/libcncl.so.1:\
+        ${NEUWARE_LIB_DIR}/libcnnl.so.1:\
+        ${NEUWARE_LIB_DIR}/libcnrt.so:\
+        ${NEUWARE_LIB_DIR}/libcnrtc.so:\
+        ${NEUWARE_LIB_DIR}/libcnnl_extra.so:\
+        ${NEUWARE_LIB_DIR}/libmagicmind_runtime.so.1:\
+        ${NEUWARE_LIB_DIR}/libcnlight.so:\
+        ${NEUWARE_LIB_DIR}/libcnpapi.so:\
+        ${NEUWARE_LIB_DIR}/libcndrv.so:\
+        ${NEUWARE_LIB_DIR}/libcndev.so:\
+        ${NEUWARE_LIB_DIR}/libcnmlrt.so:\
+        ${NEUWARE_LIB_DIR}/libmagicmind.so.1:\
+        ${NEUWARE_LIB_DIR}/libcnbin.so"
 
-elif [ $SDK_NAME == "cpu" ];then
+    BUILD_WHL_WITH_CAMBRICON="ON"
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CAMBRICON=ON -DMGE_MLU_ARCH=MLU370"
+else
+    BUILD_WHL_WITH_CAMBRICON="OFF"
+fi
+
+if [ $SDK_NAME == "cpu" ];then
     echo "use $SDK_NAME without cuda support"
     BUILD_WHL_CPU_ONLY="ON"
 else
-    echo "no support sdk ${SDK_NAME}"
-    usage
-    exit -1
-fi
-
-if [[ -z ${BUILD_WHL_CPU_ONLY} ]]
-then
     BUILD_WHL_CPU_ONLY="OFF"
 fi
 
@@ -313,7 +339,9 @@ mkdir -p ${OUTPUTDIR}
 
 source ${BASEDIR}/scripts/whl/utils/utils.sh
 
-check_cuda_cudnn_trt_version
+if [ ${BUILD_WHL_WITH_CUDA} == "ON" ]; then
+    check_cuda_cudnn_trt_version
+fi
 
 if [[ -z ${BUILD_GCC8} ]];then
     BUILD_GCC8=OFF
@@ -347,22 +375,36 @@ fi
 if [ ${IN_CI} = "true" ];then
     EXTRA_CMAKE_FLAG=" ${EXTRA_CMAKE_FLAG} -DMGE_WITH_TEST=ON"
 fi
+
+# mount args
+mount_args=""
+if [ ${BUILD_WHL_WITH_CUDA} == "ON" ]; then
+    mount_args="-v ${CUDA_ROOT_DIR}:/usr/local/cuda -v ${CUDNN_ROOT_DIR}:/opt/cudnn -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt"
+fi
+
+if [ ${BUILD_WHL_WITH_CAMBRICON} == "ON" ]; then
+    mount_args="-v ${NEUWARE_HOME}:/usr/local/neuware"
+fi
+
+echo "mount args: ${mount_args}"
+
 docker run --rm ${docker_args} $TMPFS_ARGS \
     -e UID=${USERID} \
     -e PUBLIC_VERSION_POSTFIX=${PUBLIC_VERSION_POSTFIX} \
     -e LOCAL_VERSION=${LOCAL_VERSION} \
     -e STRIP_SDK_INFO=${STRIP_SDK_INFO} \
     -e BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY} \
+    -e BUILD_WHL_WITH_CUDA=${BUILD_WHL_WITH_CUDA} \
+    -e BUILD_WHL_WITH_CAMBRICON=${BUILD_WHL_WITH_CAMBRICON} \
     -e ALL_PYTHON="${ALL_PYTHON}" \
     -e EXTRA_CMAKE_FLAG="$EXTRA_CMAKE_FLAG" \
-    -e CUDA_COPY_LIB_LIST="$CUDA_COPY_LIB_LIST"  \
+    -e COPY_LIB_LIST="$COPY_LIB_LIST"  \
     -e SDK_NAME="$SDK_NAME"  \
     -e CUDA_ROOT_DIR="/usr/local/cuda" \
     -e CUDNN_ROOT_DIR="/opt/cudnn" \
     -e TRT_ROOT_DIR="/opt/tensorrt" \
-    -v ${CUDA_ROOT_DIR}:/usr/local/cuda \
-    -v ${CUDNN_ROOT_DIR}:/opt/cudnn \
-    -v ${TENSORRT_ROOT_DIR}:/opt/tensorrt \
+    -e NEUWARE_HOME="/usr/local/neuware" \
+    ${mount_args} \
     -v ${BASEDIR}:/home/code \
     -v ${OUTPUTDIR}:/home/output:rw \
     ${docker_tag} /bin/bash -c "$run_cmd"

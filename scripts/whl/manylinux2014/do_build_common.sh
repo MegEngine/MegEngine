@@ -32,18 +32,39 @@ function full_copy_so(){
     fi
 }
 
-function handle_copy_cuda_libs() {
+function handle_copy_libs() {
     TO_DIR=$1
-    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+    if [ ${BUILD_WHL_WITH_CUDA} = "ON" ]; then
         echo "handle cuda lib to ${TO_DIR}"
         cp /usr/local/cuda/lib64/libnvToolsExt.so.1 ${TO_DIR}
-        IFS=: read -a lib_name_array <<<"$CUDA_COPY_LIB_LIST"
+        IFS=: read -a lib_name_array <<<"$COPY_LIB_LIST"
         append_rpath='$ORIGIN'
         for lib_name in ${lib_name_array[@]};do
             echo "cuda copy detail: ${lib_name} to ${TO_DIR}"
             full_copy_so $lib_name ${TO_DIR} $append_rpath
         done
     fi
+    if [ ${BUILD_WHL_WITH_CAMBRICON} = "ON" ]; then
+        echo "handle cambricon lib to ${TO_DIR}"
+        IFS=: read -a lib_name_array <<<"$COPY_LIB_LIST"
+        append_rpath='$ORIGIN'
+        for lib_name in ${lib_name_array[@]};do
+            echo "cambricon copy detail: ${lib_name} to ${TO_DIR}"
+            full_copy_so $lib_name ${TO_DIR} $append_rpath
+        done
+    fi
+}
+
+function patch_elf_depend_lib_name(){
+    lib_path=$1
+    needed_libs=$(patchelf --print-needed $lib_path)
+    for lib_name in $needed_libs
+    do
+        base_name=$(basename $lib_name)
+        if [ "$base_name" != "$lib_name" ];then
+            patchelf --replace-needed $lib_name $base_name $lib_path
+        fi
+    done
 }
 
 function patch_elf_depend_lib_mgb_mge() {
@@ -63,9 +84,12 @@ function patch_elf_depend_lib_mgb_mge() {
     patchelf --remove-rpath ${LIBS_DIR}/libmegengine_shared.so
     patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_shared.so
 
+    patch_elf_depend_lib_name ${BUILD_DIR}/staging/megbrain/_mgb.so
+    patch_elf_depend_lib_name ${LIBS_DIR}/libmegengine_shared.so
+    patch_elf_depend_lib_name ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
     # as some version of cudnn/trt libs have dlopen libs, so we can not use auditwheel
     # TODO: PR for auditwheel to support args for dlopen libs
-    handle_copy_cuda_libs ${LIBS_DIR}
+    handle_copy_libs ${LIBS_DIR}
 }
 
 function patch_elf_depend_lib_megenginelite() {
@@ -77,6 +101,8 @@ function patch_elf_depend_lib_megenginelite() {
     patchelf --remove-rpath ${LIBS_DIR}/liblite_shared_whl.so
     patchelf --force-rpath --set-rpath '$ORIGIN/../../megengine/core/lib' ${LIBS_DIR}/liblite_shared_whl.so
     handle_strip ${LIBS_DIR}/liblite_shared_whl.so
+
+    patch_elf_depend_lib_name ${LIBS_DIR}/liblite_shared_whl.so
 }
 
 SRC_DIR=$(readlink -f "`dirname $0`/../../../")
@@ -102,7 +128,7 @@ then
 fi
 
 BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_OFF/MGE_INFERENCE_ONLY_OFF/Release/build/
-if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+if [ ${BUILD_WHL_WITH_CUDA} = "ON" ]; then
     BUILD_DIR=${SRC_DIR}/build_dir/host/MGE_WITH_CUDA_ON/MGE_INFERENCE_ONLY_OFF/Release/build/
 fi
 
@@ -206,7 +232,7 @@ do
     fi
 
     HOST_BUILD_ARGS="-t -s"
-    if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+    if [ ${BUILD_WHL_WITH_CUDA} = "ON" ]; then
         HOST_BUILD_ARGS="${HOST_BUILD_ARGS} -c"
     fi
 

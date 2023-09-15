@@ -166,7 +166,9 @@ else
     export TRT_ROOT_DIR=${TRT_ROOT_DIR}
 fi
 
-check_cuda_cudnn_trt_version
+if [ ${BUILD_WHL_CPU_ONLY} = "OFF" ]; then
+    check_cuda_cudnn_trt_version
+fi
 check_python_version_is_valid "${ALL_PYTHON}" "${FULL_PYTHON_VER}"
 
 PYTHON_DIR=
