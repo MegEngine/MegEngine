@@ -214,12 +214,14 @@ void TensorRTManager::create_trt_context(
     for (size_t i = m_offset; i < m_offset + inp_shape.size(); ++i) {
         auto dims = m_context->getBindingDimensions(i);
         auto dims_check = engine->getBindingDimensions(i);
-        for (int j = 0; j < dims.nbDims; j++) {
-            if (dims_check.d[j] == -1) {
-                dims.d[j] = inp_shape.at(i - m_offset)[j];
+        if (!m_context->allInputDimensionsSpecified()) {
+            for (int j = 0; j < dims.nbDims; j++) {
+                if (dims_check.d[j] == -1) {
+                    dims.d[j] = inp_shape.at(i - m_offset)[j];
+                }
             }
+            is_set_correct &= m_context->setBindingDimensions(i, dims);
         }
-        is_set_correct &= m_context->setBindingDimensions(i, dims);
     }
     // check if input shape is set correctly
     if (!is_set_correct) {
@@ -675,8 +677,13 @@ void TensorRTOpr::build_engine_from_cache() {
     if (!ret.valid())
         return;
     comp_node().activate();
+#if NV_TENSOR_RT_VERSION < 8000
     auto engine = runtime->deserializeCudaEngine(
             reinterpret_cast<const void*>(ret->ptr), ret->size, nullptr);
+#else
+    auto engine = runtime->deserializeCudaEngine(
+            reinterpret_cast<const void*>(ret->ptr), ret->size);
+#endif
     mgb_assert(engine, "failed to deserialize ICudaEngine");
     m_engine = {engine, TensorRTDeleter<nvinfer1::ICudaEngine>()};
 }
