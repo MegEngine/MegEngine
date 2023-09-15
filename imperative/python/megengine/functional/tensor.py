@@ -111,11 +111,11 @@ def arange(
         start, stop = 0, start
 
     if not isinstance(start, Tensor):
-        start = Tensor(start, dtype="float32")
+        start = Tensor(start, dtype="float32", device=device)
     if not isinstance(stop, Tensor):
-        stop = Tensor(stop, dtype="float32")
+        stop = Tensor(stop, dtype="float32", device=device)
     if not isinstance(step, Tensor):
-        step = Tensor(step, dtype="float32")
+        step = Tensor(step, dtype="float32", device=device)
 
     num = ceil((stop - start) / step)
     stop = start + step * (num - 1)
