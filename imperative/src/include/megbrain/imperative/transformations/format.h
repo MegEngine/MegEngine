@@ -42,6 +42,7 @@ class FormatTransformation final : public Transformation {
 private:
     // enable auto_convert by default to be easier to use.
     bool m_auto_convert = true;
+    bool m_bypass_format_transoformation = false;
     ObjectType<FormattedTensorValue> m_value_type{"FormattedTensorValue"};
 
 public:
@@ -61,7 +62,10 @@ public:
     }
     void set_auto_convert(bool enabled) { m_auto_convert = enabled; }
     bool get_auto_convert() const { return m_auto_convert; }
-
+    void set_bypass_format_transoformation(bool enabled) {
+        m_bypass_format_transoformation = enabled;
+    }
+    bool get_bypass_format_transoformation() { return m_bypass_format_transoformation; }
     const Type<FormattedTensorValue>& value_type() const { return m_value_type; }
 
     inline ValueRef unwrap_input(const ValueRef& input) const;

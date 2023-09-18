@@ -196,6 +196,19 @@ public:
     std::string to_string() const override;
 };
 
+class AsFormat final : public OperatorImpl<AsFormat, Operator::IdentityLike> {
+private:
+    Format m_format;
+
+public:
+    AsFormat(std::string format) : m_format(format) {}
+
+    Format format() const { return m_format; }
+    std::string raw_type() const { return "AsFormat"; }
+
+    std::string to_string() const override;
+};
+
 class GetVarVal final : public OperatorImpl<GetVarVal, Operator::GetAttrLike> {
 public:
     std::string to_string() const override;

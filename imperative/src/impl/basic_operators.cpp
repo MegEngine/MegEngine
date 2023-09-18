@@ -118,6 +118,10 @@ std::string SetFormat::to_string() const {
     return ssprintf("SetFormat{format=%s}", m_format.to_string().c_str());
 }
 
+std::string AsFormat::to_string() const {
+    return ssprintf("AsFormat{format=%s}", m_format.to_string().c_str());
+}
+
 std::string GetVarVal::to_string() const {
     return "GetVarVal";
 }

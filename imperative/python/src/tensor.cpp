@@ -647,6 +647,12 @@ void TensorWrapper::_set_format(PyObject* dest) {
     m_tensor->set_format(format);
 }
 
+void TensorWrapper::_as_format(PyObject* dest) {
+    auto py_dest = py::reinterpret_borrow<py::object>(dest);
+    auto format = py_dest.cast<std::string>();
+    m_tensor->as_format(format);
+}
+
 void TensorWrapper::_set_name(PyObject* dest) {
     auto py_dest = py::reinterpret_borrow<py::object>(dest);
     auto name = py_dest.cast<std::string>();
@@ -958,6 +964,7 @@ void init_tensor(py::module m) {
                     .def<&TensorWrapper::_drop>("_drop")
                     .def<&TensorWrapper::_detail>("_detail")
                     .def<&TensorWrapper::_set_format>("_set_format")
+                    .def<&TensorWrapper::_as_format>("_as_format")
                     .def<&TensorWrapper::_set_name>("_set_name")
                     .def<&TensorWrapper::_watch>("_watch")
                     .def<&TensorWrapper::_var>("var")
@@ -1921,6 +1928,12 @@ void init_tensor(py::module m) {
           [format_trans](bool enabled) { format_trans->set_auto_convert(enabled); });
     m.def("get_auto_format_convert",
           [format_trans]() { return format_trans->get_auto_convert(); });
+    m.def("set_bypass_format_transoformation", [format_trans](bool enabled) {
+        format_trans->set_bypass_format_transoformation(enabled);
+    });
+    m.def("get_bypass_format_transoformation", [format_trans]() {
+        return format_trans->get_bypass_format_transoformation();
+    });
 
     m.def("_to_dlpack", [](py::object tensor) {
         return py::reinterpret_steal<py::object>(tensor_to_dlpack(tensor.ptr()));

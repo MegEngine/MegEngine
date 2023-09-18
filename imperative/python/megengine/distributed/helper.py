@@ -2,6 +2,7 @@
 import functools
 import multiprocessing as mp
 from collections import defaultdict
+from contextlib import contextmanager
 from typing import Callable
 from weakref import WeakSet
 
@@ -10,7 +11,11 @@ import numpy as np
 from megengine.autodiff.grad_manager import GradManager, get_backwarding_grad_manager
 
 from .. import tensor
-from ..core._imperative_rt.core2 import apply
+from ..core._imperative_rt.core2 import (
+    apply,
+    get_bypass_format_transoformation,
+    set_bypass_format_transoformation,
+)
 from ..core._trace_option import use_xla_backend
 from ..core.ops.builtin import ParamPackConcat, ParamPackSplit
 from ..functional.tensor import copy
@@ -20,6 +25,16 @@ from ..utils.future import Future
 from . import group as _group
 from .functional import _bcast_param, all_reduce_sum, broadcast
 from .group import WORLD, Group, group_barrier, is_distributed, override_backend
+
+
+@contextmanager
+def _bypass_format_transformation(enable=True):
+    origin_flag = get_bypass_format_transoformation()
+    set_bypass_format_transoformation(enable)
+    try:
+        yield
+    finally:
+        set_bypass_format_transoformation(origin_flag)
 
 
 def param_pack_split(inp: Tensor, offsets: list, shapes: list):
@@ -113,7 +128,6 @@ def pack_allreduce_split(pack_list, shapes, group, reduce_method):
     offsets_val = get_offsets(shapes)
     offsets = Tensor(offsets_val)
     packed_grads = param_pack_concat(pack_list, offsets, offsets_val)
-
     packed_grads = all_reduce_sum(packed_grads, group, group.comp_node)
     if reduce_method == "mean":
         packed_grads /= group.size
@@ -236,6 +250,7 @@ class AllreduceCallback:
             return
         grad_list = [self._gradients_dict[p] for p in self._packing_list[dtype]]
         shapes = [p._tuple_shape for p in self._packing_list[dtype]]
+
         with override_backend(self._backend):
             reduced_grads = pack_allreduce_split(
                 grad_list, shapes, self._group, self._reduce_method
@@ -274,8 +289,9 @@ class AllreduceCallback:
         return self._futures_dict[param]
 
     def _flush(self):
-        for dtype in sorted(self._packing_list.keys()):
-            self._pack(dtype)
+        with _bypass_format_transformation():
+            for dtype in sorted(self._packing_list.keys()):
+                self._pack(dtype)
         for param in self._params:
             grad = self._gradients_dict[param]
             grad = copy(grad, self._grad_origin_device[param])

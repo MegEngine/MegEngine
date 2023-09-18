@@ -294,6 +294,7 @@ class GradManager:
                     grad = grad.get()
                 spec = self._attach_specs.get(id_)
                 tensor = spec and spec.tensor()
+                grad._as_format(tensor.format)
                 if tensor is not None:
                     if tensor.grad is None:
                         tensor.grad = grad
@@ -325,8 +326,6 @@ class GradManager:
             return
 
         def callback(grad, callbacks=spec.callbacks):
-            from ..functional import ones_like
-
             for cb in callbacks:
                 grad = cb(tensor, grad)
             self._gradients[id(tensor)] = grad

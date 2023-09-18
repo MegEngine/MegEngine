@@ -137,6 +137,10 @@ class Tensor(_Tensor, ArrayMethodMixin):
         r"""Sets the memory format of a :class:`~.Tensor`."""
         super()._set_format(format)
 
+    def _as_format(self, format):
+        r"""Sets the memory format of a :class:`~.Tensor`."""
+        super()._as_format(format)
+
     @property
     def qparams(self):
         r"""Returns a :class:`~.QParams` object containing quantization params of a :class:`~.Tensor`."""

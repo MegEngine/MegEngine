@@ -667,6 +667,9 @@ struct FormatRuleRegistry {
 
 ValueRefList FormatTransformation::apply_transformation(
         const Operator& op, Span<ValueRef> inputs) {
+    if (m_bypass_format_transoformation) {
+        return imperative::apply(op, unwrap_inputs(inputs));
+    }
     if (auto* apply_op = op.as<ApplyOp>()) {
         // bypass SymbolValue
         if (!check_all_format_value(inputs)) {
@@ -726,6 +729,18 @@ ValueRefList FormatTransformation::apply_transformation(
         auto&& inp_ref = inputs[0].as_ref(m_value_type);
         mgb_assert(inp_ref, "Cannot set format for non-format Tensor.");
         return {to(*inp_ref, _op->format().type(), "")};
+    } else if (auto* _op = op.as<AsFormat>()) {
+        auto&& inp_ref = inputs[0].as_ref(m_value_type);
+        if (inp_ref) {
+            if (inp_ref->format() != FT::DEFAULT) {
+                mgb_assert(
+                        inp_ref->format() == _op->format(),
+                        "Cannot set format for non-format Tensor.");
+            }
+            return {as(*inp_ref, _op->format().type())};
+        } else {
+            return {wrap_output(inputs[0], _op->format())};
+        }
     } else if (op.is<Operator::IdentityLike>()) {
         auto&& inp_ref = inputs[0].as_ref(m_value_type);
         if (inp_ref) {
