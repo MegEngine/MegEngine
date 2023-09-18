@@ -240,6 +240,7 @@ class AllreduceCallback:
             if self._reduce_method == "mean":
                 grad /= self._group.size
             return grad
+        # TODO: Integrate the allreduce process of XLA with the allreduce process of imperative into one.
         if getattr(self, "_used_xla", False) and grad._is_external_value():
             return grad
         gm = get_backwarding_grad_manager()

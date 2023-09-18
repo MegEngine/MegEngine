@@ -87,9 +87,6 @@ JIT_BACKEND = {"default": trace, "xla": xla_trace}
 
 
 def partial_trace(func=None, *, backend="default", without_host=True, **trace_options):
-    # import os
-    # if int(os.environ.get('DISABLE_TRACE', "0")) != 0:
-    #     return lambda func: func
 
     assert backend in JIT_BACKEND
     assert without_host, "partial_trace only support without_host mode currently!"
