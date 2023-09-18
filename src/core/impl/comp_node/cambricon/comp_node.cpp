@@ -386,10 +386,9 @@ void CambriconCompNodeImpl::peer_copy_to(
         if (dst_env.device == src_env.device) {
             // remark: transfering data from device to device does not
             // support async
-            sync();
-            dest_impl->sync();
-            MGB_CNRT_CHECK(cnrtMemcpy(
-                    dest, const_cast<void*>(src), size, CNRT_MEM_TRANS_DIR_DEV2DEV));
+            MGB_CNRT_CHECK(cnrtMemcpyAsync(
+                    dest, const_cast<void*>(src), size, dst_env.queue,
+                    CNRT_MEM_TRANS_DIR_DEV2DEV));
         } else {
             mgb_throw_if(
                     !enable_peer_access(src_env.device, dst_env.device) ||
@@ -399,10 +398,9 @@ void CambriconCompNodeImpl::peer_copy_to(
                     "src=%d,dst=%d",
                     src_env.device, dst_env.device);
             sync();
-            dest_impl->sync();
-            MGB_CNRT_CHECK(cnrtMemcpyPeer(
-                    dest, dst_env.device, const_cast<void*>(src), src_env.device,
-                    size));
+            MGB_CNRT_CHECK(cnrtMemcpyPeerAsync(
+                    dest, dst_env.device, const_cast<void*>(src), src_env.device, size,
+                    dst_env.queue));
         }
         return;
     }
@@ -519,53 +517,34 @@ bool CambriconCompNodeImpl::check_global_finalized() {
 /* ================== CambriconCompNodeImpl::EventImpl ================*/
 
 class CambriconCompNode::EventImpl final : public EventImplHelper {
-    bool m_placed_notifier = false;
-    bool m_sync_queue_called = false;
     bool m_init_finished = false;
+    CambriconCompNodeImpl* const m_comp_node_impl;
     cnrtNotifier_t m_cnrt_notifier;
 
-    CambriconCompNodeImpl* cambricon_comp_node_impl() const {
-        return static_cast<CambriconCompNodeImpl*>(m_comp_node_impl);
-    }
-
     void do_record() override {
-        m_sync_queue_called = false;
-        cambricon_comp_node_impl()->activate();
-        auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-        if (!m_placed_notifier) {
-            MGB_CNRT_CHECK(cnrtPlaceNotifier(m_cnrt_notifier, env.queue));
-            m_placed_notifier = true;
-        }
-    }
-
-    void call_sync_queue() {
-        mgb_assert(m_placed_notifier);
-        if (!m_sync_queue_called) {
-            cambricon_comp_node_impl()->activate();
-            auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-            MGB_CNRT_CHECK(cnrtQueueSync(env.queue));
-            m_sync_queue_called = true;
-        }
+        m_comp_node_impl->activate();
+        auto&& env = m_comp_node_impl->m_env.cnrt_env();
+        MGB_CNRT_CHECK(cnrtPlaceNotifier(m_cnrt_notifier, env.queue));
     }
 
     bool do_finished() override {
-        call_sync_queue();
-        return true;
+        m_comp_node_impl->activate();
+        cnrtRet_t err = cnrtQueryNotifier(m_cnrt_notifier);
+        if (err == cnrtSuccess)
+            return true;
+        if (err == cnrtErrorNotReady)
+            return false;
+        mgb_throw(
+                CnrtError, "failed to query event: %d: %s", int(err),
+                cnrtGetErrorStr(err));
     }
 
-    void host_wait_cv() override {
-        mgb_assert(m_placed_notifier);
-        cambricon_comp_node_impl()->activate();
-        auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-        MGB_CNRT_CHECK(cnrtQueueSync(env.queue));
-    }
+    void host_wait_cv() override { MGB_CNRT_CHECK(cnrtWaitNotifier(m_cnrt_notifier)); }
 
     double do_elapsed_time_until(EventImplHelper& end) override {
-        cambricon_comp_node_impl()->activate();
-        auto&& env = cambricon_comp_node_impl()->m_env.cnrt_env();
-        MGB_CNRT_CHECK(cnrtQueueSync(env.queue));
-        float ret = 0.f;
-        MGB_CNRT_CHECK(cnrtNotifierDuration(
+        m_comp_node_impl->activate();
+        float ret = 0.0;
+        MGB_CNRT_CHECK(cnrtNotifierElapsedTime(
                 m_cnrt_notifier, static_cast<EventImpl&>(end).m_cnrt_notifier, &ret));
         return static_cast<double>(ret) * 1e-3;
     }
@@ -574,9 +553,14 @@ class CambriconCompNode::EventImpl final : public EventImplHelper {
 
 public:
     EventImpl(CambriconCompNodeImpl* comp_node_impl, size_t create_flags)
-            : EventImplHelper(comp_node_impl, create_flags) {
-        cambricon_comp_node_impl()->activate();
-        MGB_CNRT_CHECK(cnrtNotifierCreate(&m_cnrt_notifier));
+            : EventImplHelper(comp_node_impl, create_flags),
+              m_comp_node_impl{comp_node_impl} {
+        m_comp_node_impl->activate();
+        size_t flags = CNRT_NOTIFIER_DISABLE_TIMING;
+        if (NEED_TIMER) {
+            flags = 0;
+        }
+        MGB_CNRT_CHECK(cnrtNotifierCreateWithFlags(&m_cnrt_notifier, flags));
         m_init_finished = true;
     }
 
@@ -584,7 +568,7 @@ public:
         if (m_init_finished) {
             MGB_TRY { MGB_CNRT_CHECK(cnrtNotifierDestroy(m_cnrt_notifier)); }
             MGB_CATCH(MegBrainError & exc, {
-                mgb_log_error("failed to destroy cnrt notifier: %s", exc.what());
+                mgb_log_error("failed to destroy cuda event: %s", exc.what());
             })
         }
     }
@@ -595,19 +579,15 @@ std::unique_ptr<CompNode::Event> CambriconCompNodeImpl::create_event(size_t flag
 }
 
 void CambriconCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
-    if (cn_impl->env().property().type == DeviceType::CAMBRICON) {
+    if (cn_impl->dyn_typeinfo() == CambriconCompNodeImpl::typeinfo()) {
         auto imp = static_cast<CambriconCompNodeImpl*>(cn_impl);
         auto queue = imp->m_env.cnrt_env().queue;
         imp->activate();
-        MGB_CNRT_CHECK(cnrtQueueSync(queue));
+        MGB_CNRT_CHECK(cnrtQueueWaitNotifier(m_cnrt_notifier, queue, 0));
         return;
     }
     if (cn_impl->env().property().type == DeviceType::CPU) {
-        auto waiter = [this]() {
-            cambricon_comp_node_impl()->activate();
-            auto queue = cambricon_comp_node_impl()->m_env.cnrt_env().queue;
-            MGB_CNRT_CHECK(cnrtQueueSync(queue));
-        };
+        auto waiter = [this]() { MGB_CNRT_CHECK(cnrtWaitNotifier(m_cnrt_notifier)); };
         cn_impl->add_callback(std::move(waiter));
         return;
     }
