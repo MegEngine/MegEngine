@@ -107,6 +107,7 @@
 #include <cndev.h>
 #include <cnnl.h>
 #include <cnrt.h>
+#include "megcore_cambricon.h"
 #if CNRT_MAJOR_VERSION < 5
 #include <cnml.h>
 #endif
@@ -460,10 +461,12 @@ public:
 #endif
 
 #if MGB_CAMBRICON
+
     struct CnrtEnv {
         int device = -1;
         cnrtQueue_t queue = nullptr;
         cnnlHandle_t cnnl_handle = nullptr;
+        std::unique_ptr<megcore::CambriconMemoryManager> mem_mgr = nullptr;
         cnrtDeviceProp_t device_info;
         struct InitStatus {
             bool initialized;

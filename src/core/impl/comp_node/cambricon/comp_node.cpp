@@ -32,6 +32,7 @@ size_t get_min_system_memory(size_t available) {
         return std::max<size_t>(300 * 1024 * 1024, available / 20);
     }
 }
+
 }  // anonymous namespace
 
 /* ======================= CambriconRawAlloctor ======================*/

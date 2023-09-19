@@ -380,6 +380,19 @@ void CompNodeEnv::init_cpu(const CpuEnv& env, CompNode comp_node) {
 }
 
 #if MGB_CAMBRICON
+namespace {
+// hack for cambricon
+struct CambriconMemoryManagerImpl : public megcore::CambriconMemoryManager {
+    CambriconMemoryManagerImpl(CompNode comp_node) : comp_node(comp_node) {}
+
+    virtual void* alloc(size_t size) final { return comp_node.alloc_device(size); }
+    virtual void free(void* ptr) final { return comp_node.free_device(ptr); }
+
+private:
+    CompNode comp_node;
+};
+}  // namespace
+
 void CompNodeEnv::init_cnrt(
         int dev, CompNode comp_node, const ContinuationCtx<cnrtQueue_t>& cont) {
     m_comp_node = comp_node;
@@ -395,6 +408,7 @@ void CompNodeEnv::init_cnrt(
 #endif
     // ensure exception safe
     bool queue_created = false, cnnl_handle_created = false;
+    bool mem_mgr_created = false;
     MGB_MARK_USED_VAR(queue_created);
     MGB_TRY {
         m_cnrt_env.activate();
@@ -406,6 +420,7 @@ void CompNodeEnv::init_cnrt(
         cnnl_handle_created = true;
         m_user_data_container = std::make_unique<UserDataContainer>();
         cont.next(m_cnrt_env.queue);
+        m_cnrt_env.mem_mgr = std::make_unique<CambriconMemoryManagerImpl>(m_comp_node);
         // TODO: initialize megdnn handle
         mgb_assert(
                 m_property.mem_alignment ==
