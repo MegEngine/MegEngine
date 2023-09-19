@@ -39,6 +39,7 @@ private:
     class Kern;
     class CUDAKern;
     class CPUKern;
+    class CambriconKern;
 
     std::unique_ptr<Kern> m_kern;
 

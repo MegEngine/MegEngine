@@ -144,7 +144,8 @@ void test::run_topk_test(Handle* handle, bool test_kth_only) {
         }
     }
 
-    auto modes = {Mode::KTH_ONLY, Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED};
+    std::vector<Mode> modes = {
+            Mode::KTH_ONLY, Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED};
     if (!test_kth_only) {
         modes = {Mode::VALUE_IDX_NOSORT, Mode::VALUE_IDX_SORTED};
     }

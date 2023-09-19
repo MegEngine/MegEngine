@@ -162,6 +162,11 @@ public:
     CndevError(const std::string& msg);
 };
 
+class CnnlError final : public SystemError {
+public:
+    CnnlError(const std::string& msg);
+};
+
 class CnmlError final : public SystemError {
 public:
     CnmlError(const std::string& msg);

@@ -105,6 +105,7 @@
 
 #if MGB_CAMBRICON
 #include <cndev.h>
+#include <cnnl.h>
 #include <cnrt.h>
 #if CNRT_MAJOR_VERSION < 5
 #include <cnml.h>
@@ -135,6 +136,14 @@
                     #expr, __cnml_check_code, __FILE__, __func__, __LINE__); \
         }                                                                    \
     } while (0)
+#define MGB_CNNL_CHECK(expr)                                                 \
+    do {                                                                     \
+        cnnlStatus_t __cnnl_check_code = (expr);                             \
+        if (mgb_unlikely(__cnnl_check_code != CNNL_STATUS_SUCCESS)) {        \
+            ::mgb::_on_cnnl_error(                                           \
+                    #expr, __cnnl_check_code, __FILE__, __func__, __LINE__); \
+        }                                                                    \
+    } while (0)
 #else
 #define MGB_CNRT_CHECK(expr)                                            \
     do {                                                                \
@@ -155,6 +164,13 @@
         cnmlStatus_t __cnml_check_code = (expr);                                  \
         if (mgb_unlikely(__cnml_check_code != CNML_STATUS_SUCCESS)) {             \
             ::mgb::_on_cnml_error(#expr, __cnml_check_code, __FILE__, "", "", 1); \
+        }                                                                         \
+    } while (0)
+#define MGB_CNNL_CHECK(expr)                                                      \
+    do {                                                                          \
+        cnnlStatus_t __cnnl_check_code = (expr);                                  \
+        if (mgb_unlikely(__cnnl_check_code != CNNL_STATUS_SUCCESS)) {             \
+            ::mgb::_on_cnnl_error(#expr, __cnnl_check_code, __FILE__, "", "", 1); \
         }                                                                         \
     } while (0)
 #endif  // MGB_ENABLE_LOGGING
@@ -202,6 +218,9 @@ const char* cnml_get_error_string(cnmlStatus_t err);
         const char* expr, cnrtRet_t err, const char* file, const char* func, int line);
 [[noreturn]] void _on_cndev_error(
         const char* expr, cndevRet_t err, const char* file, const char* func, int line);
+[[noreturn]] void _on_cnnl_error(
+        const char* expr, cnnlStatus_t err, const char* file, const char* func,
+        int line);
 #if CNRT_MAJOR_VERSION < 5
 [[noreturn]] void _on_cnml_error(
         const char* expr, cnmlStatus_t err, const char* file, const char* func,
@@ -444,6 +463,7 @@ public:
     struct CnrtEnv {
         int device = -1;
         cnrtQueue_t queue = nullptr;
+        cnnlHandle_t cnnl_handle = nullptr;
         cnrtDeviceProp_t device_info;
         struct InitStatus {
             bool initialized;

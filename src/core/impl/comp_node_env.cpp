@@ -349,6 +349,14 @@ void mgb::_on_cndev_error(
             cndevGetErrorString(err), expr, file, func, line);
 }
 
+void mgb::_on_cnnl_error(
+        const char* expr, cnnlStatus_t err, const char* file, const char* func,
+        int line) {
+    mgb_throw(
+            CnnlError, "cnnl error %d: %s (%s at %s:%s:%d)", int(err),
+            cnnlGetErrorString(err), expr, file, func, line);
+}
+
 #if CNRT_MAJOR_VERSION < 5
 void mgb::_on_cnml_error(
         const char* expr, cnmlStatus_t err, const char* file, const char* func,
@@ -386,12 +394,16 @@ void CompNodeEnv::init_cnrt(
     m_property.mem_alignment = 1u;
 #endif
     // ensure exception safe
-    bool queue_created = false;
+    bool queue_created = false, cnnl_handle_created = false;
     MGB_MARK_USED_VAR(queue_created);
     MGB_TRY {
         m_cnrt_env.activate();
         MGB_CNRT_CHECK(cnrtQueueCreate(&m_cnrt_env.queue));
         queue_created = true;
+        MGB_CNNL_CHECK(cnnlCreate(&m_cnrt_env.cnnl_handle));
+        // todo: remove this hack for nms opr
+        MGB_CNNL_CHECK(cnnlSetQueue(m_cnrt_env.cnnl_handle, m_cnrt_env.queue));
+        cnnl_handle_created = true;
         m_user_data_container = std::make_unique<UserDataContainer>();
         cont.next(m_cnrt_env.queue);
         // TODO: initialize megdnn handle
@@ -401,6 +413,9 @@ void CompNodeEnv::init_cnrt(
     }
     MGB_CATCH(std::exception & exc, {
         mgb_log_error("cnrt init failed: %s", exc.what());
+        if (cnnl_handle_created) {
+            MGB_CNNL_CHECK(cnnlDestroy(m_cnrt_env.cnnl_handle));
+        }
         if (queue_created) {
             MGB_CNRT_CHECK(cnrtQueueDestroy(m_cnrt_env.queue));
         }
@@ -430,6 +445,7 @@ void CompNodeEnv::fini() {
 #if MGB_CAMBRICON
     if (m_property.type == DeviceType::CAMBRICON) {
         m_cnrt_env.activate();
+        MGB_CNNL_CHECK(cnnlDestroy(m_cnrt_env.cnnl_handle));
         MGB_CNRT_CHECK(cnrtQueueDestroy(m_cnrt_env.queue));
     }
 #endif

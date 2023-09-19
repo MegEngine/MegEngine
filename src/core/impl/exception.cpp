@@ -98,6 +98,8 @@ std::string CnrtError::get_cnrt_extra_info() {
 
 CndevError::CndevError(const std::string& msg) : SystemError(msg) {}
 
+CnnlError::CnnlError(const std::string& msg) : SystemError(msg) {}
+
 CnmlError::CnmlError(const std::string& msg) : SystemError(msg) {}
 
 bool mgb::has_uncaught_exception() {

@@ -3,6 +3,10 @@
 #if MGB_CUDA
 #include "./nms_kern.cuh"
 #endif
+#if MGB_CAMBRICON
+#include "./nms_cambricon.h"
+#endif
+
 #include "./nms_cpu.h"
 
 #include "megbrain/comp_node_env.h"
@@ -119,6 +123,49 @@ void NMSKeep::CUDAKern::exec(
 #endif  // MGB_CUDA for CUDAKern
 // f}}} cuda kernel ends
 
+// f{{{ cambrcion kernel begins
+#if MGB_CAMBRICON
+class NMSKeep::CambriconKern final : public Kern {
+public:
+    size_t get_workspace_size(const NMSKeep* opr, const TensorShape& boxes) override {
+        CompNode comp_node = opr->comp_node();
+        auto&& cnrt_env = CompNodeEnv::from_comp_node(comp_node).cnrt_env();
+        size_t nr_boxes = boxes.shape[1];
+        return nms::cambricon_kern_workspace(cnrt_env.cnnl_handle, nr_boxes);
+    }
+
+    void exec(
+            const NMSKeep* opr, const DeviceTensorND& inp,
+            const DeviceTensorND& out_idx, const DeviceTensorND& out_size,
+            const DeviceTensorND& workspace) override;
+};
+
+void NMSKeep::CambriconKern::exec(
+        const NMSKeep* opr, const DeviceTensorND& inp, const DeviceTensorND& out_idx,
+        const DeviceTensorND& out_size, const DeviceTensorND& workspace) {
+    CompNode comp_node = out_idx.comp_node();
+    mgb_assert(comp_node == opr->comp_node());
+    auto&& cnrt_env = CompNodeEnv::from_comp_node(comp_node).cnrt_env();
+    auto handle = cnrt_env.cnnl_handle;
+    size_t batch = inp.shape(0), nr_boxes = inp.shape(1);
+    auto inp_ptr = inp.ptr<float>();
+    void* workspace_ptr = workspace.raw_ptr();
+    auto out_idx_ptr = reinterpret_cast<uint32_t*>(out_idx.ptr<int32_t>()),
+         out_size_ptr = reinterpret_cast<uint32_t*>(out_size.ptr<int32_t>());
+    auto max_output = opr->param().max_output;
+    for (size_t i = 0; i < batch; ++i) {
+        MGB_CNRT_CHECK(cnrtMemsetAsync(
+                workspace_ptr, 0, workspace.layout().access_bytes(), cnrt_env.queue));
+        nms::cambricon_kern(
+                nr_boxes, max_output, opr->param().iou_thresh,
+                inp_ptr + i * nr_boxes * 4, out_idx_ptr + i * max_output,
+                out_size_ptr + i, workspace_ptr, handle);
+    }
+}
+
+#endif
+// f}}} cambricon kernel ends
+
 // f{{{ cpu kernel begins
 class NMSKeep::CPUKern final : public Kern {
 public:
@@ -190,6 +237,11 @@ NMSKeep::NMSKeep(
 #if MGB_CUDA
         case CompNode::DeviceType::CUDA:
             m_kern = std::make_unique<CUDAKern>();
+            break;
+#endif
+#if MGB_CAMBRICON
+        case CompNode::DeviceType::CAMBRICON:
+            m_kern = std::make_unique<CambriconKern>();
             break;
 #endif
         case CompNode::DeviceType::CPU:
