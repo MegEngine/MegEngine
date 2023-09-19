@@ -9,6 +9,8 @@ from ..lib.mlir import ir
 from ..lib.mlir.dialects import chlo, hlo
 from ..utils import flatten_list
 from .elemwise import (
+    isinf,
+    isnan,
     log,
     logical_and,
     logical_not,
@@ -19,6 +21,7 @@ from .elemwise import (
     round,
 )
 from .hlotensor import HLOTensor
+from .reduction import sum
 from .tensor import concat, expand_dims, fill, iota, xla_scatter
 from .utils import _can_broadcast_to, _shape_equal, register_lower_rule
 
@@ -54,9 +57,6 @@ def dot_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
 @register_lower_rule(mops.MatrixMul)
 def matmul_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(ctx.vars_in) == 2 and len(ctx.vars_out) == 1 and len(args) == 2
-    assert (
-        ctx.op.compute_mode == mops.BatchedMatrixMul.ComputeMode.DEFAULT
-    ), f"{ctx.op.compute_mode}"
     assert ctx.op.format == mops.BatchedMatrixMul.Format.DEFAULT, f"{ctx.op.format}"
     assert ctx.op.dimA == len(args[0].shape) and ctx.op.dimB == len(
         args[1].shape
@@ -198,9 +198,6 @@ def _bmm_shape_helper(lhs_shape, rhs_shape, lhs_transpose, rhs_transpose):
 @register_lower_rule(mops.BatchedMatrixMul)
 def batched_matmul_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(ctx.vars_in) == 2 and len(ctx.vars_out) == 1 and len(args) == 2
-    assert (
-        ctx.op.compute_mode == mops.BatchedMatrixMul.ComputeMode.DEFAULT
-    ), f"{ctx.op.compute_mode}"
     assert ctx.op.format == mops.BatchedMatrixMul.Format.DEFAULT, f"{ctx.op.format}"
     assert ctx.op.dimA == len(args[0].shape) and ctx.op.dimB == len(
         args[1].shape
@@ -557,3 +554,14 @@ def lsq_grad_rule(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     grad_s = grad_s * args[-1] * args[0]
     grad_x = ind_middle * args[0]
     return [grad_x, grad_s]
+
+
+@register_lower_rule(mops.CheckNonFinite)
+def checknonfinite_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    check_inf = [logical_or(isnan(arg), isinf(arg)) for arg in args]
+    check_inf_reduce = [expand_dims(sum(inp), 0) for inp in check_inf]
+    concat_res = concat(check_inf_reduce, 0)
+    if_nonfinite = expand_dims(sum(concat_res), 0).astype(np.int32)
+    res = [arg * ctx.op.scale for arg in args]
+    res.append(if_nonfinite)
+    return res

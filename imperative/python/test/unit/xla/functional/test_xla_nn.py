@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import megengine as mge
+import megengine.amp as amp
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
@@ -25,6 +26,8 @@ def test_conv2d():
         b = tensor(0.1 * np.random.rand(*b_shape), dtype=dtype) if b_shape else None
         y = F.conv2d(x, w, b, stride=stride, padding=padding, groups=groups)
         dy = tensor(0.1 * np.random.rand(*y.shape), dtype=dtype)
+        cm = "float32" if dtype == np.float16 else "default"
+        rtol = 5e-3 if dtype == np.float16 else 1e-07
 
         gm = GradManager()
 
@@ -34,7 +37,15 @@ def test_conv2d():
             def func(x, w, b, dy):
                 gm.attach([x, w, b])
                 with gm:
-                    y = F.conv2d(x, w, b, stride=stride, padding=padding, groups=groups)
+                    y = F.conv2d(
+                        x,
+                        w,
+                        b,
+                        stride=stride,
+                        padding=padding,
+                        groups=groups,
+                        compute_mode=cm,
+                    )
                     gm.backward(y, dy)
                 return [y, x.grad, w.grad, b.grad]
 
@@ -46,7 +57,14 @@ def test_conv2d():
             def func(x, w, dy):
                 gm.attach([x, w])
                 with gm:
-                    y = F.conv2d(x, w, stride=stride, padding=padding, groups=groups)
+                    y = F.conv2d(
+                        x,
+                        w,
+                        stride=stride,
+                        padding=padding,
+                        groups=groups,
+                        compute_mode=cm,
+                    )
                     gm.backward(y, dy)
                 return [y, x.grad, w.grad]
 
@@ -54,53 +72,75 @@ def test_conv2d():
             xla_rsts = func(x, w, dy)
 
         for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
-            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+            np.testing.assert_allclose(
+                mge_rst.numpy(), xla_rst.numpy(), atol=1e-5, rtol=rtol
+            )
 
-    tester(
-        (4, 16, 24, 24), (32, 16, 3, 3), (1, 32, 1, 1), stride=1, padding=1, groups=1
-    )
-    tester(
-        (4, 16, 24, 24),
-        (32, 16, 3, 3),
-        (1, 32, 1, 1),
-        stride=(2, 3),
-        padding=(2, 1),
-        groups=1,
-    )
-    tester(
-        (4, 16, 24, 24),
-        (16, 1, 1, 3, 3),
-        None,
-        stride=(2, 3),
-        padding=(2, 1),
-        groups=16,
-    )
+    for dtype in [np.float16, np.float32]:
+        tester(
+            (4, 16, 24, 24),
+            (32, 16, 3, 3),
+            (1, 32, 1, 1),
+            stride=1,
+            padding=1,
+            groups=1,
+            dtype=dtype,
+        )
+        tester(
+            (4, 16, 24, 24),
+            (32, 16, 3, 3),
+            (1, 32, 1, 1),
+            stride=(2, 3),
+            padding=(2, 1),
+            groups=1,
+            dtype=dtype,
+        )
+        tester(
+            (4, 16, 24, 24),
+            (16, 1, 1, 1, 1),
+            None,
+            stride=(2, 3),
+            padding=(2, 1),
+            groups=16,
+            dtype=dtype,
+        )
 
-    tester((4, 16, 24, 24), (32, 16, 1, 1), None, stride=1, padding=1, groups=1)
-    tester(
-        (4, 16, 1, 1),
-        (32, 16, 1, 1),
-        (1, 32, 1, 1),
-        stride=(2, 3),
-        padding=(2, 1),
-        groups=1,
-    )
-    tester(
-        (4, 16, 24, 24),
-        (16, 1, 1, 1, 1),
-        (1, 16, 1, 1),
-        stride=(2, 3),
-        padding=(2, 1),
-        groups=16,
-    )
-    tester(
-        (4, 16, 24, 24),
-        (4, 4, 4, 1, 1),
-        (1, 16, 1, 1),
-        stride=(2, 3),
-        padding=(2, 1),
-        groups=4,
-    )
+        tester(
+            (4, 16, 24, 24),
+            (32, 16, 1, 1),
+            None,
+            stride=1,
+            padding=1,
+            groups=1,
+            dtype=dtype,
+        )
+        tester(
+            (4, 16, 1, 1),
+            (32, 16, 1, 1),
+            (1, 32, 1, 1),
+            stride=(2, 3),
+            padding=(2, 1),
+            groups=1,
+            dtype=dtype,
+        )
+        tester(
+            (4, 16, 24, 24),
+            (16, 1, 1, 1, 1),
+            (1, 16, 1, 1),
+            stride=(2, 3),
+            padding=(2, 1),
+            groups=16,
+            dtype=dtype,
+        )
+        tester(
+            (4, 16, 24, 24),
+            (4, 4, 4, 1, 1),
+            (1, 16, 1, 1),
+            stride=(2, 3),
+            padding=(2, 1),
+            groups=4,
+            dtype=dtype,
+        )
 
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")

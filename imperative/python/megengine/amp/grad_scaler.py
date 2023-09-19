@@ -135,8 +135,9 @@ class GradScaler:
 
         # to support tracing, _check_gradients should be applied to every grad.
         if self._check_gradients(
-            [x.grad for x in grad_tensors], 1.0 / self.scale_factor
-        ):
+            [x.grad for x in grad_tensors if x.grad is not None],
+            1.0 / self.scale_factor,
+        ).numpy():
             self._found_non_finite = True
             for tensor in grad_tensors:
                 if tensor is None or getattr(tensor, "grad", None) is None:
@@ -148,7 +149,6 @@ class GradScaler:
         if len(grads) == 0:
             return False
         rst = _check_non_finite(grads, scale)
-        rst = rst.numpy()
         return rst
 
     def update(self, new_scale: float = None):
@@ -186,3 +186,128 @@ class GradScaler:
         self.backoff_factor = state["backoff_factor"]
         self.growth_interval = state["growth_interval"]
         self._growth_tracker = state["_growth_tracker"]
+
+
+class Xla_GradScaler(GradScaler):
+
+    r"""A helper class that performs grad scaling to prevent from data overflow in
+    :class:`~.autocast` mode when used in xla backend.
+
+    Args:
+        init_scale: initial scale factor.
+        model: the model to be trained
+        growth_factor: factor that the scale is multiplied by in actual
+            :meth:`update` stage. If growth_factor is 0, scale_factor will not update.
+        backoff_factor: factor that the scale is multiplied by when encountering
+            overflow grad.
+        growth_interval: the interval between two scale update stages.
+
+    Returns:
+        Xla_GradScaler object.
+
+    Example:
+        .. code-block::
+
+        class TrainExample:
+            def __init__(self, model):
+                model.train()
+                self.model = model
+                self.opt = SGD(model.parameters(), lr=1e-4)
+                self.gm = GradManager()
+                self.gm.attach(model.parameters())
+                self.scaler = amp.Xla_GradScaler(model, init_scale=16, growth_interval=2000)
+                self.traced_func = None
+
+            @amp.autocast(enabled=True)
+            def trace_step(self, model, opt, inp, target, scale_factor):
+                with self.gm:
+                    pred = model(inp)
+                    loss = F.loss.cross_entropy(pred, target)
+                    self.scaler.backward(self.gm, scale_factor, loss)
+                opt.step().clear_grad()
+                return loss
+
+            def train_step(self, inp, target):
+                if self.traced_func is None:
+                    self.traced_func = xla_trace(self.trace_step, without_host=True, capture_as_const=True)
+                loss = self.traced_func(self.model, self.opt, inp, target, self.scaler.scale_factor)
+                self.scaler.update(self.model)
+                return loss
+        
+    """
+
+    def __init__(
+        self,
+        model,
+        init_scale: float = 2.0 ** 4,
+        growth_factor: float = 2.0,
+        backoff_factor: float = 0.5,
+        growth_interval: int = 2000,
+    ):
+
+        super().__init__(init_scale, growth_factor, backoff_factor, growth_interval)
+        self.scale_factor = Tensor(self.scale_factor)
+
+        self.origin_params = []
+        for param in list(model.parameters()):
+            self.origin_params.append(Tensor(param, no_cache=True))
+
+    def backward(
+        self,
+        gm: GradManager,
+        scale_factor: Tensor,
+        y: Union[Tensor, List[Tensor]] = None,
+        dy: Union[Tensor, List[Tensor]] = None,
+    ):
+        r"""Unscale all ``grad_tensors``'s grad and check if the gradient is finite.
+
+        Args:
+            grad_tensors: Tensors needed to unscale grads. Should be all tensors
+                that are affected by ``target`` tensor in GradManager's backward.
+        """
+        if y is None:
+            ys = []
+        elif isinstance(y, (tuple, list)):
+            ys = y
+        else:
+            ys = [y]
+        if dy is None:
+            dys = [full_like(y, scale_factor) for y in ys]
+        elif isinstance(dy, (tuple, list)):
+            dys = [dy_ * scale_factor for dy_ in dy]
+        else:
+            dys = [dy * scale_factor]
+
+        gm.backward(y=ys, dy=dys)
+        self.ifinfinite = self._check_gradients(
+            [x.grad for x in gm.attached_tensors() if x.grad is not None],
+            1.0 / float(scale_factor),
+        )
+
+    def update(self, model, new_scale: float = None):
+        r"""Update the scale factor and model paramters according to whether encountered overflow grad.
+        If ``new_scale`` is provided, internal update mechanism will be ignored.
+        """
+        if self.growth_interval == 0:
+            return
+
+        if new_scale is not None:
+            self.scale_factor = Tensor(float(new_scale))
+
+        if int(self.ifinfinite):
+            for origin_param, model_param in zip(
+                self.origin_params, list(model.parameters())
+            ):
+                model_param[...] = origin_param
+            self.scale_factor *= self.backoff_factor
+            self._growth_tracker = 0
+
+        else:
+            for origin_param, model_param in zip(
+                self.origin_params, list(model.parameters())
+            ):
+                origin_param[...] = model_param
+            self._growth_tracker += 1
+            if self._growth_tracker >= self.growth_interval:
+                self.scale_factor *= self.growth_factor
+                self._growth_tracker = 0

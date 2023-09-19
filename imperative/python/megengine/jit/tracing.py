@@ -447,7 +447,8 @@ class trace:
                 self.setup_env()
             outputs = self.__wrapped__(*args, **kwargs)
             Tensor._reset = origin_reset
-
+        except Exception as e:
+            raise e
         finally:
             handling_exc = sys.exc_info() != (None,) * 3
             active_trace = None
@@ -653,6 +654,8 @@ class trace:
             # TODO: may be deleted
             for attr, key in self.attr_to_key.items():
                 param = get_expand_structure(attr[0], attr[1])
+        except Exception as e:
+            raise e
         finally:
             handling_exc = sys.exc_info() != (None,) * 3
             active_trace = None

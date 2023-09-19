@@ -437,11 +437,12 @@ def precision_attr(lhs_prec, rhs_prec) -> ir.ArrayAttr:
     lhs_prec = str(lhs_prec)
     rhs_prec = str(rhs_prec)
 
-    assert lhs_prec == "float32"
-    assert rhs_prec == "float32"
+    assert lhs_prec in ["float32", "float16"]
+    assert rhs_prec in ["float32", "float16"]
 
     dtype_to_precision = {
         "float32": "DEFAULT",
+        "float16": "DEFAULT",
     }
     precision = (dtype_to_precision[lhs_prec], dtype_to_precision[rhs_prec])
     return ir.ArrayAttr.get([hlo.PrecisionAttr.get(p) for p in precision])

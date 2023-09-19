@@ -37,6 +37,8 @@ def batch_norm_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         args[3],
         args[4],
     )
+    inp_type = inp.dtype
+    inp = inp.astype(weight.dtype)
     unused = HLOTensor(
         np.random.random(ctx.vars_out[-2].shape).astype(ctx.vars_out[-2].dtype)
     )
@@ -62,6 +64,7 @@ def batch_norm_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         running_var = (
             running_var * (1 - ctx.op.avg_factor) + batch_var * ctx.op.avg_factor
         )
+        oup = oup.astype(inp_type)
         return running_mean, running_var, batch_mean, batch_var, unused, oup
     else:
         rst = hlo.BatchNormInferenceOp(
@@ -75,6 +78,7 @@ def batch_norm_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         ).results
         assert len(rst) == 1, f"len(rst): {len(rst)}"
         oup = HLOTensor(rst[0])
+        oup = oup.astype(inp_type)
         return running_mean, running_var, unused, oup
 
 
@@ -96,6 +100,9 @@ def batch_norm_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]])
         args[3].reshape((C,)),
         args[4].reshape((C,)),
     )
+    inp_type = inp.dtype
+    inp = inp.astype(weight.dtype)
+    grad = grad.astype(weight.dtype)
     rst = hlo.BatchNormGradOp(
         inp.tensor,
         weight.tensor,
@@ -105,11 +112,13 @@ def batch_norm_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]])
         ir_utils.f32_attr(ctx.op.epsilon),
         ir_utils.i64_attr(channel_dim),
     ).results
-    return [
+    res = [
         HLOTensor(rst[1]).reshape(ctx.vars_out[0].shape),
         HLOTensor(rst[2]).reshape(ctx.vars_out[1].shape),
         HLOTensor(rst[0]),
     ]
+    res[-1] = res[-1].astype(inp_type)
+    return res
 
 
 def _normalize(x, axes, eps):

@@ -5,9 +5,12 @@ import pytest
 
 import megengine.functional as F
 import megengine.jit as jit
+import megengine.module as M
 import megengine.tensor as tensor
 from megengine import is_cuda_available
 from megengine.autodiff.grad_manager import GradManager
+from megengine.core._imperative_rt.core2 import apply
+from megengine.core.ops import builtin
 from megengine.core.tensor.dtype import QuantDtypeMeta
 from megengine.quantization.utils import (
     QuantMode,
@@ -27,6 +30,7 @@ def test_matmul():
         rhs = tensor(0.1 * np.random.randn(*rhs_shape), dtype=dtype)
         out = F.matmul(lhs, rhs, lhs_transpose, rhs_transpose)
         dout = tensor(0.1 * np.random.randn(*out.shape), dtype=dtype)
+        atol = 5e-4 if dtype == np.float16 else 1e-5
 
         gm = GradManager()
 
@@ -42,50 +46,51 @@ def test_matmul():
         xla_rsts = func(lhs, rhs, dout)
 
         for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
-            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=atol)
 
-    tester((5,), (5,), False, False)
-    tester((4, 5), (5,), False, False)
-    tester((5,), (5, 6), False, False)
-    tester((5, 4), (5,), True, False)
+    for dtype in [np.float16, np.float32]:
+        tester((5,), (5,), False, False)
+        tester((4, 5), (5,), False, False, dtype)
+        tester((5,), (5, 6), False, False, dtype)
+        tester((5, 4), (5,), True, False, dtype)
 
-    tester((4, 5), (5, 6), False, False)
-    tester((4, 5), (6, 5), False, True)
-    tester((5, 4), (5, 6), True, False)
-    tester((5, 4), (6, 5), True, True)
+        tester((4, 5), (5, 6), False, False, dtype)
+        tester((4, 5), (6, 5), False, True, dtype)
+        tester((5, 4), (5, 6), True, False, dtype)
+        tester((5, 4), (6, 5), True, True, dtype)
 
-    tester((2, 3, 4, 5), (5, 6), False, False)
-    tester((2, 3, 4, 5), (6, 5), False, True)
-    tester((2, 1, 5, 4), (5, 6), True, False)
-    tester((2, 1, 5, 4), (6, 5), True, True)
-    tester((1, 5, 4), (5, 6), True, False)
-    tester((1, 5, 4), (6, 5), True, True)
+        tester((2, 3, 4, 5), (5, 6), False, False, dtype)
+        tester((2, 3, 4, 5), (6, 5), False, True, dtype)
+        tester((2, 1, 5, 4), (5, 6), True, False, dtype)
+        tester((2, 1, 5, 4), (6, 5), True, True, dtype)
+        tester((1, 5, 4), (5, 6), True, False, dtype)
+        tester((1, 5, 4), (6, 5), True, True, dtype)
 
-    tester((4, 5), (2, 3, 5, 6), False, False)
-    tester((4, 5), (2, 3, 6, 5), False, True)
-    tester((5, 4), (2, 1, 5, 6), True, False)
-    tester((5, 4), (2, 1, 6, 5), True, True)
-    tester((5, 4), (1, 5, 6), True, False)
-    tester((5, 4), (1, 6, 5), True, True)
+        tester((4, 5), (2, 3, 5, 6), False, False, dtype)
+        tester((4, 5), (2, 3, 6, 5), False, True, dtype)
+        tester((5, 4), (2, 1, 5, 6), True, False, dtype)
+        tester((5, 4), (2, 1, 6, 5), True, True, dtype)
+        tester((5, 4), (1, 5, 6), True, False, dtype)
+        tester((5, 4), (1, 6, 5), True, True, dtype)
 
-    tester((1, 4, 5), (1, 5, 6), False, False)
-    tester((1, 5, 4), (1, 5, 6), True, False)
-    tester((3, 4, 5), (3, 5, 6), False, False)
-    tester((3, 5, 4), (3, 6, 5), True, True)
+        tester((1, 4, 5), (1, 5, 6), False, False, dtype)
+        tester((1, 5, 4), (1, 5, 6), True, False, dtype)
+        tester((3, 4, 5), (3, 5, 6), False, False, dtype)
+        tester((3, 5, 4), (3, 6, 5), True, True, dtype)
 
-    tester((5, 3, 2, 7, 8), (3, 2, 8, 9), False, False)
-    tester((5, 1, 2, 7, 8), (1, 2, 9, 8), False, True)
-    tester((5, 3, 2, 8, 7), (3, 1, 8, 9), True, False)
-    tester((5, 3, 2, 8, 7), (1, 2, 9, 8), True, True)
-    tester((5, 3, 2, 8, 7), (1, 8, 9), True, False)
-    tester((5, 3, 1, 8, 7), (1, 9, 8), True, True)
+        tester((5, 3, 2, 7, 8), (3, 2, 8, 9), False, False, dtype)
+        tester((5, 1, 2, 7, 8), (1, 2, 9, 8), False, True, dtype)
+        tester((5, 3, 2, 8, 7), (3, 1, 8, 9), True, False, dtype)
+        tester((5, 3, 2, 8, 7), (1, 2, 9, 8), True, True, dtype)
+        tester((5, 3, 2, 8, 7), (1, 8, 9), True, False, dtype)
+        tester((5, 3, 1, 8, 7), (1, 9, 8), True, True, dtype)
 
-    tester((3, 2, 7, 8), (4, 3, 2, 8, 9), False, False)
-    tester((3, 1, 7, 8), (4, 3, 1, 9, 8), False, True)
-    tester((3, 1, 8, 7), (4, 3, 2, 8, 9), True, False)
-    tester((1, 2, 8, 7), (4, 2, 2, 9, 8), True, True)
-    tester((1, 8, 7), (4, 3, 2, 8, 9), True, False)
-    tester((1, 8, 7), (4, 3, 1, 9, 8), True, True)
+        tester((3, 2, 7, 8), (4, 3, 2, 8, 9), False, False, dtype)
+        tester((3, 1, 7, 8), (4, 3, 1, 9, 8), False, True, dtype)
+        tester((3, 1, 8, 7), (4, 3, 2, 8, 9), True, False, dtype)
+        tester((1, 2, 8, 7), (4, 2, 2, 9, 8), True, True, dtype)
+        tester((1, 8, 7), (4, 3, 2, 8, 9), True, False, dtype)
+        tester((1, 8, 7), (4, 3, 1, 9, 8), True, True, dtype)
 
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
@@ -302,3 +307,38 @@ def test_lsq():
     tester((1, 32, 32, 32), -126, 129, 4.0, 0.0, 1.0)
     tester((16, 32, 32, 32), -126, 129, 2.0, 1.0, 1.5)
     tester((4, 32, 32, 32), -128, 128, 0.5, 1.0, 2.5)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_non_finite():
+    def check_non_finite(inps, scale=1.0):
+        if isinstance(inps, tensor):
+            inps = [inps]
+        op = builtin.CheckNonFinite(scale=scale)
+        oups = apply(op, *inps)
+
+        return oups
+
+    def tester(logits, scale):
+        @jit.xla_trace(without_host=True)
+        def func(logits, scale):
+            out = check_non_finite(logits, scale)
+            return list(out)
+
+        mge_rsts = func(logits, scale)
+        xla_rsts = func(logits, scale)
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+
+    inp1 = tensor(np.random.randn(2, 3, 4, 5), dtype="float32")
+    inp2 = tensor(np.random.randn(2, 2, 3), dtype="float32")
+    inp3 = tensor(np.random.randn(2, 3, 4), dtype="float32")
+    inp4 = tensor(np.array([1.5, 2.3, np.nan, 4.2, 5.5], dtype="float32"))
+    inp5 = tensor(np.array([1.5, 2.3, np.inf, 4.2, 5.5], dtype="float32"))
+
+    tester([inp1], 0.5)
+    tester([inp1, inp2, inp3], 0.5)
+    tester([inp1, inp2, inp4], 0.5)
+    tester([inp1, inp2, inp5], 0.5)

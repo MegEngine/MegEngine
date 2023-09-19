@@ -72,7 +72,7 @@ def dropout_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     multiplier = mask.astype(inp.dtype)
     assert ctx.op.drop_prob < 1 and ctx.op.drop_prob >= 0, ctx.op.drop_prob
     multiplier = multiplier / (1.0 - ctx.op.drop_prob)
-    out = inp * multiplier
+    out = (inp * multiplier).astype(inp.dtype)
     mask = mask.reshape((-1,)).astype("uint8")
     return out, mask, new_key
 
@@ -86,4 +86,5 @@ def droupout_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
 
     scale = 1.0 - drop_prob
     multiplier = mask.reshape(dy.shape).astype(dy.dtype) / scale
+    multiplier = multiplier.astype(dy.dtype)
     return dy * multiplier

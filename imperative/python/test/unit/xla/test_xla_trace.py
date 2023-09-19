@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import megengine
+import megengine.amp as amp
 import megengine.functional as F
 from megengine import Parameter, is_cuda_available
 from megengine import module as M
@@ -123,3 +124,43 @@ def test_xla_trace_with_property():
 
     np.testing.assert_allclose(mge_outs[1].numpy(), xla_outs[1].numpy(), 1e-5)
     np.testing.assert_allclose(mge_weight, xla_weight - 1, 1e-5)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_xla_grad_scaler():
+    def tester(inp_shape, dtype=None):
+        class MyModule(M.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x, y):
+                z = x + 2 * y
+                loss = 2 * z + 1
+                return loss
+
+        test_module = MyModule()
+        gm = GradManager()
+        scaler = amp.Xla_GradScaler(test_module)
+
+        dtype = dtype or np.float32
+        x = tensor(np.random.randn(*inp_shape), dtype=dtype)
+        y = tensor(np.random.randn(*inp_shape), dtype=dtype)
+
+        @xla_trace(without_host=True)
+        def trace_func(model, inp1, inp2, scale_factor):
+            gm.attach([inp1, inp2])
+            with gm:
+                loss = model(inp1, inp2)
+                scaler.backward(gm, scale_factor, loss)
+            return [inp1.grad, scale_factor]
+
+        mge_rsts = trace_func(test_module, x, y, scaler.scale_factor)
+        xla_rsts = trace_func(test_module, x, y, scaler.scale_factor)
+
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+        np.testing.assert_equal(mge_rsts[0].numpy(), 2)
+
+    tester((4, 32, 32, 32))

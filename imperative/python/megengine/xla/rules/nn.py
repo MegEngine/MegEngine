@@ -431,7 +431,7 @@ def avgpooling(
         divider = fill(1.0, div_ishape, inp.dtype)
         divider = sumpooling(divider, stride, kernel, padding, oshape=div_oshape)
         ret = sum_pool / divider
-    return ret
+    return ret.astype(inp.dtype)
 
 
 def _get_adaptive_pool_param(ishape, oshape, tensor_format):
@@ -523,7 +523,14 @@ def maxpooling_grad(
     selector = lambda x, y: x >= y
     scatter = lambda x, y: x + y
     out = _select_and_scatter(
-        padded_x, dy, 0.0, kernel, stride, new_padding, selector, scatter
+        padded_x,
+        dy,
+        np.array(0.0, dtype=dy.dtype),
+        kernel,
+        stride,
+        new_padding,
+        selector,
+        scatter,
     )
 
     if expand_padding:
@@ -560,6 +567,7 @@ def avgpooling_grad(
         divider = sumpooling(divider, stride, kernel, padding, oshape=div_oshape)
         dy = dy / divider
 
+    dy = dy.astype(x.dtype)
     pads = _conv_general_vjp_lhs_padding(
         x.shape, kernel, stride, dy.shape, padding, base_dilation, kernel_dilation
     )

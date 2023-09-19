@@ -55,8 +55,22 @@ def _infer_elemwise_oshape(inp_shapes):
     return oshape
 
 
+def _elemwise_dtype_cast_func(inps, hlo_op=None):
+
+    cast_case = {
+        #     op           origin     target
+        hlo.ExpOp: [np.float16, np.float32]
+    }
+
+    if hlo_op in cast_case:
+        origin, target = cast_case[hlo_op]
+        inps = [inp.astype(target) if inp.dtype == origin else inp for inp in inps]
+
+    return inps
+
+
 def _elemwise_dtype_promote(
-    *inps: Sequence[Union[int, float, bool, np.array, HLOTensor]]
+    *inps: Sequence[Union[int, float, bool, np.array, HLOTensor]], hlo_op=None
 ):
     """
     promote dtypes.
@@ -80,6 +94,7 @@ def _elemwise_dtype_promote(
         np.float64,
     ]
     inps = [inp if isinstance(inp, HLOTensor) else np.array(inp) for inp in inps]
+    inps = _elemwise_dtype_cast_func(inps, hlo_op)
     dtype_indices = [promote_order.index(inp.dtype) for inp in inps]
     biggest_index = max(dtype_indices)
     target_dtype = promote_order[biggest_index]
@@ -150,7 +165,7 @@ def _compare(lhs, rhs, mode, comparison_type=None):
 
 
 def _elemwise(hlo_op, inps):
-    inps = _elemwise_dtype_promote(inps)
+    inps = _elemwise_dtype_promote(inps, hlo_op=hlo_op)
     hinps = [HLOTensor(inp) if not isinstance(inp, HLOTensor) else inp for inp in inps]
 
     ishapes = [inp.shape for inp in hinps]
@@ -257,7 +272,8 @@ def square(x):
 def abs_grad(x, dy):
     from .tensor import where
 
-    return where(x > 0, dy, -dy)
+    res = where(x > 0, dy, -dy)
+    return res.astype(x.dtype)
 
 
 def tan_grad(x, dy):
@@ -265,19 +281,23 @@ def tan_grad(x, dy):
 
 
 def tanh_grad(x, dy):
-    return (1.0 - tanh(x) ** 2.0) * dy
+    res = (1.0 - tanh(x) ** 2.0) * dy
+    return res.astype(x.dtype)
 
 
 def asinh_grad(x, dy):
-    return dy / sqrt(x ** 2.0 + 1.0)
+    res = dy / sqrt(x ** 2.0 + 1.0)
+    return res.astype(x.dtype)
 
 
 def acosh_grad(x, dy):
-    return dy / sqrt(x ** 2.0 - 1.0)
+    res = dy / sqrt(x ** 2.0 - 1.0)
+    return res.astype(x.dtype)
 
 
 def atanh_grad(x, dy):
-    return dy / (1.0 - x ** 2.0)
+    res = dy / (1.0 - x ** 2.0)
+    return res.astype(x.dtype)
 
 
 def gelu(inp, approximate: bool = True):
@@ -293,7 +313,7 @@ def gelu(inp, approximate: bool = True):
         h = inp * g
     else:
         assert False, "only approximate gelu is supported"
-    return h
+    return h.astype(inp.dtype)
 
 
 def gelu_grad(x, dy, approximate: bool = True):
@@ -311,7 +331,7 @@ def gelu_grad(x, dy, approximate: bool = True):
         ret = dy * _h
     else:
         assert False
-    return ret
+    return ret.astype(x.dtype)
 
 
 def fuse_add_relu(x, y):
@@ -329,49 +349,55 @@ def relu_grad(x, dy):
 
 
 def sigmoid(inp):
-    return 1.0 / (1.0 + exp(-inp))
+    res = 1.0 / (1.0 + exp(-inp))
+    return res.astype(inp.dtype)
 
 
 def sigmoid_grad(y, dy):
-    return y * (1.0 - y) * dy
+    res = y * (1.0 - y) * dy
+    return res.astype(y.dtype)
 
 
 def hsigmoid(x):
     from .tensor import where
 
-    return where(x <= -3.0, 0.0, where(x >= 3.0, 1.0, (x + 3.0) / 6.0))
+    res = where(x <= -3.0, 0.0, where(x >= 3.0, 1.0, (x + 3.0) / 6.0))
+    return res.astype(x.dtype)
 
 
 def hsigmoid_grad(x, dy):
     from .tensor import where
 
-    return where(x <= -3.0, 0.0, where(x >= 3.0, 0.0, dy / 6.0))
+    res = where(x <= -3.0, 0.0, where(x >= 3.0, 0.0, dy / 6.0))
+    return res.astype(x.dtype)
 
 
 def relu6(x):
-    return clip(x, 0.0, 6.0)
+    return clip(x, 0.0, 6.0).astype(x.dtype)
 
 
 def relu6_grad(x, dy):
     from .tensor import where
 
-    return where(x <= 0.0, 0.0, where(x >= 6.0, 0.0, dy))
+    return where(x <= 0.0, 0.0, where(x >= 6.0, 0.0, dy)).astype(x.dtype)
 
 
 def hswish(x):
-    return x * minimum(maximum(x + 3.0, 0.0), 6.0) * (1.0 / 6.0)
+    res = x * minimum(maximum(x + 3.0, 0.0), 6.0) * (1.0 / 6.0)
+    return res.astype(x.dtype)
 
 
 def hswish_grad(x, dy):
     from .tensor import where
 
-    return where(x < -3.0, 0.0, where(x > 3.0, dy, (2.0 * x + 3.0) / 6.0 * dy))
+    res = where(x < -3.0, 0.0, where(x > 3.0, dy, (2.0 * x + 3.0) / 6.0 * dy))
+    return res.astype(x.dtype)
 
 
 def logsigmoid(x):
     from .tensor import where
 
-    return -log1p(exp(-abs(x))) + where(x >= 0.0, 0.0, x)
+    return -log1p(exp(-abs(x))) + where(x >= 0.0, 0.0, x).astype(x.dtype)
 
 
 def softplus(x):
@@ -386,26 +412,30 @@ def softplus_grad(x, dy):
     grad0 = where(x > 0.0, logg, -logg)
     relux = relu(x)
     grad1 = where(relux > 0.0, dy, 0.0)
-    return grad0 + grad1
+    return (grad0 + grad1).astype(x.dtype)
 
 
 def prelu(inp, alpha):
     mask = (inp > 0.0).astype(inp.dtype)
-    return inp * mask + alpha * (1.0 - mask) * inp
+    res = inp * mask + alpha * (1.0 - mask) * inp
+    return res.astype(inp.dtype)
 
 
 def prelu_grad(x, dy, alpha):
     mask = (x > 0.0).astype(x.dtype)
-    return dy * mask + alpha * (1.0 - mask) * dy
+    res = dy * mask + alpha * (1.0 - mask) * dy
+    return res.astype(x.dtype)
 
 
 def silu(inp):
-    return inp / (1.0 + exp(-inp))
+    res = inp / (1.0 + exp(-inp))
+    return res.astype(inp.dtype)
 
 
 def silu_grad(x, dy):
     xsig = sigmoid(x)
-    return dy * xsig * (1.0 + x * (1.0 - xsig))
+    res = dy * xsig * (1.0 + x * (1.0 - xsig))
+    return res.astype(x.dtype)
 
 
 def isnan(x):

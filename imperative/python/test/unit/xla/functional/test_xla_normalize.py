@@ -3,6 +3,8 @@ import platform
 import numpy as np
 import pytest
 
+import megengine as mge
+import megengine.amp as amp
 import megengine.functional as F
 import megengine.jit as jit
 import megengine.tensor as tensor
@@ -188,13 +190,16 @@ def test_group_norm():
 @pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
 @pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_batch_norm():
+    np.random.seed(124)
+    mge.random.seed(124)
+
     def tester(ishape, training, momentum, eps, inplace, dtype=None):
         dtype = dtype or np.float32
         x = tensor(np.random.randn(*ishape), dtype=dtype)
-        rmean = tensor(np.random.randn(1, ishape[1], 1, 1), dtype=dtype)
-        rvar = tensor(np.abs(np.random.randn(1, ishape[1], 1, 1)), dtype=dtype)
-        weight = tensor(np.random.randn(1, ishape[1], 1, 1), dtype=dtype)
-        bias = tensor(np.random.randn(1, ishape[1], 1, 1), dtype=dtype)
+        rmean = tensor(np.random.randn(1, ishape[1], 1, 1), dtype=np.float32)
+        rvar = tensor(np.abs(np.random.randn(1, ishape[1], 1, 1)), dtype=np.float32)
+        weight = tensor(np.random.randn(1, ishape[1], 1, 1), dtype=np.float32)
+        bias = tensor(np.random.randn(1, ishape[1], 1, 1), dtype=np.float32)
         dy = tensor(np.random.randn(*ishape), dtype=dtype)
 
         gm = autodiff.GradManager()
@@ -230,6 +235,8 @@ def test_batch_norm():
         for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
             np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=5e-4)
 
-    tester((32, 16, 8, 8), True, 0.9, 1e-5, True)
-    tester((1, 16, 17, 128), True, 0.7, 1e-5, False)
-    tester((32, 16, 64, 5), False, 0.8, 1e-5, True)
+    tester((32, 16, 8, 8), True, 0.9, 1e-5, True, np.float16)
+    tester((32, 16, 8, 8), True, 0.9, 1e-5, True, np.float32)
+    tester((1, 16, 17, 128), True, 0.7, 1e-5, False, np.float16)
+    tester((1, 16, 17, 128), True, 0.7, 1e-5, False, np.float32)
+    tester((32, 16, 64, 5), False, 0.8, 1e-5, True, np.float32)
