@@ -18,7 +18,7 @@ import numpy as np
 
 from ..device import _sh, get_default_device
 from ..functional.tensor import copy
-from ..logger import get_logger
+from ..logger import call_countlog_func, get_logger
 from ..random.rng import _random_seed_generator
 from ..tensor import Tensor
 from .collator import Collator
@@ -30,7 +30,7 @@ from .signal_handling import (
     _set_worker_pids,
     _set_worker_signal_handlers,
 )
-from .transform import PseudoTransform, Transform
+from .transform import CudaTransform, PseudoTransform, Transform
 
 try:
     import thread
@@ -72,10 +72,14 @@ if data_monitor:
 
 
 def get_monitor_time_stats(func, *args, **kwargs):
-    tik = time.perf_counter()
-    ret = func(*args, **kwargs)
-    tok = time.perf_counter()
-    return ret, tok - tik
+    if data_monitor:
+        tik = time.perf_counter()
+        ret = func(*args, **kwargs)
+        tok = time.perf_counter()
+        return ret, tok - tik
+    else:
+        ret = func(*args, **kwargs)
+        return ret, 0
 
 
 def raise_timeout_error():
@@ -313,6 +317,12 @@ class PreLoader:
 class _ParallelDataLoaderIter:
     def __init__(self):
         self._worker_queue_idx_cycle = itertools.cycle(range(self.num_workers))
+        if isinstance(self.transform, CudaTransform):
+            self.transform.apply = call_countlog_func(
+                self.transform.apply,
+                1,
+                "Using CudaTransform now, not forget to convert input to mge.tensor",
+            )
         from .tools._queue import PlasmaShmQueue
 
         self._worker_result_queue = PlasmaShmQueue()
@@ -374,6 +384,10 @@ class _ParallelDataLoaderIter:
         if isinstance(data, bytes):
             data = pickle.loads(data)
             data.reraise()
+
+        if isinstance(self.transform, CudaTransform):
+            data = self.transform.apply(data)
+
         return data
 
     def _get_data(self):
@@ -766,33 +780,32 @@ def stream_fetcher(
             if parallel_stream is False:
                 raw_data = idx
             else:
-                if data_monitor:
-                    raw_data, _dataset_time = get_monitor_time_stats(next, dataset_iter)
-                    total_dataset_time += _dataset_time
-                else:
-                    raw_data = next(dataset_iter)
+                raw_data, _dataset_time = get_monitor_time_stats(next, dataset_iter)
+                total_dataset_time += _dataset_time
 
-            if data_monitor:
+            if isinstance(transform, CudaTransform):
+                data.append(raw_data)
+            else:
                 trans_items, _transform_time = get_monitor_time_stats(
                     transform.apply, raw_data
                 )
                 total_transform_time += _transform_time
-            else:
-                trans_items = transform.apply(raw_data)
-            data.append(trans_items)
+                data.append(trans_items)
 
         except StopIteration:
             break
 
     if len(data) == 0:
         raise StopIteration
+
+    data, collate_time = get_monitor_time_stats(collate.apply, data)
     if data_monitor:
         dataset_time = total_dataset_time
-        transform_time = total_transform_time
-        data, collate_time = get_monitor_time_stats(collate.apply, data)
+        transform_time = (
+            0.0 if isinstance(transform, CudaTransform) else total_transform_time
+        )
         return data, pid, dataset_time, transform_time, collate_time
     else:
-        data = collate.apply(data)
         return data
 
 
@@ -806,15 +819,19 @@ def map_fetcher(dataset, place_holder, transform, collate, parallel_stream, batc
         data_tok = time.perf_counter()
         dataset_time = data_tok - data_tik
 
-        trans_items, transform_time = get_monitor_time_stats(
-            transform.apply_batch, items
+        trans_items, transform_time = (
+            items,
+            0.0
+            if isinstance(transform, CudaTransform)
+            else get_monitor_time_stats(transform.apply_batch, items),
         )
         data, collate_time = get_monitor_time_stats(collate.apply, trans_items)
         return data, pid, dataset_time, transform_time, collate_time
     else:
         items = [dataset[idx] for idx in place_holder]
-        trans_items = transform.apply_batch(items)
-        data = collate.apply(trans_items)
+        if not isinstance(transform, CudaTransform):
+            items = transform.apply_batch(items)
+        data = collate.apply(items)
         return data
 
 

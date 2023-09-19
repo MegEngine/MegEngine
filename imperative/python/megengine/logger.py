@@ -3,8 +3,11 @@ import contextlib
 import logging
 import os
 import sys
+from collections import Counter
+from functools import wraps
 
 _all_loggers = []
+_all_log_counter = Counter()
 _default_level_name = os.getenv("MEGENGINE_LOGGING_LEVEL", "INFO")
 _default_level = logging.getLevelName(_default_level_name.upper())
 
@@ -160,6 +163,7 @@ def set_log_level(level, update_existing=True):
 
 
 _logger = get_logger(__name__)
+_call_count_logger = get_logger("call count")
 
 try:
     if sys.version_info.major < 3:
@@ -227,3 +231,25 @@ def enable_debug_log():
     r"""Sets logging level to debug for all components."""
     set_log_level(logging.DEBUG)
     set_mgb_log_level(logging.DEBUG)
+
+
+def call_countlog_func(func, count=1, msg=None):
+    r"""
+    Args:
+        func: wrapped func
+        count: log number of times for printing info
+        msg: info to be printed
+    """
+
+    assert msg is not None, "Please confirm the msg to be logged!"
+    hash_key = func.__qualname__
+    _all_log_counter[hash_key] += 1
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if _all_log_counter[hash_key] <= count:
+            _call_count_logger.warning(msg)
+            _all_log_counter[hash_key] += 1
+        return func(*args, **kwargs)
+
+    return wrapper

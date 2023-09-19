@@ -16,16 +16,24 @@ import time
 import numpy as np
 import pytest
 
+import megengine as mge
 from megengine.data.collator import Collator
 from megengine.data.dataloader import DataLoader, get_worker_info
 from megengine.data.dataset import ArrayDataset, Dataset, StreamDataset
 from megengine.data.sampler import RandomSampler, SequentialSampler, StreamSampler
 from megengine.data.transform import (
     Compose,
+    CudaTransform,
     Normalize,
     PseudoTransform,
     ToMode,
     Transform,
+)
+from megengine.module.vision import (
+    AdditiveGaussianNoise,
+    LinearContrast,
+    RandomHorizontalFlip,
+    Sharpen,
 )
 
 
@@ -57,6 +65,27 @@ def test_dataloader_init():
         dataset, sampler=RandomSampler(dataset, batch_size=6, drop_last=True)
     )
     assert len(dataloader) == 16
+
+
+def test_cuda_dataloader_init():
+    dataset = init_dataset()
+    with pytest.raises(ValueError):
+        dataloader = DataLoader(dataset, num_workers=-1)
+    with pytest.raises(ValueError):
+        dataloader = DataLoader(dataset, timeout=-1)
+
+    cuda_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=6, drop_last=False),
+        transform=CudaTransform(),
+    )
+    assert len(cuda_dataloader) == 17
+    cuda_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=6, drop_last=True),
+        transform=CudaTransform(),
+    )
+    assert len(cuda_dataloader) == 16
 
 
 class MyStream(StreamDataset):
@@ -180,12 +209,40 @@ def test_stream_dataloader_timeout(num_workers):
         next(data_iter)
 
 
+@pytest.mark.require_ngpu(1)
+@pytest.mark.parametrize("num_workers", [0, 2])
+def test_cuda_stream_dataloader_timeout(num_workers):
+    dataset = MyStream(100, block=True)
+    sampler = StreamSampler(batch_size=4)
+
+    cuda_dataloader = DataLoader(
+        dataset, sampler, transform=CudaTransform(), num_workers=num_workers, timeout=2
+    )
+    with pytest.raises(RuntimeError, match=r".*timeout.*"):
+        data_iter = iter(cuda_dataloader)
+        next(data_iter)
+
+
 def test_dataloader_serial():
     dataset = init_dataset()
     dataloader = DataLoader(
         dataset, sampler=RandomSampler(dataset, batch_size=4, drop_last=False)
     )
     for (data, label) in dataloader:
+        assert data.shape == (4, 1, 32, 32)
+        assert label.shape == (4,)
+
+
+@pytest.mark.require_ngpu(1)
+def test_cuda_dataloader_serial():
+    dataset = init_dataset()
+
+    cuda_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=CudaTransform(),
+    )
+    for (data, label) in cuda_dataloader:
         assert data.shape == (4, 1, 32, 32)
         assert label.shape == (4,)
 
@@ -205,6 +262,27 @@ def test_dataloader_parallel():
         num_workers=2,
     )
     for (data, label) in dataloader:
+        assert data.shape == (4, 1, 32, 32)
+        assert label.shape == (4,)
+
+
+@pytest.mark.require_ngpu(1)
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
+def test_cuda_dataloader_parallel():
+    # set max shared memory to 100M
+    os.environ["MGE_PLASMA_MEMORY"] = "100000000"
+
+    dataset = init_dataset()
+    cuda_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=CudaTransform(),
+        num_workers=2,
+    )
+    for (data, label) in cuda_dataloader:
         assert data.shape == (4, 1, 32, 32)
         assert label.shape == (4,)
 
@@ -272,6 +350,37 @@ def test_dataloader_parallel_worker_exception():
         batch_data = next(data_iter)
 
 
+@pytest.mark.require_ngpu(1)
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
+)
+def test_cuda_dataloader_parallel_worker_exception():
+    dataset = init_dataset()
+
+    class FakeErrorCudaTransform(CudaTransform):
+        def __init__(self):
+            pass
+
+        def apply(self, input):
+            raise RuntimeError("test raise error")
+            return input
+
+    cuda_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=FakeErrorCudaTransform(),
+        num_workers=2,
+    )
+    with pytest.raises(RuntimeError):
+        data_iter = iter(cuda_dataloader)
+        batch_data = next(data_iter)
+
+
 def _multi_instances_parallel_dataloader_worker():
     dataset = init_dataset()
 
@@ -303,6 +412,44 @@ def test_dataloader_parallel_multi_instances():
     os.environ["MGE_PLASMA_MEMORY"] = "100000000"
 
     _multi_instances_parallel_dataloader_worker()
+
+
+def _multi_instances_parallel_cuda_dataloader_worker():
+    dataset = init_dataset()
+
+    cuda_train_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=4, drop_last=False),
+        transform=CudaTransform(),
+        num_workers=2,
+    )
+    cuda_val_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=10, drop_last=False),
+        transform=CudaTransform(),
+        num_workers=2,
+    )
+    for idx, (data, label) in enumerate(cuda_train_dataloader):
+        assert data.shape == (4, 1, 32, 32)
+        assert label.shape == (4,)
+        if idx % 5 == 0:
+            for val_data, val_label in cuda_val_dataloader:
+                assert val_data.shape == (10, 1, 32, 32)
+                assert val_label.shape == (10,)
+
+
+@pytest.mark.require_ngpu(1)
+@pytest.mark.skipif(
+    np.__version__ >= "1.20.0",
+    reason="pyarrow is incompatible with numpy vserion 1.20.0",
+)
+def test_cuda_dataloader_parallel_multi_instances():
+    dataset = init_dataset()
+
+    # set max shared memory to 100M
+    os.environ["MGE_PLASMA_MEMORY"] = "100000000"
+
+    _multi_instances_parallel_cuda_dataloader_worker()
 
 
 @pytest.mark.isolated_distributed
@@ -412,3 +559,87 @@ def test_predataloader_parallel_worker_exception():
         data_iter = iter(dataloader)
         batch_data = next(data_iter)
         print(batch_data.shape)
+
+
+@pytest.mark.require_ngpu(1)
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
+)
+def test_cuda_predataloader_parallel_worker_exception():
+    dataset = MyPreStream(100)
+
+    class FakeErrorCudaTransform(CudaTransform):
+        def __init__(self):
+            pass
+
+        def apply(self, input):
+            raise RuntimeError("test raise error")
+            return input
+
+    cuda_dataloader = DataLoader(
+        dataset,
+        sampler=StreamSampler(batch_size=4),
+        transform=FakeErrorCudaTransform(),
+        num_workers=2,
+        parallel_stream=True,
+    )
+    with pytest.raises(RuntimeError, match=r"test raise error"):
+        data_iter = iter(cuda_dataloader)
+        batch_data = next(data_iter)
+        print(batch_data.shape)
+
+
+@pytest.mark.require_ngpu(1)
+@pytest.mark.skipif(
+    platform.system() == "Windows",
+    reason="dataloader do not support parallel on windows",
+)
+@pytest.mark.skipif(
+    multiprocessing.get_start_method() != "fork",
+    reason="the runtime error is only raised when fork",
+)
+def test_cuda_dataloader_parallel_worker_with_cvaug():
+    def test_init_dataset():
+        sample_num = 100
+        rand_data = np.random.randint(0, 255, size=(sample_num, 2, 160, 160)).astype(
+            np.float32
+        )
+        label = np.random.randint(0, 10, size=(sample_num,), dtype=int)
+        dataset = ArrayDataset(rand_data, label)
+        return dataset
+
+    class MyCudaTransform(CudaTransform):
+        def __init__(self):
+            self.linear_aug = LinearContrast(0.6)
+            self.sharpen_aug = Sharpen(alpha=(0.6, 0.8), lightness=(0.6, 0.8))
+            self.flip_aug = RandomHorizontalFlip(prob=0.3)
+
+        def apply(self, input):
+            data, label = input
+            label = mge.tensor(label)
+            data_input = mge.tensor(data)
+            linared_inp = self.linear_aug(data_input)
+            sharpened_inp = self.sharpen_aug(linared_inp)
+            fliped_inp = self.flip_aug(sharpened_inp)
+            return (fliped_inp, label)
+
+    dataset = test_init_dataset()
+    transform = MyCudaTransform()
+    dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset, batch_size=6, drop_last=False),
+        transform=transform,
+        num_workers=2,
+    )
+
+    data_iter = iter(dataloader)
+    for _ in range(3):
+        batch_data, batch_label = next(data_iter)
+        assert batch_data.shape == (6, 2, 160, 160)
+        assert batch_data.device.physical_name == "gpu0:0"
+        assert batch_label.device.physical_name == "gpu0:0"

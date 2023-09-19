@@ -20,3 +20,8 @@ class Transform(ABC):
 class PseudoTransform(Transform):
     def apply(self, input: Tuple):
         return input
+
+
+class CudaTransform(Transform):
+    def apply(self, input: Tuple):
+        return input
