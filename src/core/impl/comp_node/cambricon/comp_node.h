@@ -17,7 +17,7 @@ public:
     static void try_coalesce_all_free_memory();
     static void foreach (thin_function<void(CompNode)> callback);
     static void finalize();
-    static size_t get_device_count();
+    static size_t get_device_count(bool = true);
     static Impl* load_cambricon(const Locator& locator, const Locator& locator_logical);
     static void sync_all();
 };

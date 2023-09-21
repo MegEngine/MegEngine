@@ -15,6 +15,7 @@ using namespace mgb;
 
 #include <thread>
 
+#include <cn_api.h>
 #include <cndev.h>
 #include <cnrt.h>
 
@@ -615,19 +616,113 @@ void CambriconCompNode::EventImpl::do_device_wait_by(Impl* cn_impl) {
 
 /* ================== CambriconCompNode static methods ================*/
 
+namespace {
+
+#ifndef __unix__
+template <typename Func, typename Val>
+CNresult call_cndrv_forksafe(Func func, Val* val, size_t len) {
+    cnInit(0);
+    return func();
+}
+#else
+struct RAIICloseFD : NonCopyableObj {
+    int m_fd = -1;
+
+    RAIICloseFD(int fd) : m_fd(fd) {}
+    ~RAIICloseFD() { close(); }
+    void close() {
+        if (m_fd != -1) {
+            ::close(m_fd);
+            m_fd = -1;
+        }
+    }
+};
+// an implementation that does not call cnInit
+template <typename Func, typename Val>
+CNresult call_cndrv_forksafe(Func func, Val* val, size_t len) {
+    int count = 0;
+    // use cnDeviceGetCount to detect cambricon initialization to avoid abnormal
+    // behavior
+    auto err = cnDeviceGetCount(&count);
+    if (err != CN_ERROR_NOT_INITIALIZED)
+        return func();
+    // cnInit not called, call it in child process
+    int fd[2];
+    mgb_assert(pipe(fd) == 0, "pipe() failed");
+    int fdr = fd[0], fdw = fd[1];
+    RAIICloseFD fdr_guard(fdr);
+    RAIICloseFD fdw_guard(fdw);
+    auto cpid = fork();
+    mgb_assert(cpid != -1, "fork() failed");
+    if (cpid == 0) {
+        fdr_guard.close();
+        do {
+            err = cnInit(0);
+            if (err != CN_SUCCESS)
+                break;
+            err = func();
+        } while (0);
+        auto sz = write(fdw, &err, sizeof(err));
+        if (sz == sizeof(err) && err == CN_SUCCESS) {
+            sz = write(fdw, val, sizeof(*val) * len);
+        }
+        fdw_guard.close();
+        std::quick_exit(0);
+    }
+    fdw_guard.close();
+    auto sz = read(fdr, &err, sizeof(err));
+    mgb_assert(sz == sizeof(err), "failed to read error code from child");
+    if (err == CN_SUCCESS) {
+        sz = read(fdr, val, sizeof(*val) * len);
+        mgb_assert(
+                static_cast<size_t>(sz) == sizeof(*val) * len,
+                "failed to read value from child");
+        return err;
+    }
+    // try again, maybe another thread called cnInit while we fork
+    auto err2 = func();
+    if (err2 == CN_SUCCESS)
+        return err2;
+    if (err2 == CN_ERROR_NOT_INITIALIZED)
+        return err;
+    return err2;
+}
+#endif
+
+const char* cn_get_error_string(CNresult err) {
+    const char* ret = nullptr;
+    cnGetErrorString(err, &ret);
+    if (!ret) {
+        ret = "invalid_stub_call";
+    }
+    return ret;
+}
+
+#define MGB_CALL_CNDRV_FORKSAFE_NOASSERT(func, ptr, len, ...) \
+    call_cndrv_forksafe([&]() { return func(ptr, ##__VA_ARGS__); }, ptr, len)
+
+#define MGB_CALL_CNDRV_FORKSAFE(func, ptr, len, ...)                                \
+    {                                                                               \
+        auto err = MGB_CALL_CNDRV_FORKSAFE_NOASSERT(func, ptr, len, ##__VA_ARGS__); \
+        if (err != CNDEV_SUCCESS) {                                                 \
+            auto err_s = cn_get_error_string(err);                                  \
+            mgb_log_error(#func " failed: %s (err %d)", err_s, int(err));           \
+        }                                                                           \
+    }
+}  // namespace
+
 bool CambriconCompNode::available() {
-    CompNodeEnv::CnrtEnv::init();
     static int result = -1;
     static Spinlock mtx;
     MGB_LOCK_GUARD(mtx);
     if (result == -1) {
-        unsigned int dev_num = 0;
-        auto err = cnrtGetDeviceCount(&dev_num);
-        result = err == CNRT_RET_SUCCESS && dev_num >= 1;
+        int count = 0;
+        auto err = MGB_CALL_CNDRV_FORKSAFE_NOASSERT(cnDeviceGetCount, &count, 1);
+        result = err == CN_SUCCESS && count >= 1;
         if (!result) {
             mgb_log_warn(
                     "cambricon unavailable: %d(%s) dev_num=%u", static_cast<int>(err),
-                    cnrtGetErrorStr(err), dev_num);
+                    cn_get_error_string(err), count);
         }
     }
     return result;
@@ -742,21 +837,18 @@ void CambriconCompNode::foreach (thin_function<void(CompNode)> callback) {
     }
 }
 
-size_t CambriconCompNode::get_device_count() {
-    CompNodeEnv::CnrtEnv::init();
+size_t CambriconCompNode::get_device_count(bool warn) {
     static int cnt = -1;
     static Spinlock mtx;
     MGB_LOCK_GUARD(mtx);
     if (cnt == -1) {
-        unsigned int dev_cnt = 0;
-        auto ret = cnrtGetDeviceCount(&dev_cnt);
-        if (ret != CNRT_RET_SUCCESS) {
-            mgb_log_error(
-                    "cnrtGetDeviceCount faild: %s (err %d)", cnrtGetErrorStr(ret),
-                    int(ret));
+        auto err = MGB_CALL_CNDRV_FORKSAFE_NOASSERT(cnDeviceGetCount, &cnt, 1);
+        auto err_s = cn_get_error_string(err);
+        if (err != CN_SUCCESS) {
+            if (warn && (std::string(err_s) != "invalid_stub_call"))
+                mgb_log_error("cuDeviceGetCount failed: %s (err %d)", err_s, int(err));
             cnt = 0;
         }
-        cnt = dev_cnt;
         mgb_assert(cnt >= 0);
     }
     return cnt;

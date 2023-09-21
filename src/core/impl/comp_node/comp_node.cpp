@@ -612,7 +612,7 @@ size_t CompNode::get_device_count(DeviceType type, bool warn) {
         case DeviceType::ROCM:
             return ROCmCompNode::get_device_count();
         case DeviceType::CAMBRICON:
-            return CambriconCompNode::get_device_count();
+            return CambriconCompNode::get_device_count(warn);
         case DeviceType::ATLAS:
             return AtlasCompNode::get_device_count();
         default:
