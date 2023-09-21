@@ -233,8 +233,6 @@ def _exponential(
     if not isinstance(rate, Tensor):
         assert rate > 0, "Exponential is not defined when rate <= 0"
         rate = Tensor(rate, dtype="float32", device=handle_cn)
-    else:
-        (rate,) = _broadcast_tensors_with_size([rate], size)
     if isinstance(size, int) and size != 0:
         size = (size,)
     assert (
@@ -242,6 +240,7 @@ def _exponential(
     ), "The rate ({}) must be the same device with handle ({})".format(
         rate.device, handle_cn
     )
+    (rate,) = _broadcast_tensors_with_size([rate], size)
     op = ExponentialRNG(seed=seed, handle=handle)
     (output,) = apply(op, rate)
     return output
