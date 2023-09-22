@@ -234,12 +234,12 @@ class Optimizer(metaclass=ABCMeta):
                 group_new["params"], group_saved["params"]
             ):
                 p = param_new
-                self._state[p] = state["state"][param_saved].copy()
                 for k, v in self._state[p].items():
-                    if isinstance(v, Tensor):
-                        self._state[p][k] = v.detach()
-                    else:
-                        self._state[p][k] = Tensor(v)
+                    v_saved = state["state"][param_saved][k]
+                    if isinstance(v_saved, Tensor):
+                        v_saved = v_saved.numpy()
+                    format = v.format if isinstance(v, Tensor) else None
+                    self._state[p][k] = Tensor(v_saved, format=format)
 
             if set(group_new.keys()) != set(group_saved.keys()):
                 raise ValueError(
