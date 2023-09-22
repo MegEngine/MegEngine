@@ -219,8 +219,8 @@ def test_exponential_op():
     (output,) = apply(op, rate)
     expected_mean = 1.0 / rate
     expected_std = np.sqrt(1.0 / rate ** 2)
-    assert np.fabs(output.numpy().mean() - expected_mean) < 1e-1
-    assert np.fabs(np.sqrt(output.numpy().var()) - expected_std) < 1e-1
+    assert np.fabs(output.numpy().mean() - expected_mean).max() < 1e-1
+    assert np.fabs(np.sqrt(output.numpy().var()) - expected_std).max() < 1e-1
     assert str(output.device) == str(CompNode("xpux"))
 
     cn = CompNode("xpu2")
@@ -230,8 +230,8 @@ def test_exponential_op():
     op = ExponentialRNG(seed=seed, handle=h)
     (output,) = apply(op, rate)
     delete_rng_handle(h)
-    assert np.fabs(output.numpy().mean() - expected_mean) < 1e-1
-    assert np.fabs(np.sqrt(output.numpy().var()) - expected_std) < 1e-1
+    assert np.fabs(output.numpy().mean() - expected_mean).max() < 1e-1
+    assert np.fabs(np.sqrt(output.numpy().var()) - expected_std).max() < 1e-1
     assert str(output.device) == str(cn)
 
 

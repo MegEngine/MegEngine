@@ -20,14 +20,11 @@ class Distribution:
         """
         Returns a new distribution instance (or populates an existing instance
         provided by a derived class) with batch dimensions expanded to
-        `batch_shape`. This method calls :class:`~torch.Tensor.expand` on
-        the distribution's parameters. As such, this does not allocate new
-        memory for the expanded distribution instance. Additionally,
-        this does not repeat any args checking or parameter broadcasting in
+        `batch_shape`. This does not repeat any args checking or parameter broadcasting in
         `__init__.py`, when an instance is first created.
 
         Args:
-            batch_shape (torch.Size): the desired expanded size.
+            batch_shape : the desired expanded size.
             _instance: new instance provided by subclasses that
                 need to override `.expand`.
 
@@ -70,7 +67,7 @@ class Distribution:
         """
         Returns the standard deviation of the distribution.
         """
-        return self.variance.sqrt()
+        return self.variance ** 0.5
 
     def sample(self, sample_shape: Optional[Iterable[int]] = ()) -> Tensor:
         """
