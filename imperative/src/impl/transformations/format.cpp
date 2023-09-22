@@ -548,6 +548,19 @@ ValueRefList adaptive_pooling_rule(
     return identity_rule_helper(op, inputs, t);
 }
 
+ValueRefList conv_bwd_data_rule(
+        const ConvolutionBackwardData& op, Span<ValueRef>& inputs,
+        const bool& auto_convert, const FormatTransformation& t) {
+    auto&& inp_format = inputs[0].cast(t.value_type()).format();
+    if (inp_format == FT::NHWC) {
+        auto new_param = op.param();
+        new_param.format = ConvolutionBackwardData::Format::NHWC;
+        auto new_op = ConvolutionBackwardData::make(new_param, op.policy(), op.dtype);
+        return identity_rule_helper(*new_op, inputs, t);
+    }
+    return identity_rule_helper(op, inputs, t);
+}
+
 // clang-format off
 #define FOREACH_MULTI_INPS_NO_PARAM_OP(cb)  \
     cb(CompiledOp)                          \
@@ -567,7 +580,7 @@ ValueRefList adaptive_pooling_rule(
 
 #define FOREACH_FORMAT_POLICY_OP(cb)        \
     cb(Pooling)                             \
-    cb(Convolution)
+    cb(Convolution)                         
 
 #define FOREACH_BYPASS_OP(cb)               \
     cb(ParamPackSplit)                      \
@@ -655,6 +668,7 @@ struct FormatRuleRegistry {
         register_format_rule(concat_rule);
         register_format_rule(batchnorm_rule);
         register_format_rule(adaptive_pooling_rule);
+        register_format_rule(conv_bwd_data_rule);
         FOREACH_MULTI_INPS_NO_PARAM_OP(REGISTER_OP_RULE)
         FOREACH_IDENTITY_OP(REGISTER_OP_RULE)
         FOREACH_FORMAT_OP(REGISTER_OP_RULE)

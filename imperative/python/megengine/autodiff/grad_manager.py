@@ -294,7 +294,8 @@ class GradManager:
                     grad = grad.get()
                 spec = self._attach_specs.get(id_)
                 tensor = spec and spec.tensor()
-                grad._as_format(tensor.format)
+                if grad is not None:
+                    grad._as_format(tensor.format)
                 if tensor is not None:
                     if tensor.grad is None:
                         tensor.grad = grad
