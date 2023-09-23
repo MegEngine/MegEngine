@@ -83,6 +83,15 @@ void BetaRNG::check_exec(
     megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(alpha, beta, dst));
 }
 
+void ExponentialRNG::check_exec(
+        const TensorLayout& rate, const TensorLayout& dst, size_t workspace_in_bytes) {
+    megdnn_assert(
+            dst.dtype.category() == DTypeCategory::FLOAT && rate.dtype == dst.dtype);
+    megdnn_assert(dst.is_contiguous() && rate.is_contiguous());
+    megdnn_assert(rate.total_nr_elems() == dst.total_nr_elems());
+    megdnn_assert(workspace_in_bytes >= get_workspace_in_bytes(rate, dst));
+}
+
 #define INST_CHECK_EXEC(RNG_NAME)                                                   \
     void RNG_NAME::check_exec(const TensorLayout& dst, size_t workspace_in_bytes) { \
         megdnn_assert(                                                              \

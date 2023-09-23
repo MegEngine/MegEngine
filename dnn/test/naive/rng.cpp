@@ -228,6 +228,34 @@ void run_shuffle(Handle* handle, bool bwd_flag) {
     run({6, 3});
 }
 
+template <typename dtype>
+void run_exponential(Handle* handle) {
+    using ctype = typename DTypeTrait<dtype>::ctype;
+    auto opr = handle->create_operator<ExponentialRNG>();
+
+    TensorLayout ly{TensorShape{200000 * 5}, dtype()};
+
+    Tensor<ctype> out(handle, ly);
+    Tensor<ctype> rate(handle, ly);
+
+    auto rate_ptr = rate.ptr();
+    for (int i = 0; i < 5; ++i) {
+        for (int j = 0; j < 200000; ++j) {
+            rate_ptr[i * 200000 + j] = ctype(i + 1);
+        }
+    }
+    opr->exec(rate.tensornd(), out.tensornd(), {});
+
+    auto ptr = out.ptr();
+    for (int i = 0; i < 5; ++i) {
+        auto stat = get_mean_var(ptr + i * 200000, 200000, ctype(i + 1));
+        float mean = 1.0 / (i + 1);
+        float var = 1.0 / ((i +  1) * (i + 1));
+        ASSERT_LE(std::abs(stat.first - mean), 0.01);
+        ASSERT_LE(std::abs(stat.second - var), 0.01);
+    }
+}
+
 template <typename T>
 void run_dropout(Handle* handle) {
     using ctype = typename DTypeTrait<T>::ctype;
@@ -364,6 +392,14 @@ TEST_F(NAIVE, SHUFFLE_RNG_BWD_INT32) {
 
 TEST_F(NAIVE, SHUFFLE_RNG_BWD_F16) {
     run_shuffle<dtype::Float16>(handle(), true);
+}
+
+TEST_F(NAIVE, EXPONENTIAL_RNG_F32) {
+    run_exponential<dtype::Float32>(handle());
+}
+
+TEST_F(NAIVE, EXPONENTIAL_RNG_F16) {
+    DNN_INC_FLOAT16(run_exponential<dtype::Float16>(handle()));
 }
 
 TEST_F(NAIVE, DROPOUT_F32) {

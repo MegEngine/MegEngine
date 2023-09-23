@@ -288,4 +288,30 @@ void ShuffleRNGBackwardImpl::exec(
     }
 }
 
+ExponentialRNGImpl::ExponentialRNGImpl(Handle* handle)
+        : ExponentialRNG(handle), m_seed(0), m_offset(0), m_stream(cuda_stream(handle)) {}
+
+void ExponentialRNGImpl::exec(
+        _megdnn_tensor_in rate, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(rate.layout, dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    megdnn_assert(size);
+    ensure_seed(m_param.seed);
+    ElemwiseOpParamN<0> ele_param(size);
+    switch (dst.layout.dtype.enumv()) {
+#define cb(_dt)                                                       \
+    case DTypeTrait<_dt>::enumv: {                                    \
+        using ctype = DTypeTrait<_dt>::ctype;                         \
+        run_elemwise<random::ExponentialKernel<ctype>, ctype, 0>(     \
+                ele_param, m_stream, {dst, rate, m_seed, m_offset});  \
+        break;                                                        \
+    }
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+    }
+    m_offset += 20;
+}
+
 // vim: syntax=cpp.doxygen

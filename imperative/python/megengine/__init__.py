@@ -65,3 +65,4 @@ import megengine.quantization
 import megengine.random
 import megengine.utils
 import megengine.traced_module
+import megengine.distributions
