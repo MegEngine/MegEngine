@@ -24,6 +24,12 @@
 #define DNN_FLOAT16_SELECT(_x, _y) _x
 #endif
 
+#if MEGDNN_WITH_ROCM
+#define MEGDNN_ELEMWISE_INC_UINT16(_x)
+#else
+#define MEGDNN_ELEMWISE_INC_UINT16(_x) _x
+#endif
+
 namespace megdnn {
 
 /*!

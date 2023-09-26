@@ -190,7 +190,9 @@ void ElemwiseImpl::exec_BINARY_INT() {
 
     switch (m_dst->layout.dtype.enumv()) {
         MEGDNN_FOREACH_COMPUTING_DTYPE_INT(cb)
-        cb(::megdnn::dtype::Uint16) default : megdnn_throw("bad dtype");
+        MEGDNN_ELEMWISE_INC_UINT16(cb(::megdnn::dtype::Uint16))
+        default:
+            megdnn_throw("bad dtype");
     }
 
 #undef cb
