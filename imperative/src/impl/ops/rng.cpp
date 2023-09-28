@@ -320,10 +320,10 @@ struct OpMeth<MultiHeadAttn> {
                 opdef.vbias,          opdef.obias,
                 opdef.sm_scaler,      opdef.input_order,
                 opdef.attn_mask_type, opdef.tensor_combination_type,
-                opdef.add_zero_attn,  opdef.need_weights,
-                opdef.reslink,        opdef.training,
-                handle_seed,          opdef.attn_prob,
-                opdef.out_prob};
+                opdef.add_bias_kv,    opdef.add_zero_attn,  
+                opdef.need_weights,   opdef.reslink,
+                opdef.training,       handle_seed,
+                opdef.attn_prob,      opdef.out_prob};
     }
 };
 
@@ -771,8 +771,8 @@ SmallVector<TensorPtr> apply_on_physical_tensor<MultiHeadAttn>(
                 inputs[1]->dev_tensor().as_megdnn(),
                 inputs[2]->dev_tensor().as_megdnn(),
                 inputs[3]->dev_tensor().as_megdnn(), empty_tensor,
+                inputs[4]->dev_tensor().as_megdnn(),
                 inputs[5]->dev_tensor().as_megdnn(),
-                inputs[6]->dev_tensor().as_megdnn(),
                 outputs[0]->dev_tensor().as_megdnn(),
                 outputs[1]->dev_tensor().as_megdnn(),
                 outputs[2]->dev_tensor().as_megdnn(),

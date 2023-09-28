@@ -25,9 +25,9 @@ bool MHAForwardProxyBase::layout_ismatch(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
         m_relayout_opr == nullptr or m_repeat_opr == nullptr) {
         megdnn_assert(
                 m_matmul_opr == nullptr and m_bmatmul_opr == nullptr and
-                        m_add_opr == nullptr and m_elem_opr == nullptr and
-                        m_softmax_opr == nullptr and m_dropout_opr == nullptr and
-                        m_relayout_opr == nullptr and m_repeat_opr == nullptr,
+                m_add_opr == nullptr and m_elem_opr == nullptr and m_softmax_opr == nullptr and 
+                m_dropout_opr == nullptr and m_relayout_opr == nullptr and 
+                m_repeat_opr == nullptr,
                 "All the sub-opr are either not constructed or all constructed, but "
                 "now only a part is constructed.");
         m_matmul_opr = handle->create_operator<MatrixMulForward>();
@@ -97,8 +97,6 @@ bool MHAForwardProxyBase::layout_ismatch(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
 void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     MEGDNN_MARK_USED_VAR(handle);
     MEGDNN_MARK_USED_VAR(attn_mask);
-    MEGDNN_MARK_USED_VAR(bias_k);
-    MEGDNN_MARK_USED_VAR(bias_v);
     MEGDNN_MARK_USED_VAR(out);
     MEGDNN_MARK_USED_VAR(attn_weight);
     MEGDNN_MARK_USED_VAR(mask_reservespace);
@@ -116,10 +114,19 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     m_kbias = param.kbias;
     m_vbias = param.vbias;
     m_obias = param.obias;
+    // m_add_bias_kv = param.add_bias_kv;
+    // m_add_zero_attn = param.add_zero_attn;
+    // m_reslink = param.reslink;
     auto cal_type = qkvo_weight_bias.dtype;
     TensorLayout placeholder_layout;
 
     auto reflash_dtype = [&](DType dtype) {
+        // m_nbias_k_layout.dtype = dtype;
+        // m_nbias_v_layout.dtype = dtype;
+        // m_zero_k_layout.dtype = dtype;
+        // m_zero_v_layout.dtype = dtype;
+        // m_added_bias_zero_k_layout.dtype = dtype;
+        // m_added_bias_zero_v_layout.dtype = dtype;
         m_q_layout.dtype = dtype;
         m_k_layout.dtype = dtype;
         m_v_layout.dtype = dtype;
@@ -200,6 +207,8 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
         m_bo_off = end;
         end += m_bo_layout.total_nr_elems();
     }
+
+    // size_t attn_add = (param.add_bias_kv ? 1 : 0) + (param.add_zero_attn ? 1 : 0);
 
     // q/k/v, nq/nk/nv
     auto head_repeat = [&](TensorLayout& m_q_layout, TensorLayout& m_nq_layout) {
@@ -463,14 +472,14 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
         nlayout = nlayout.dimshuffle({0, 2, 1, 3});
         m_relayout_opr->exec({q.raw_ptr(), nlayout}, nq);
     };
-    auto repeat_to_multihead = [&](TensorND& q, TensorND& nq, size_t idx) {
+    auto repeat_to_multihead = [&](TensorND& q, TensorND& nq, size_t wksp_idx) {
         q.layout = TensorLayout(
                 {q.layout[0], 1, q.layout[1], q.layout[2]}, q.layout.dtype);
         nq.layout = TensorLayout(
                 {nq.layout[0] / m_heads, m_heads, nq.layout[1], nq.layout[2]},
                 nq.layout.dtype);
         m_repeat_opr->param().times = TensorLayout({1, m_heads, 1, 1}, q.layout.dtype);
-        m_repeat_opr->exec(q, nq, wksp_bundle.get_workspace(idx));
+        m_repeat_opr->exec(q, nq, wksp_bundle.get_workspace(wksp_idx));
         nq.layout = TensorLayout(
                 {nq.layout[0] * nq.layout[1], nq.layout[2], nq.layout[3]},
                 nq.layout.dtype);

@@ -778,8 +778,8 @@ MGB_DYN_TYPE_OBJ_FINAL_IMPL(MultiHeadAttnBackward);
 MultiHeadAttnBackward::MultiHeadAttnBackward(
         VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values,
         VarNode* qkvo_weight_bias, VarNode* attn_mask, VarNode* attn_weight,
-        VarNode* mask_reservespace, VarNode* othr_reservespace, const Param& param,
-        const OperatorNodeConfig& config)
+        VarNode* mask_reservespace, VarNode* othr_reservespace,
+        const Param& param, const OperatorNodeConfig& config)
         : Super({queries->owner_graph(),
                  config,
                  "multi_head_attn_backward",
@@ -800,9 +800,9 @@ MultiHeadAttnBackward::MultiHeadAttnBackward(
 
 MultiHeadAttnBackward::MultiHeadAttnBackward(
         VarNode* diff, VarNode* queries, VarNode* keys, VarNode* values,
-        VarNode* qkvo_weight_bias, VarNode* attn_weight, VarNode* mask_reservespace,
-        VarNode* othr_reservespace, const Param& param,
-        const OperatorNodeConfig& config)
+        VarNode* qkvo_weight_bias, VarNode* attn_weight,
+        VarNode* mask_reservespace, VarNode* othr_reservespace,
+        const Param& param, const OperatorNodeConfig& config)
         : Super({queries->owner_graph(),
                  config,
                  "multi_head_attn_backward",
@@ -824,8 +824,8 @@ MultiHeadAttnBackward::MultiHeadAttnBackward(
 SymbolVarArray MultiHeadAttnBackward::make(
         SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
         SymbolVar qkvo_weight_bias, SymbolVar attn_mask, SymbolVar attn_weight,
-        SymbolVar mask_reservespace, SymbolVar othr_reservespace, const Param& param,
-        const OperatorNodeConfig& config) {
+        SymbolVar mask_reservespace, SymbolVar othr_reservespace,
+        const Param& param, const OperatorNodeConfig& config) {
     auto outs = queries.node()
                         ->owner_graph()
                         ->insert_opr(std::make_unique<MultiHeadAttnBackward>(
@@ -841,9 +841,9 @@ SymbolVarArray MultiHeadAttnBackward::make(
 
 SymbolVarArray MultiHeadAttnBackward::make(
         SymbolVar diff, SymbolVar queries, SymbolVar keys, SymbolVar values,
-        SymbolVar qkvo_weight_bias, SymbolVar attn_weight, SymbolVar mask_reservespace,
-        SymbolVar othr_reservespace, const Param& param,
-        const OperatorNodeConfig& config) {
+        SymbolVar qkvo_weight_bias, SymbolVar attn_weight,
+        SymbolVar mask_reservespace, SymbolVar othr_reservespace,
+        const Param& param, const OperatorNodeConfig& config) {
     auto outs = queries.node()
                         ->owner_graph()
                         ->insert_opr(std::make_unique<MultiHeadAttnBackward>(
@@ -866,8 +866,14 @@ void MultiHeadAttnBackward::init_output_static_infer_desc() {
     mgr.register_shape_infer(output(3), ShapeInferDesc::make_identity(input(4)));
     auto input_type = param().tensor_combination_type;
     if (input_type == InputType::ALL or input_type == InputType::ONLY_BIASKV) {
-        mgr.register_shape_infer(output(4), ShapeInferDesc::make_identity(input(4)));
-        mgr.register_shape_infer(output(5), ShapeInferDesc::make_identity(input(4)));
+        mgr.register_shape_infer(output(4), {SourceType::DEP, {{output(1), DepType::SHAPE}}, [](TensorShape& dest, const InpVal& inp) {
+                                                dest = {1, 1, inp.val.at(0).shape()[2]};
+                                                return true;
+                                            }});
+        mgr.register_shape_infer(output(5), {SourceType::DEP, {{output(2), DepType::SHAPE}}, [](TensorShape& dest, const InpVal& inp) {
+                                                dest = {1, 1, inp.val.at(0).shape()[2]};
+                                                return true;
+                                            }});
     } else {
         TensorShape empty{0};
         mgr.register_shape_infer(output(4), ShapeInferDesc::make_const(empty));
@@ -931,7 +937,7 @@ void MultiHeadAttnBackward::scn_do_execute() {
                 output(4)->dev_tensor().as_megdnn(),
                 output(5)->dev_tensor().as_megdnn(),
                 get_megdnn_workspace_from_var(output(6)));
-    else
+    else 
         megdnn_opr()->exec(
                 input(0)->dev_tensor().as_megdnn(), input(1)->dev_tensor().as_megdnn(),
                 input(2)->dev_tensor().as_megdnn(), input(3)->dev_tensor().as_megdnn(),

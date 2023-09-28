@@ -1382,6 +1382,7 @@ PADDING_MODES = [Doc('REPLICATE = 0', 'aaaaaa|abcdefgh|hhhhhhh'),
                'Indicates that there is only mask tensor in input.'),
            Doc('ONLY_BIASKV = 2', 'Indicates that there is only bias_kv tensor in input.'),
            Doc('ALL = 3', 'Indicates that there are mask tensor and bias_kv tensor in the input.'), name_field="tensor_combination_type")
+ .add_fields('bool', Doc('add_bias_kv', 'Whether adds bias to the key and value sequences at sequence dim after input projection.'), 'false')
  .add_fields('bool', Doc('add_zero_attn', 'Whether to add a new batch of zeros to the key and value sequences.'), 'false')
  .add_fields('bool', Doc('need_weights', 'Whether to return the attention matrix, which is the output result of softmax.'), 'false')
  .add_fields('bool', Doc('reslink', 'Whether to add input query to final output.'), 'false')

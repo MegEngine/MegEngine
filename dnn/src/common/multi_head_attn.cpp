@@ -32,13 +32,13 @@ void MultiHeadAttnForward::check_exec(
     if (p.qproj_size or p.kproj_size or p.vproj_size or p.kproj_size)
         megdnn_assert_contiguous(qkvo_weight_bias);
     bool have_mask = false;
-    bool have_biaskv = false;
+    // bool have_biaskv = false;
     auto input_type = p.tensor_combination_type;
-    if (input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL) {
-        have_biaskv = true;
-        megdnn_assert_contiguous(bias_k);
-        megdnn_assert_contiguous(bias_v);
-    }
+    // if (input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL) {
+    //     have_biaskv = true;
+    //     megdnn_assert_contiguous(bias_k);
+    //     megdnn_assert_contiguous(bias_v);
+    // }
     if (input_type == InputType::ONLY_MASK or input_type == InputType::ALL) {
         have_mask = true;
         megdnn_assert_contiguous(attn_mask);
@@ -83,26 +83,28 @@ void MultiHeadAttnForward::check_exec(
             "value(%zu). details: %s",
             keys.shape[1], values.shape[1], errmsg().c_str());
     // bias_k and bias_v layout check
-    if (have_biaskv) {
-        megdnn_assert(
-                bias_k.ndim == 3 and bias_v.ndim == 3,
-                "bias_k ndim should be 3, but got %zu, details: %s", bias_k.ndim,
-                errmsg().c_str());
-        megdnn_assert(
-                (bias_k.shape[0] == 1) and (bias_k.shape[1] == 1) and
-                        (bias_k.shape[2] == (p.kproj_size ? p.kproj_size : p.k_size)),
-                "bias_k.shape should be [1, 1, %u], but got [%zu, "
-                "%zu, %zu], details: %s",
-                p.kproj_size ? p.kproj_size : p.k_size, bias_k.shape[0],
-                bias_k.shape[1], bias_k.shape[2], errmsg().c_str());
-        megdnn_assert(
-                (bias_v.shape[0] == 1) and (bias_v.shape[1] == 1) and
-                        (bias_v.shape[2] == (p.vproj_size ? p.vproj_size : p.v_size)),
-                "bias_v.shape should be [1, 1, %u], but got [%zu, "
-                "%zu, %zu], details: %s",
-                p.vproj_size ? p.vproj_size : p.v_size, bias_v.shape[0],
-                bias_v.shape[1], bias_v.shape[2], errmsg().c_str());
-    }
+    // if (have_biaskv) {
+    //     megdnn_assert(
+    //             bias_k.ndim == 3, "bias_k.ndim should be 3, but got %zu, details: %s",
+    //             bias_k.ndim, errmsg().c_str());
+    //     megdnn_assert(
+    //             (bias_k.shape[0] == 1) and (bias_k.shape[1] == 1) and
+    //                     (bias_k.shape[2] == (p.kproj_size ? p.kproj_size : p.k_size)),
+    //             "bias_k.shape should be [1, 1, %u], but got [%zu, "
+    //             "%zu, %zu], details: %s",
+    //             p.kproj_size ? p.kproj_size : p.k_size, bias_k.shape[0],
+    //             bias_k.shape[1], bias_k.shape[2], errmsg().c_str());
+    //     megdnn_assert(
+    //             bias_v.ndim == 3, "bias_v.ndim should be 3, but got %zu, details: %s",
+    //             bias_v.ndim, errmsg().c_str());
+    //     megdnn_assert(
+    //             (bias_v.shape[0] == 1) and (bias_v.shape[1] == 1) and
+    //                     (bias_v.shape[2] == (p.vproj_size ? p.vproj_size : p.v_size)),
+    //             "bias_v.shape should be [1, 1, %u], but got [%zu, "
+    //             "%zu, %zu], details: %s",
+    //             p.vproj_size ? p.vproj_size : p.v_size, bias_v.shape[0],
+    //             bias_v.shape[1], bias_v.shape[2], errmsg().c_str());
+    // }
     // attn mask layout check
     size_t attn_add = (have_biaskv ? 1 : 0) + (p.add_zero_attn ? 1 : 0);
     if (have_mask and attn_mask.ndim == 3) {
@@ -142,10 +144,11 @@ void MultiHeadAttnForward::check_exec(
                TOSTRING(p.v_size) + ", " + TOSTRING(p.qproj_size) + ", " +
                TOSTRING(p.kproj_size) + ", " + TOSTRING(p.vproj_size) + ", " +
                TOSTRING(p.oproj_size) + ", " + TOSTRING(p.qbias) + ", " +
-               TOSTRING(p.kbias) + ", " + TOSTRING(p.vbias) + ", " + TOSTRING(p.obias) +
-               ", " + TOSTRING(p.num_heads) + ", " + TOSTRING(p.need_weights) + ", " +
-               TOSTRING(p.add_zero_attn) + ", " + TOSTRING(int(p.attn_mask_type)) +
-               ", " + TOSTRING(int(p.tensor_combination_type)) + ", " +
+               TOSTRING(p.kbias) + ", " + TOSTRING(p.vbias) + ", " + 
+               TOSTRING(p.obias) + ", " + TOSTRING(p.num_heads) + ", " + 
+               TOSTRING(p.need_weights) + ", " +TOSTRING(p.add_bias_kv) + ", " +
+               TOSTRING(p.add_zero_attn) + ", " + TOSTRING(int(p.attn_mask_type)) + ", " + 
+               TOSTRING(p.reslink) + "," + TOSTRING(int(p.tensor_combination_type)) + ", " +
                TOSTRING(p.sm_scaler) + ", " + TOSTRING(p.training);
     };
 #undef TOSTRING
@@ -196,7 +199,7 @@ void MultiHeadAttnForward::check_exec(
 void MultiHeadAttnBackward::deduce_layout(
         const TensorLayout& diff, const TensorLayout& queries, const TensorLayout& keys,
         const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
-        const TensorLayout& attn_mask, const TensorLayout& attn_weight,
+        const TensorLayout& attn_mask, const TensorLayout& attn_weight, 
         const TensorLayout& mask_reservespace, const TensorLayout& othr_reservespace,
         TensorLayout& dqueries, TensorLayout& dkeys, TensorLayout& dvalues,
         TensorLayout& dqkvo_weight_bias, TensorLayout& dbias_k, TensorLayout& dbias_v) {
@@ -256,8 +259,12 @@ void MultiHeadAttnBackward::check_exec(
 
     auto input_type = p.tensor_combination_type;
     bool have_mask = false;
-    bool have_biaskv =
-            input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL;
+    // bool have_biaskv = false;
+    // if (input_type == InputType::ONLY_BIASKV or input_type == InputType::ALL) {
+    //     have_biaskv = true;
+    //     megdnn_assert_contiguous(dbias_k);
+    //     megdnn_assert_contiguous(dbias_v);
+    // }
     if (input_type == InputType::ONLY_MASK or input_type == InputType::ALL) {
         have_mask = true;
         megdnn_assert_contiguous(attn_mask);
@@ -265,8 +272,9 @@ void MultiHeadAttnBackward::check_exec(
 
     // misc
     auto required_workspace_in_bytes = get_workspace_in_bytes(
-            diff, queries, keys, values, qkvo_weight_bias, attn_mask, attn_weight,
-            mask_reservespace, othr_reservespace, dqueries, dkeys, dvalues,
+            diff, queries, keys, values, qkvo_weight_bias,
+            attn_mask, attn_weight, mask_reservespace,
+            othr_reservespace, dqueries, dkeys, dvalues,
             dqkvo_weight_bias, dbias_k, dbias_v);
     megdnn_assert(workspace_in_bytes >= required_workspace_in_bytes);
     megdnn_assert(othr_reservespace.total_nr_elems() > 0);
@@ -342,27 +350,29 @@ void MultiHeadAttnBackward::check_exec(
             queries.shape[0] * p.num_heads, queries.shape[1], keys.shape[1] + attn_add,
             attn_add, attn_weight.shape[0], attn_weight.shape[1], attn_weight.shape[2],
             errmsg().c_str());
-    // dbias_k, dbias_v layout check
-    if (have_biaskv) {
-        megdnn_assert(
-                dbias_k.ndim == 3 and dbias_v.ndim == 3,
-                "dbias_k ndim should be 3, but got %zu, details: %s", dbias_k.ndim,
-                errmsg().c_str());
-        megdnn_assert(
-                (dbias_k.shape[0] == 1) and (dbias_k.shape[1] == 1) and
-                        (dbias_k.shape[2] == (p.kproj_size ? p.kproj_size : p.k_size)),
-                "dbias_k.shape should be [1, 1, %u], but got [%zu, "
-                "%zu, %zu], details: %s",
-                p.kproj_size ? p.kproj_size : p.k_size, dbias_k.shape[0],
-                dbias_k.shape[1], dbias_k.shape[2], errmsg().c_str());
-        megdnn_assert(
-                (dbias_v.shape[0] == 1) and (dbias_v.shape[1] == 1) and
-                        (dbias_v.shape[2] == (p.vproj_size ? p.vproj_size : p.v_size)),
-                "dbias_v.shape should be [1, 1, %u], but got [%zu, "
-                "%zu, %zu], details: %s",
-                p.vproj_size ? p.vproj_size : p.v_size, dbias_v.shape[0],
-                dbias_v.shape[1], dbias_v.shape[2], errmsg().c_str());
-    }
+    // dbias_k and dbias_v layout check
+    // if (have_biaskv) {
+    //     megdnn_assert(
+    //             dbias_k.ndim == 3, "dbias_k.ndim should be 3, but got %zu, details: %s",
+    //             dbias_k.ndim, errmsg().c_str());
+    //     megdnn_assert(
+    //             (dbias_k.shape[0] == 1) and (dbias_k.shape[1] == 1) and
+    //                     (dbias_k.shape[2] == (p.kproj_size ? p.kproj_size : p.k_size)),
+    //             "dbias_k.shape should be [1, 1, %u], but got [%zu, "
+    //             "%zu, %zu], details: %s",
+    //             p.kproj_size ? p.kproj_size : p.k_size, dbias_k.shape[0],
+    //             dbias_k.shape[1], dbias_k.shape[2], errmsg().c_str());
+    //     megdnn_assert(
+    //             dbias_v.ndim == 3, "dbias_v.ndim should be 3, but got %zu, details: %s",
+    //             dbias_v.ndim, errmsg().c_str());
+    //     megdnn_assert(
+    //             (dbias_v.shape[0] == 1) and (dbias_v.shape[1] == 1) and
+    //                     (dbias_v.shape[2] == (p.vproj_size ? p.vproj_size : p.v_size)),
+    //             "dbias_v.shape should be [1, 1, %u], but got [%zu, "
+    //             "%zu, %zu], details: %s",
+    //             p.vproj_size ? p.vproj_size : p.v_size, dbias_v.shape[0],
+    //             dbias_v.shape[1], dbias_v.shape[2], errmsg().c_str());
+    // }
     // attn mask layout check
     if (have_mask and attn_mask.ndim == 3) {
         megdnn_assert(
@@ -391,10 +401,11 @@ void MultiHeadAttnBackward::check_exec(
                TOSTRING(p.v_size) + ", " + TOSTRING(p.qproj_size) + ", " +
                TOSTRING(p.kproj_size) + ", " + TOSTRING(p.vproj_size) + ", " +
                TOSTRING(p.oproj_size) + ", " + TOSTRING(p.qbias) + ", " +
-               TOSTRING(p.kbias) + ", " + TOSTRING(p.vbias) + ", " + TOSTRING(p.obias) +
-               ", " + TOSTRING(p.num_heads) + ", " + TOSTRING(p.need_weights) + ", " +
-               TOSTRING(p.add_zero_attn) + ", " + TOSTRING(int(p.attn_mask_type)) +
-               ", " + TOSTRING(int(p.tensor_combination_type)) + ", " +
+               TOSTRING(p.kbias) + ", " + TOSTRING(p.vbias) + ", " + 
+               TOSTRING(p.obias) + ", " + TOSTRING(p.num_heads) + ", " + 
+               TOSTRING(p.need_weights) + ", " + TOSTRING(p.add_bias_kv) + ", " + 
+               TOSTRING(p.add_zero_attn) + ", " + TOSTRING(int(p.attn_mask_type)) + ", " + 
+               TOSTRING(p.reslink) + "," + TOSTRING(int(p.tensor_combination_type)) + ", " +
                TOSTRING(p.sm_scaler) + ", " + TOSTRING(p.training);
     };
 #undef TOSTRING

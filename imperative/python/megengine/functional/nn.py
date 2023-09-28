@@ -2255,6 +2255,10 @@ def _merge_masks(
         and attn_mask is not None
         and key_padding_mask is None
     ):
+        # if add_zero_attn:
+        #     attn_mask = pad(attn_mask, ((0, 0), (0, 1)))
+        # if add_bias_kv:
+        #     attn_mask = pad(attn_mask, ((0, 0), (0, 1)))
         # At this point, merged_mask = attn_mask
         mask_type = "default_mask"
         merged_mask = attn_mask
@@ -2342,6 +2346,7 @@ def multi_head_attention(
     obias: bool = False,
     bias_k: Optional[Tensor] = None,
     bias_v: Optional[Tensor] = None,
+    add_bias_kv: bool = False,
     add_zero_attn: bool = False,
     key_padding_mask: Optional[Tensor] = None,
     attn_mask: Optional[Tensor] = None,
@@ -2385,6 +2390,7 @@ def multi_head_attention(
         obias: indicates whether there is a out bias in io_weight_bias, this parameter is only valid when oproj_size > 0.
         bias_k, bias_v: the bias of the key and value sequences to be added at sequence dim. distinguished from kbias and vbias, bias_kv here is not kbias and vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.
             Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        add_bias_kv: If specified, adds bias to the key and value sequences at sequence dim. Default: ``False``.
         add_zero_attn: if specified, adds a new batch of zeros to the key and value sequences at sequence dim. Default: ``False``.
             Note: should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         key_padding_mask: if specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of
@@ -2522,6 +2528,7 @@ def multi_head_attention(
         input_order=0,
         seed=_get_global_rng_seed(),
         attn_mask_type=attn_mask_type,
+        add_bias_kv=add_bias_kv,
         add_zero_attn=add_zero_attn,
         embeding_size=embed_dim,
         k_size=k_size,

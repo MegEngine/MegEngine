@@ -1,6 +1,9 @@
 #include "src/common/multi_head_attn/proxy_backward_base.h"
+
 #include "megdnn/basic_types.h"
 #include "megdnn/oprs/nn.h"
+
+#include "src/naive/handle.h"
 
 namespace megdnn {
 
@@ -41,6 +44,7 @@ bool MHABackwardProxyBase::layout_ismatch(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM)
         m_dropout_opr = handle->create_operator<Dropout>();
         m_dropoutbw_opr = handle->create_operator<DropoutBackward>();
         m_relayout_opr = handle->create_operator<Relayout>();
+        // m_repeat_opr = handle->create_operator<RepeatForward>();
     }
     auto matmul_layout = [](const TensorLayout& A, const TensorLayout& B,
                             const TensorLayout& C, bool enable) -> bool {
@@ -75,10 +79,10 @@ bool MHABackwardProxyBase::layout_ismatch(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM)
 
 void MHABackwardProxyBase::layout_refill(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM) {
     MEGDNN_MARK_USED_VAR(attn_weight);
-    MEGDNN_MARK_USED_VAR(mask_reservespace);
     MEGDNN_MARK_USED_VAR(handle);
     MEGDNN_MARK_USED_VAR(diff);
     MEGDNN_MARK_USED_VAR(attn_mask);
+    MEGDNN_MARK_USED_VAR(mask_reservespace);
     MEGDNN_MARK_USED_VAR(othr_reservespace);
     MEGDNN_MARK_USED_VAR(dqueries);
     MEGDNN_MARK_USED_VAR(dkeys);
@@ -107,12 +111,15 @@ void MHABackwardProxyBase::layout_refill(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM) 
     m_kbias = param.kbias;
     m_vbias = param.vbias;
     m_obias = param.obias;
+    // m_add_bias_kv = param.add_bias_kv;
+    // m_add_zero_attn = param.add_zero_attn;
     auto cal_type = qkvo_weight_bias.dtype;
     m_grad_qin_layout = queries;
     m_grad_kin_layout = keys;
     m_grad_vin_layout = values;
 
     auto reflash_dtype = [&](DType dtype) {
+        // m_grad_reslink_q_layout.dtype = dtype;
         m_grad_drop2_layout.dtype = dtype;
         m_grad_out_layout.dtype = dtype;
         m_grad_z_layout.dtype = dtype;
@@ -198,6 +205,8 @@ void MHABackwardProxyBase::layout_refill(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM) 
         end += m_bo_layout.total_nr_elems();
     }
 
+    // m_attn_add = (param.add_bias_kv ? 1 : 0) + (param.add_zero_attn ? 1 : 0);
+
     // q/k/v
     m_matmul_opr->param().transposeA = false;
     m_matmul_opr->param().transposeB = false;
@@ -214,25 +223,27 @@ void MHABackwardProxyBase::layout_refill(MHA_PROXY_BACKWARD_LAYOUT_CONST_PARAM) 
                 m_grad_q_layout.dtype};
     }
     if (param.kproj_size) {
-        matmul_deduce_layout(m_matmul_opr, keys, m_wk_layout, m_grad_k_layout);
+        matmul_deduce_layout(m_matmul_opr, TensorLayout{{keys.shape[0], keys.shape[1], keys.shape[2]}, keys.dtype}, 
+                m_wk_layout, m_grad_k_layout);
         m_grad_nk_layout = TensorLayout{
                 {m_grad_k_layout.shape[0] * m_head, m_grad_k_layout.shape[1],
                  m_grad_k_layout.shape[2] / m_head},
                 m_grad_k_layout.dtype};
     } else {
-        m_grad_k_layout = keys;
+        m_grad_k_layout = TensorLayout{{keys.shape[0], keys.shape[1], keys.shape[2]}, keys.dtype};
         m_grad_nk_layout = TensorLayout{
                 {m_grad_k_layout[0] * m_head, m_grad_k_layout[1], m_grad_k_layout[2]},
                 m_grad_k_layout.dtype};
     }
     if (param.vproj_size) {
-        matmul_deduce_layout(m_matmul_opr, values, m_wv_layout, m_grad_v_layout);
+        matmul_deduce_layout(m_matmul_opr, TensorLayout{{values.shape[0], values.shape[1], values.shape[2]}, values.dtype},
+                m_wv_layout, m_grad_v_layout);
         m_grad_nv_layout = TensorLayout{
                 {m_grad_v_layout.shape[0] * m_head, m_grad_v_layout.shape[1],
                  m_grad_v_layout.shape[2] / m_head},
                 m_grad_v_layout.dtype};
     } else {
-        m_grad_v_layout = values;
+        m_grad_v_layout = TensorLayout{{values.shape[0], values.shape[1], values.shape[2]}, values.dtype};
         m_grad_nv_layout = TensorLayout{
                 {m_grad_v_layout[0] * m_head, m_grad_v_layout[1], m_grad_v_layout[2]},
                 m_grad_v_layout.dtype};
@@ -435,8 +446,7 @@ WorkspaceBundle MHABackwardProxyBase::get_workspace_bundle(
              param.oproj_size ? m_grad_z_workspacesize : 0,
              param.oproj_size ? m_grad_wo0_workspacesize : 0,
              param.oproj_size ? m_grad_wo1_workspacesize : 0,
-             (param.oproj_size and param.obias) ? m_grad_bo_layout.span().dist_byte()
-                                                : 0,
+             (param.oproj_size and param.obias) ? m_grad_bo_layout.span().dist_byte() : 0,
              (param.oproj_size and param.obias) ? m_grad_bo0_workspacesize : 0,
              (param.oproj_size and param.obias) ? m_grad_bo1_workspacesize : 0,
              param.num_heads > 1 ? m_grad_nz_layout.span().dist_byte() : 0,
