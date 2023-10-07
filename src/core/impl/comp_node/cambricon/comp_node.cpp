@@ -565,9 +565,9 @@ public:
             : EventImplHelper(comp_node_impl, create_flags),
               m_comp_node_impl{comp_node_impl} {
         m_comp_node_impl->activate();
-        size_t flags = CNRT_NOTIFIER_DISABLE_TIMING;
-        if (NEED_TIMER) {
-            flags = 0;
+        cnrtNotifierFlags_t flags = CNRT_NOTIFIER_DISABLE_TIMING_ALL;
+        if (create_flags & NEED_TIMER) {
+            flags = CNRT_NOTIFIER_DEFAULT;
         }
         MGB_CNRT_CHECK(cnrtNotifierCreateWithFlags(&m_cnrt_notifier, flags));
         m_init_finished = true;
