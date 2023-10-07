@@ -31,7 +31,7 @@ using namespace debug;
 #include <signal.h>
 #include <sys/types.h>
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OHOS__)
 #include <dlfcn.h>
 #include <unwind.h>
 #include <iomanip>
@@ -213,7 +213,8 @@ BacktraceResult mgb::debug::backtrace(int nr_exclude) {
     recursive_call = true;
     BacktraceResult result;
 
-#if (defined(__linux__) || defined(__APPLE__)) && !defined(__ANDROID__)
+#if (defined(__linux__) || defined(__APPLE__)) && !defined(__ANDROID__) && \
+        !defined(__OHOS__)
     int i = 0;
     int depth = ::backtrace(stack_mem, MAX_DEPTH);
     char** strs = backtrace_symbols(stack_mem, depth);

@@ -2,8 +2,8 @@
 #include "megbrain/test/helper.h"
 #include "megbrain/utils/timer.h"
 
-#if MGB_BUILD_SLIM_SERVING || defined(ANDROID) || defined(WIN32) || defined(IOS) || \
-        defined(__APPLE__)
+#if MGB_BUILD_SLIM_SERVING || defined(ANDROID) || defined(__OHOS__) || \
+        defined(WIN32) || defined(IOS) || defined(__APPLE__)
 #pragma message "sys test disabled on unsupported platforms"
 
 #else

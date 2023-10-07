@@ -14,7 +14,7 @@
 void mgb::elemwise_static_calc(
         opr::Elemwise::Mode mode, HostTensorND& dest,
         const std::vector<HostTensorND>& inputs) {
-#if defined(ANDROID) || defined(IOS) || defined(__arm__)
+#if defined(ANDROID) || defined(__OHOS__) || defined(IOS) || defined(__arm__)
     static opr::intl::UniqPtrWithCN<megdnn::Elemwise> opr_impl;
     static std::mutex mtx;
     MGB_LOCK_GUARD(mtx);

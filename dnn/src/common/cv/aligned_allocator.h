@@ -11,7 +11,7 @@
 #include "malloc.h"
 #endif
 
-#if defined(__ANDROID__) || defined(ANDROID)
+#if defined(__ANDROID__) || defined(ANDROID) || defined(__OHOS__)
 #include "malloc.h"
 #define HAS_MEMALIGN
 #elif !defined(_MSC_VER) && !defined(__MINGW32__)

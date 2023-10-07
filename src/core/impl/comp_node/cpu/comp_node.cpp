@@ -44,7 +44,7 @@ class CpuCompNode::WorkerQueue final : public AsyncQueueSC<TaskElem, WorkerQueue
     void on_async_queue_worker_thread_start() override {
         mgb_assert(m_locator.device >= 0);
         if (enable_affinity) {
-#if !defined(ANDROID) && !defined(__ANDROID__)
+#if !defined(ANDROID) && !defined(__ANDROID__) && !defined(__OHOS__)
             sys::set_cpu_affinity({m_locator.device});
 #endif
         }
@@ -257,7 +257,7 @@ public:
         auto alignment = get_mem_addr_alignment();
 #ifdef WIN32
         return _aligned_malloc(size, alignment);
-#elif defined(__ANDROID__) || defined(ANDROID)
+#elif defined(__ANDROID__) || defined(ANDROID) || defined(__OHOS__)
         return memalign(alignment, size);
 #else
         void* ptr = nullptr;

@@ -71,14 +71,14 @@ int set_cpu_affinity(const std::vector<size_t>& cpuset) {
 
 cpu_set_t do_set_cpu_affinity(const cpu_set_t& mask) {
     cpu_set_t prev_mask;
-#if defined(ANDROID) || defined(__ANDROID__)
+#if defined(ANDROID) || defined(__ANDROID__) || defined(__OHOS__)
     SET_AFFINITY_CHECK(sched_getaffinity(gettid(), sizeof(prev_mask), &prev_mask));
     SET_AFFINITY_CHECK(sched_setaffinity(gettid(), sizeof(mask), &mask));
 #else
     SET_AFFINITY_CHECK(
             sched_getaffinity(syscall(__NR_gettid), sizeof(prev_mask), &prev_mask));
     SET_AFFINITY_CHECK(sched_setaffinity(syscall(__NR_gettid), sizeof(mask), &mask));
-#endif  // defined(ANDROID) || defined(__ANDROID__)
+#endif  // defined(ANDROID) || defined(__ANDROID__) || defined(__OHOS__)
     return prev_mask;
 }
 

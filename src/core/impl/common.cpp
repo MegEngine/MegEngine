@@ -15,33 +15,35 @@
 #ifdef __ANDROID__
 #include <android/log.h>
 #include <sys/system_properties.h>
+#elif defined(__OHOS__)
+#include <hilog/log.h>
 #endif
 
 using namespace mgb;
 
 namespace {
 
-LogLevel config_default_log_level() {
-    auto default_level = LogLevel::ERROR;
+mgb::LogLevel config_default_log_level() {
+    auto default_level = mgb::LogLevel::ERROR;
     //! env to config LogLevel
     //!  DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3, NO_LOG = 4
     //! for example , export RUNTIME_OVERRIDE_LOG_LEVEL=0, means set LogLevel to
     //! DEBUG
     if (auto env = ::std::getenv("RUNTIME_OVERRIDE_LOG_LEVEL"))
-        default_level = static_cast<LogLevel>(std::stoi(env));
+        default_level = static_cast<mgb::LogLevel>(std::stoi(env));
 
 #ifdef __ANDROID__
     //! special for Android prop, attention: getprop may need permission
     char buf[PROP_VALUE_MAX];
     if (__system_property_get("RUNTIME_OVERRIDE_LOG_LEVEL", buf) > 0) {
-        default_level = static_cast<LogLevel>(atoi(buf));
+        default_level = static_cast<mgb::LogLevel>(atoi(buf));
     }
 #endif
 
     return default_level;
 }
 
-LogLevel min_log_level = config_default_log_level();
+mgb::LogLevel min_log_level = config_default_log_level();
 }  // namespace
 
 #if MGB_ENABLE_LOGGING
@@ -54,8 +56,8 @@ void mgb_extern_api_get_time(int64_t* sec, int64_t* nsec);
 
 namespace {
 void default_log_handler(
-        LogLevel level, const char* file, const char* func, int line, const char* fmt,
-        va_list ap) {
+        mgb::LogLevel level, const char* file, const char* func, int line,
+        const char* fmt, va_list ap) {
     if (level < min_log_level)
         return;
 
@@ -75,21 +77,21 @@ void default_log_handler(
     }
     const char* warn_reminder = "";
     switch (level) {
-        case LogLevel::ERROR:
+        case mgb::LogLevel::ERROR:
             if (sys::stderr_ansi_color())
                 warn_reminder = "\x1b[1;4;31m[ERR]\x1b[0m";
             else
                 warn_reminder = "[ERR]";
             break;
-        case LogLevel::WARN:
+        case mgb::LogLevel::WARN:
             if (sys::stderr_ansi_color())
                 warn_reminder = "\x1b[1;31m[WARN]\x1b[0m";
             else
                 warn_reminder = "[WARN]";
             break;
-        case LogLevel::INFO:
+        case mgb::LogLevel::INFO:
             break;
-        case LogLevel::DEBUG:
+        case mgb::LogLevel::DEBUG:
             if (sys::stderr_ansi_color())
                 warn_reminder = "\x1b[36m[DEBUG]\x1b[0m";
             else
@@ -145,19 +147,50 @@ void default_log_handler(
 #ifdef __ANDROID__
     android_LogPriority android_level;
     switch (level) {
-        case LogLevel::WARN:
+        case mgb::LogLevel::WARN:
             android_level = ANDROID_LOG_WARN;
             break;
-        case LogLevel::INFO:
+        case mgb::LogLevel::INFO:
             android_level = ANDROID_LOG_INFO;
             break;
-        case LogLevel::DEBUG:
+        case mgb::LogLevel::DEBUG:
             android_level = ANDROID_LOG_DEBUG;
             break;
         default:
             android_level = ANDROID_LOG_ERROR;
     }
     __android_log_vprint(android_level, "runtime", fmt, ap);
+#elif defined(__OHOS__)
+    //! see also, sysroot/usr/include/hiloh/log.h:LogLevel in OpenHormony NDK
+    typedef enum {
+        /** Debug level to be used by {@link OH_LOG_DEBUG} */
+        OH_LOG_DEBUG = 3,
+        /** Informational level to be used by {@link OH_LOG_INFO} */
+        OH_LOG_INFO = 4,
+        /** Warning level to be used by {@link OH_LOG_WARN} */
+        OH_LOG_WARN = 5,
+        /** Error level to be used by {@link OH_LOG_ERROR} */
+        OH_LOG_ERROR = 6,
+        /** Fatal level to be used by {@link OH_LOG_FATAL} */
+        OH_LOG_FATAL = 7,
+    } OHOSLogLevel;
+    OHOSLogLevel ohos_level;
+    switch (level) {
+        case mgb::LogLevel::WARN:
+            ohos_level = OH_LOG_WARN;
+            break;
+        case mgb::LogLevel::INFO:
+            ohos_level = OH_LOG_INFO;
+            break;
+        case mgb::LogLevel::DEBUG:
+            ohos_level = OH_LOG_DEBUG;
+            break;
+        default:
+            ohos_level = OH_LOG_ERROR;
+    }
+    OH_LOG_Print(
+            LOG_APP, static_cast<::LogLevel>(ohos_level), LOG_DOMAIN, "runtime", fmt,
+            ap);
 #endif
 
 #undef HDR_FMT
@@ -172,16 +205,16 @@ class MegDNNLogHandler {
         mgb::LogLevel mgb_level;
         switch (dnn_level) {
             case megdnn::LogLevel::DEBUG:
-                mgb_level = LogLevel::DEBUG;
+                mgb_level = mgb::LogLevel::DEBUG;
                 break;
             case megdnn::LogLevel::INFO:
-                mgb_level = LogLevel::INFO;
+                mgb_level = mgb::LogLevel::INFO;
                 break;
             case megdnn::LogLevel::WARN:
-                mgb_level = LogLevel::WARN;
+                mgb_level = mgb::LogLevel::WARN;
                 break;
             default:
-                mgb_level = LogLevel::ERROR;
+                mgb_level = mgb::LogLevel::ERROR;
         }
         if (mgb_level < min_log_level) {
             return;
@@ -254,7 +287,7 @@ LogHandler log_handler = default_log_handler;
 
 #endif  // MGB_ENABLE_LOGGING
 
-LogLevel mgb::set_log_level(LogLevel level) {
+mgb::LogLevel mgb::set_log_level(LogLevel level) {
     if (auto env = ::std::getenv("RUNTIME_OVERRIDE_LOG_LEVEL"))
         level = static_cast<LogLevel>(std::stoi(env));
 
@@ -271,7 +304,7 @@ LogLevel mgb::set_log_level(LogLevel level) {
     return ret;
 }
 
-LogLevel mgb::get_log_level() {
+mgb::LogLevel mgb::get_log_level() {
     return min_log_level;
 }
 

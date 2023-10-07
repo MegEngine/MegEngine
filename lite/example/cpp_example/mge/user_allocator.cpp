@@ -10,7 +10,7 @@ public:
     void* allocate(LiteDeviceType, int, size_t size, size_t align) override {
 #if defined(WIN32) || defined(_WIN32)
         return _aligned_malloc(size, align);
-#elif defined(__ANDROID__) || defined(ANDROID)
+#elif defined(__ANDROID__) || defined(ANDROID) || defined(__OHOS__)
         return memalign(align, size);
 #else
         void* ptr = nullptr;

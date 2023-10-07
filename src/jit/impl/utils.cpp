@@ -55,7 +55,7 @@ bool ExecutableHelper::keep_interm() {
 
 //! now only cuda/halide jit depends on ExecutableHelperImpl
 //! FIXME: imp ExecutableHelperImpl support android if later need
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__) && !defined(__ANDROID__) && !defined(__OHOS__)
 
 namespace {
 

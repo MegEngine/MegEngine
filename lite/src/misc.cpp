@@ -11,6 +11,8 @@
 
 #ifdef __ANDROID__
 #include <android/log.h>
+#elif defined(__OHOS__)
+#include <hilog/log.h>
 #endif
 
 using namespace lite;
@@ -140,6 +142,8 @@ void lite::print_log(LiteLogLevel level, const char* format, ...) {
 
 #ifdef __ANDROID__
     __android_log_print(ANDROID_LOG_INFO, "lite", "%s", out.c_str());
+#elif defined(__OHOS__)
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, "lite", "%s", out.c_str());
 #else
     fprintf(stderr, "%s\n", out.c_str());
 #endif
