@@ -491,8 +491,6 @@ public:
 
         void activate() const {
             init();
-            // int dev;
-            // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
             MGB_CNRT_CHECK(cnrtSetDevice(device));
         }
     };

@@ -676,8 +676,6 @@ TEST(TestCompNodeCambricon, P2PCopy) {
     auto run_raw = []() {
         int v0 = 0, v1 = 1;
         int dev0 = 0, dev1 = 1;
-        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev0, 0));
-        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev1, 1));
         int *dp0, *dp1;
         MGB_CNRT_CHECK(cnrtSetDevice(dev0));
         MGB_CNRT_CHECK(cnrtMalloc((void**)(&dp0), sizeof(int)));

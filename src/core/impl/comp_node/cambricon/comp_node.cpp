@@ -71,14 +71,8 @@ public:
     CompNode::DeviceType device_type() override {
         return CompNode::DeviceType::CAMBRICON;
     }
-    void set_device(int device) override {
-        // int dev;
-        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
-        MGB_CNRT_CHECK(cnrtSetDevice(device));
-    }
+    void set_device(int device) override { MGB_CNRT_CHECK(cnrtSetDevice(device)); }
     void device_synchronize(int device) override {
-        // int dev;
-        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, device));
         MGB_CNRT_CHECK(cnrtSetDevice(device));
         MGB_CNRT_CHECK(cnrtSyncDevice());
     }
@@ -142,7 +136,6 @@ public:
     void* alloc_host(size_t size) override {
         activate();
         void* ptr;
-        // MGB_CNRT_CHECK(cnrtMallocHost(&ptr, size, CNRT_MEMTYPE_DEFAULT));
         MGB_CNRT_CHECK(cnrtHostMalloc(&ptr, size));
         return ptr;
     }
@@ -793,8 +786,6 @@ void CambriconCompNode::sync_all() {
 
     MGB_LOCK_GUARD(sd->mtx);
     for (int i = 0; i < sd->nr_dev_used; ++i) {
-        // int dev;
-        // MGB_CNRT_CHECK(cnrtGetDeviceHandle(&dev, sd->dev_info[i].dev_num));
         MGB_CNRT_CHECK(cnrtSetDevice(sd->dev_info[i].dev_num));
         MGB_CNRT_CHECK(cnrtSyncDevice());
     }
