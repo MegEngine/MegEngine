@@ -3,6 +3,7 @@ from typing import Iterable, Union
 
 import numpy as np
 
+from ..jit.tracing import is_tracing
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
@@ -78,7 +79,7 @@ class Adadelta(Optimizer):
             step = states["step"]
             step += c1
             grad = param.grad
-            if weight_decay != 0.0:
+            if is_tracing() or weight_decay != 0.0:
                 grad = grad + param * _weight_decay
 
             square_avg = states["square_avg"]

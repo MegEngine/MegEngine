@@ -51,9 +51,9 @@ def test_xla_trace_shape_change():
 class ConvNet(M.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = M.Conv2d(3, 6, 5)
+        self.conv1 = M.Conv2d(3, 6, 5, bias=False)
         self.bn1 = M.BatchNorm2d(6)
-        self.conv2 = M.Conv2d(6, 16, 5)
+        self.conv2 = M.Conv2d(6, 16, 5, bias=False)
         self.bn2 = M.BatchNorm2d(16)
         self.fc1 = M.Linear(16 * 5 * 5, 120)
         self.fc2 = M.Linear(120, 84)
@@ -99,25 +99,29 @@ def test_xla_trace_training():
         if is_trace:
             func = xla_trace(func, without_host=True, capture_as_const=True)
 
-        losses, bn_states = [], []
+        losses, bn_states, opt_states = [], [], []
         for i in range(10):
             timage = megengine.Tensor(image[i % 3])
             tlabel = megengine.Tensor(label[i % 3])
             loss = func(model, optimizer, timage, tlabel)
-            losses.append(loss.item())
 
+            losses.append(loss.item())
             bn_states.append(model.bn1.running_mean.numpy().reshape(-1))
+            opt_states.append(
+                list(optimizer._state.values())[3]["exp_avg"].numpy().reshape(-1)
+            )
 
             if i == 4:
                 for pg in optimizer.param_groups:
                     pg["lr"] = 0.006
 
-        return np.asarray(losses), bn_states
+        return np.asarray(losses), np.stack(bn_states), np.stack(opt_states)
 
-    imp_loss, _ = runner(False)
-    xla_loss, xla_bn_states = runner(True)
+    imp_loss, imp_bn_states, imp_opt_states = runner(False)
+    xla_loss, xla_bn_states, xla_opt_states = runner(True)
     np.testing.assert_allclose(imp_loss, xla_loss, atol=5e-4, rtol=1e-3)
-    assert np.all(xla_bn_states[-1] != xla_bn_states[-2])
+    np.testing.assert_allclose(imp_bn_states, xla_bn_states, atol=1e-5)
+    np.testing.assert_allclose(imp_opt_states, xla_opt_states, atol=1e-5)
 
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
@@ -135,7 +139,7 @@ def test_partial_trace_training():
         label = np.random.randint(0, 10, (3, 8,))
 
         gm = autodiff.GradManager().attach(model.parameters())
-        optimizer = optim.AdamW(model.parameters(), lr=0.012)
+        optimizer = optim.Adam(model.parameters(), lr=0.012, weight_decay=0.1)
 
         if is_trace:
             type(model).forward = partial_trace(
@@ -145,7 +149,7 @@ def test_partial_trace_training():
                 func=type(optimizer)._updates, backend="xla", capture_as_const=True
             )
 
-        losses, bn_states = [], []
+        losses, bn_states, opt_states = [], [], []
         for i in range(10):
             timage = megengine.Tensor(image[i % 3])
             tlabel = megengine.Tensor(label[i % 3])
@@ -159,11 +163,16 @@ def test_partial_trace_training():
                 for pg in optimizer.param_groups:
                     pg["lr"] = 0.006
                     pg["weight_decay"] = 0.2
-            bn_states.append(model.bn1.running_mean.numpy().reshape(-1))
             losses.append(loss.item())
-        return np.asarray(losses), bn_states
+            bn_states.append(model.bn1.running_mean.numpy().reshape(-1))
+            opt_states.append(
+                list(optimizer._state.values())[7]["exp_avg"].numpy().reshape(-1)
+            )
 
-    imp_loss, _ = runner(False)
-    xla_loss, xla_bn_states = runner(True)
+        return np.asarray(losses), np.stack(bn_states), np.stack(opt_states)
+
+    imp_loss, imp_bn_states, imp_opt_states = runner(False)
+    xla_loss, xla_bn_states, xla_opt_states = runner(True)
     np.testing.assert_allclose(imp_loss, xla_loss, atol=5e-4, rtol=1e-3)
-    assert np.all(xla_bn_states[-1] != xla_bn_states[-2])
+    np.testing.assert_allclose(imp_bn_states, xla_bn_states, atol=1e-4)
+    np.testing.assert_allclose(imp_opt_states, xla_opt_states, atol=1e-4)

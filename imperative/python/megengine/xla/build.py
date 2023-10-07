@@ -36,7 +36,7 @@ def build_xla(
     tr = RngKeyAdder()(tr)
     tr = DropoutMaskCanonicalizer()(tr)
 
-    if verbose and get_rank() == 0:
+    if verbose > 0 and get_rank() == 0:
         print("================ Mge Trace Result ================")
         print(tr)
 
@@ -106,11 +106,11 @@ def build_xla(
             rank=get_rank(),
         )
 
-    if verbose and get_rank() == 0:
+    if verbose > 1 and get_rank() == 0:
         print("================ XLA HLO IR ================")
         print(computation.as_text())
     compiled = computation.compile()
-    if verbose and get_rank() == 0:
+    if verbose > 2 and get_rank() == 0:
         print("================ XLA Execute Plan ================")
         print(compiled.as_text())
 

@@ -3,6 +3,7 @@ import os
 from typing import Iterable, Tuple, Union
 
 from ..functional.inplace import _inplace_add_
+from ..jit.tracing import is_tracing
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
@@ -80,7 +81,7 @@ class Adam(Optimizer):
                 continue
 
             grad = param.grad
-            if weight_decay != 0.0:
+            if is_tracing() or weight_decay != 0.0:
                 grad = grad + param * _weight_decay
 
             states = self._state[param]

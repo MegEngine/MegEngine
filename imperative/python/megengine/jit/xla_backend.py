@@ -92,6 +92,10 @@ class xla_trace(trace):
     def unset_env(self):
         set_use_xla_backend(self.orig_use_xla)
 
+    def get_random_seed(self):
+        assert self.has_randomstate == True
+        return self.random_seed
+
     def convert_params_to_xla(self):
         from ..utils.module_utils import get_expand_structure
         from ..tensor import Tensor
@@ -104,6 +108,7 @@ class xla_trace(trace):
             0 if len(devices) == 0 else [d.id for d in devices].index(device_id)
         )
         device = devices[device_index]
+        # TODO: device -> host -> device
         for attr, _ in self.attr_to_key.items():
             param = get_expand_structure(attr[0], attr[1])
             param._reset(param.to("cpux"))
@@ -150,10 +155,11 @@ class xla_trace(trace):
         _full_sync()
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
-        for idx, id in enumerate(self.inp_ids):
-            id2inpidx[id].append(idx)
-        for idx, id in enumerate(self.out_ids):
-            id2outidx[id].append(idx)
+        # map inp id to the 0, 1, 2, 3, ...
+        for idx, inp_id in enumerate(self.inp_ids):
+            id2inpidx[inp_id].append(idx)
+        for idx, oup_id in enumerate(self.out_ids):
+            id2outidx[oup_id].append(idx)
         self.inpkey2idx = {}
         self.outkey2idx = {}
         if self.input_num == len(set(self.inp_ids)) - 1:
@@ -172,6 +178,8 @@ class xla_trace(trace):
         outmark2id = dict()
         for var in self.vars:
             if var.kind == "external":
+                # the mark in setted by `get_marked_input_tensor`
+                # so inpmark2id[mark] map the traced inp id(input_num) to the id in the graph
                 for mark in var.inp_mark:
                     inpmark2id[mark] = var.id
             elif var.data_required and var.out_mark:
@@ -179,6 +187,7 @@ class xla_trace(trace):
                     outmark2id[mark] = var.id
         for k, v in inpmark2id.items():
             for idx in id2inpidx[v]:
+                # map the traced id to the sequence
                 self.inpkey2idx[k] = idx
 
         for k, v in outmark2id.items():

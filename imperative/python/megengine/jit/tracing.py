@@ -321,14 +321,24 @@ class trace:
         self.output_num = len([i for i in outputs if i != -1])
 
     def setup_without_host(self):
+        # all the modules in traced func args
         self.inp_modules = set()
         self.module_tensors = set()
+        # record how to map a tensorwrapper to which attr of which module
+        # the batchnorm running_mean and running_var is also saved here
         self.tensor_to_attr = dict()
+        # map (module, tensor_name) to the input id
         self.attr_to_key = dict()
+        # map (module, tensor_name) to the output id
         self.update_param_dict = dict()
+        # map optimizer state tensor wrapper exclude lr to output id
         self.update_opt_param_dict = dict()
+        # include optimizer state such as "exp_avg" of adamw and hyperparam like "weight_decay"
+        # "lr" is not include here
         self.capture_optimizer_state = set()
+        # currently, only the input id of learning rate is recorded here
         self.capture_optimizer_hyper_param = []
+        # map a tensor wrapper in self.capture_optimizer_state to input_id
         self.opt_param_dict = dict()
 
     def __call__(self, *args, **kwargs):
@@ -496,6 +506,7 @@ class trace:
             if not self.traced:
                 self.convert_optimizer_state_to_tensor(*args, **kwargs)
             self._trace.enter()
+            # trace without host with megbrain graph backend
             if self._trace.compiled():
                 arglist, _ = tree_flatten((args, kwargs))
                 idx = 0
@@ -549,8 +560,10 @@ class trace:
                 rst = object.__getattribute__(obj, attr)
                 if isinstance(rst, RawTensor):
                     assert rst in self.tensor_to_attr
+                    # according to the tensor wrapper to find the (module, attr) tuple
                     attr = self.tensor_to_attr[rst]
                     if attr not in self.attr_to_key:
+                        # record how to map (module, attr) to input id
                         self.attr_to_key[attr] = self.input_num
                         self.input_num += 1
                         marked_input_tensor(self.attr_to_key[attr], rst)
@@ -562,12 +575,14 @@ class trace:
             def tensor_wrapper_resethook(obj, other):
                 if obj in self.tensor_to_attr:
                     attr = self.tensor_to_attr[obj]
+                    # add module.params to output list
                     other = get_marked_output_tensor(self.output_num, other)
                     self.update_param_num += 1
                     self.update_param_dict[attr] = self.output_num
                     self.output_num += 1
                 elif obj in self.capture_optimizer_state:
                     other = get_marked_output_tensor(self.output_num, other)
+                    # add optimizer states to output list
                     self.update_opt_param_dict[obj] = self.output_num
                     self.output_num += 1
                 origin_reset(obj, other)
@@ -584,6 +599,14 @@ class trace:
                     self.arg_list.append(self.input_num)
                     self.input_num += 1
                 elif isinstance(arg, Optimizer):
+                    # opt_state_dict is a dict like
+                    # [{'betas': [Tensor(0.9, device=xpux:0), Tensor(0.999, device=xpux:0)],
+                    #   'eps': Tensor(1e-08, device=xpux:0),
+                    #   'params': [0, 1, 2, 3, 4], # params ids
+                    #   'weight_decay': Tensor(0.01, device=xpux:0)}]
+                    #  {
+                    #      0: {"key", state_tensor}, ~, 4:  {"key", state_tensor}
+                    #  }
                     opt_state_dict = arg.state_dict(keep_var=True)
                     for state in opt_state_dict["param_groups"]:
                         state.pop("lr")
@@ -598,9 +621,11 @@ class trace:
                         self.capture_optimizer_hyper_param.append(self.input_num)
                         self.input_num += 1
             self.opt_param_dict = {}
+            # optimizer states and hyper param is also added into inputs
             for t in self.capture_optimizer_state:
                 if t not in self.tensor_to_attr:  # not module parameter
                     mark_param = get_marked_input_tensor(self.input_num, t)
+                    # record how to map the optimizer tensors to input id
                     self.opt_param_dict[t] = self.input_num
                     t[...] = mark_param
                     self.input_num += 1
@@ -618,6 +643,7 @@ class trace:
             Module.__getattribute__ = object.__getattribute__
             Tensor._reset = origin_reset
 
+            # TODO: may be deleted
             for attr, key in self.attr_to_key.items():
                 param = get_expand_structure(attr[0], attr[1])
         finally:
@@ -635,6 +661,7 @@ class trace:
             ):
                 self._process_outputs(outputs)
             if not self._trace.compiled():
+                # process the returned value of traced function
                 outlist, self.outdef = tree_flatten(outputs)
                 for i, out in enumerate(outlist):
                     assert isinstance(out, RawTensor), f"get out of type {type(out)}"

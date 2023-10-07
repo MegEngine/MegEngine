@@ -209,11 +209,12 @@ class TraceResult:
         except RuntimeError:
             var_dtype = "unknown"
 
-        var_bound_data = (
-            ("," + ",".join(str(var.bound_data).split()))
-            if var.bound_data is not None and var.bound_data.size < 5
-            else ""
-        )
+        if var.bound_data is not None and var.bound_data.size < 5:
+            flated = var.bound_data.reshape(-1)
+            var_bound_data = ",".join([str(flated[i]) for i in range(flated.size)])
+            var_bound_data = "[" + var_bound_data + "]"
+        else:
+            var_bound_data = ""
 
         return f"{var.id}%:<{_str_shape(var.shape)},{var_dtype}{var_bound_data}>"
 
@@ -228,15 +229,15 @@ class TraceResult:
         return ret
 
     def __str__(self) -> str:
-        func_inps_str = ", ".join(map(self._str_var, self.inputs))
+        func_inps_str = ", \n    ".join(map(self._str_var, self.inputs))
         func_oups_str = ", ".join(map(self._str_var, self.outputs))
         func_const_str = "\n        ".join(map(self._str_var, self.consts))
-        ret = f"{self.func_name}({func_inps_str}) -> ({func_oups_str}) {{\n    "
+        ret = f"{self.func_name}(\n    {func_inps_str}\n) {{\n    "
         if len(self.consts) > 0:
             ret += f"const:\n        {func_const_str}\n    "
         ret += "\n    ".join(map(self._str_eqn, self.eqns))
         output_num = len(self.outputs)
-        ret += f"\n return {output_num} {func_oups_str}"
+        ret += f"\n    return {output_num} {func_oups_str}"
         ret += "\n}"
         return ret
 

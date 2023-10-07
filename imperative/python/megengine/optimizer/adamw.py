@@ -3,6 +3,7 @@ import os
 from typing import Iterable, Tuple, Union
 
 from ..functional.inplace import _inplace_add_
+from ..jit.tracing import is_tracing
 from ..tensor import Parameter, tensor
 from .optimizer import Optimizer
 
@@ -101,7 +102,7 @@ class AdamW(Optimizer):
                 delta = (exp_avg / (c1 - _beta0 ** step)) / (
                     (exp_avg_sq / (c1 - _beta1 ** step)) ** c05 + _eps
                 )
-                if weight_decay != 0.0:
+                if is_tracing() or weight_decay != 0.0:
                     delta += param * _weight_decay
                 _inplace_add_(param, delta, alpha=c1, beta=_neg_lr)
                 continue
@@ -121,5 +122,6 @@ class AdamW(Optimizer):
                 (exp_avg_sq / (c1 - _beta1 ** step)) ** c05 + _eps
             )
 
-            delta += param * _weight_decay
+            if is_tracing() or weight_decay != 0.0:
+                delta += param * _weight_decay
             param -= _lr * delta
