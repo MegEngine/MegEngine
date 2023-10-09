@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "../utils.cuh"
 #include "./opr_impl.h"
+#if MGB_CUSTOM_OP
 #include "megbrain/custom/custom.h"
 #include "megbrain/custom/platform/custom_cuda.h"
 
@@ -87,3 +88,5 @@ void launch_cuda_kernel(
             }));
     after_kernel_launch();
 }
+
+#endif
