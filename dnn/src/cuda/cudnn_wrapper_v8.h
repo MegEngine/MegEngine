@@ -1,7 +1,7 @@
 #pragma once
 #include "src/cuda/cudnn_with_check.h"
 
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
 #include "megdnn/basic_types.h"
 #include "megdnn/oprs/nn.h"
 #include "src/common/utils.h"

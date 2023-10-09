@@ -68,7 +68,7 @@ public:
     class AlgoCUDNNConv;
     class AlgoCUDNNConvBiasActivationBase;
     class AlgoCUDNNConvBiasActivation;
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
     class AlgoCUDNNConvV8;
     class AlgoCUDNNConvBiasActivationV8;
 #endif

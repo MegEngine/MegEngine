@@ -47,7 +47,7 @@ ConvBiasForward::Algorithm* ConvBiasForwardImpl::get_algorithm_heuristic(
         const AlgoAttribute& positive_attr, const AlgoAttribute& negative_attr) {
     using namespace conv_bias;
     AlgoBase::SizeArgs args{this, src, filter, bias, z, dst};
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
     if (sm_algo_pack.cudnn_conv_v8.is_available_attribute(
                 args, positive_attr, negative_attr, workspace_limit_in_bytes)) {
         return &sm_algo_pack.cudnn_conv_v8;

@@ -1,5 +1,5 @@
 #include "src/cuda/cudnn_wrapper_v8.h"
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
 #include "src/cuda/cudnn_wrapper.h"
 
 #include "src/common/utils.h"

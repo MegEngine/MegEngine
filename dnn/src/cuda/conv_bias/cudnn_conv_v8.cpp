@@ -3,7 +3,7 @@
 #include "src/cuda/cudnn_wrapper_v8.h"
 #include "src/cuda/utils.h"
 
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
 using namespace megdnn;
 using namespace cuda;
 using namespace conv_bias;

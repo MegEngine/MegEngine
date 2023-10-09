@@ -238,7 +238,7 @@ private:
     CudnnAlgoPack::Attr m_attr;
 };
 
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
 class ConvBiasForwardImpl::AlgoCUDNNConvBiasActivationV8 final
         : public AlgoCUDNNConvBiasActivationBase {
 public:
@@ -416,7 +416,7 @@ private:
     CudnnAlgoPack::Attr m_attr;
 };
 
-#if CUDNN_VERSION >= 8020
+#if CUDNN_VERSION >= 8020 && 0  // FIXME(hc): need fix
 class ConvBiasForwardImpl::AlgoCUDNNConvV8 final : public AlgoCUDNNConvBase {
 public:
     AlgoCUDNNConvV8() : AlgoCUDNNConvBase() {
@@ -1289,7 +1289,10 @@ public:
     AlgoGroupConvGeneral group;
     AlgoBFloat16 bfloat16;
     AlgoSimpleInt1 int1_simple;
-#if CUDNN_VERSION >= 8020
+
+    // FIXME(hc): need fix, have bad result on cuda11.4+cudnn8.2.1, e.g. unit-test
+    // CUDA.CONV_BIAS_V8_IMMA cannot pass
+#if CUDNN_VERSION >= 8020 && 0
     AlgoCUDNNConvV8 cudnn_conv_v8;
     AlgoCUDNNConvBiasActivationV8 cudnn_conv_bias_activation_v8;
 #endif
