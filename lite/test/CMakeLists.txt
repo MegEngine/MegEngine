@@ -14,7 +14,9 @@ if(MGE_WITH_TEST)
   endif()
 
   if(UNIX)
-    if(APPLE OR ANDROID)
+    if(APPLE
+       OR ANDROID
+       OR OHOS)
       target_link_libraries(lite_test dl)
     else()
       target_link_libraries(lite_test dl rt)

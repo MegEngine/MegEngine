@@ -35,7 +35,9 @@ if(LITE_BUILD_WITH_MGE AND MGE_WITH_ROCM)
 endif()
 
 if(UNIX)
-  if(APPLE OR ANDROID)
+  if(APPLE
+     OR ANDROID
+     OR OHOS)
     target_link_libraries(load_and_run dl)
   else()
     target_link_libraries(load_and_run dl rt)
@@ -71,7 +73,9 @@ if(BUILD_SHARED_LIBS)
   endif()
 
   if(UNIX)
-    if(APPLE OR ANDROID)
+    if(APPLE
+       OR ANDROID
+       OR OHOS)
       target_link_libraries(load_and_run_depends_shared dl)
     else()
       target_link_libraries(load_and_run_depends_shared dl rt)

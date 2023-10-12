@@ -243,12 +243,15 @@ if(MGB_WITH_FLATBUFFERS)
 endif()
 if(UNIX
    AND NOT ANDROID
+   AND NOT OHOS
    AND NOT APPLE)
   target_link_libraries(megbrain PUBLIC dl rt atomic)
 endif()
 
 if(ANDROID)
   target_link_libraries(megbrain PUBLIC log)
+elseif(OHOS)
+  target_link_libraries(megbrain PUBLIC hilog_ndk.z)
 endif()
 
 set(_VER_FILE ${PROJECT_SOURCE_DIR}/src/version.ld)

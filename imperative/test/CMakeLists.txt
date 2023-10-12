@@ -58,7 +58,9 @@ if(CXX_SUPPORT_WCLASS_MEMACCESS)
 endif()
 
 if(UNIX)
-  if(APPLE OR ANDROID)
+  if(APPLE
+     OR ANDROID
+     OR OHOS)
     target_link_libraries(imperative_test dl)
   else()
     target_link_libraries(imperative_test dl rt)

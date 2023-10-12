@@ -47,7 +47,7 @@ else()
     ${MODULE_NAME} PRIVATE megengine_shared -Wl,--version-script=${MGE_VERSION_SCRIPT})
 endif()
 
-if(ANDROID)
+if(ANDROID OR OHOS)
   target_link_libraries(${MODULE_NAME} PRIVATE ${PYTHON_LIBRARIES})
 endif()
 

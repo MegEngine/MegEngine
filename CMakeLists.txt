@@ -235,7 +235,7 @@ if(NOT APPLE)
     # ANDROID
     check_cxx_compiler_flag("-Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld"
                             LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL)
-    if(LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL AND ANDROID)
+    if(LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL AND (ANDROID OR OHOS))
       message(STATUS "icf is supported in this compiler")
       set(CMAKE_EXE_LINKER_FLAGS
           "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld")
@@ -269,6 +269,10 @@ if(MGB_WITH_FLATBUFFERS)
   set(MGB_ENABLE_FBS_SERIALIZATION ON)
 endif()
 
+if(OHOS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
+endif()
+
 if(CMAKE_TOOLCHAIN_FILE)
   message(STATUS "We are cross compiling.")
   message(
@@ -287,6 +291,14 @@ if(CMAKE_TOOLCHAIN_FILE)
       set(MGE_ARCH "aarch64")
     else()
       message(FATAL_ERROR "DO NOT SUPPORT ANDROID ARCH NOW")
+    endif()
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+    if(${OHOS_ARCH} STREQUAL "armeabi-v7a")
+      set(MGE_ARCH "armv7")
+    elseif(${OHOS_ARCH} STREQUAL "arm64-v8a")
+      set(MGE_ARCH "aarch64")
+    else()
+      message(FATAL_ERROR "DO NOT SUPPORT OHOS ARCH NOW")
     endif()
   elseif(IOS_TOOLCHAIN_ROOT)
     if(${IOS_ARCH} STREQUAL "armv7")
@@ -509,6 +521,8 @@ else()
     set(OPTIMIZE_LEVEL "-g -O0 -DNDEBUG -fsanitize=address -fno-omit-frame-pointer")
   elseif(ANDROID)
     set(OPTIMIZE_LEVEL "-g -Ofast -DNDEBUG")
+  elseif(OHOS)
+    set(OPTIMIZE_LEVEL "-g -Ofast -DNDEBUG")
   else()
     set(OPTIMIZE_LEVEL "-g -O3 -DNDEBUG")
   endif()
@@ -528,8 +542,12 @@ else()
   # big, clang ld will take a long long long time when use -static-libsan, so we use
   # dynamic asan by default ANDROID asan.so depends on log, so broadcast log
   # link_libraries for megengine depends target, for example flatc target
-  if(MGE_BUILD_WITH_ASAN AND ANDROID)
-    link_libraries(log)
+  if(MGE_BUILD_WITH_ASAN)
+    if(ANDROID)
+      link_libraries(log)
+    elseif(OHOS)
+      link_libraries(hilog_ndk.z)
+    endif()
   endif()
 endif()
 
@@ -550,6 +568,7 @@ if(MGE_WITH_LARGE_ARCHIVE)
 elseif(
   CXX_SUPPORT_GOLD
   AND NOT ANDROID
+  AND NOT OHOS
   AND NOT APPLE
   AND NOT MSVC
   AND NOT WIN32
@@ -683,7 +702,9 @@ if(NOT MGE_ENABLE_EXCEPTIONS)
   add_definitions(-Wno-format-security)
 endif()
 
-if(MGE_BUILD_IMPERATIVE_RT OR ANDROID)
+if(MGE_BUILD_IMPERATIVE_RT
+   OR ANDROID
+   OR OHOS)
   message(STATUS "config cxx standard to 17.")
   set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -1158,7 +1179,8 @@ endif()
 if(CMAKE_THREAD_LIBS_INIT
    OR CMAKE_HAVE_LIBC_PTHREAD
    OR CMAKE_USE_WIN32_THREADS_INIT
-   OR ANDROID)
+   OR ANDROID
+   OR OHOS)
   set(MGB_HAVE_THREAD 1)
 endif()
 
@@ -1271,7 +1293,7 @@ endif()
 if(MGE_ARCH STREQUAL "armv7")
   # -funsafe-math-optimizations to enable neon auto-vectorization (since neon is not
   # fully IEEE 754 compatible, GCC does not turn on neon auto-vectorization by default.
-  if(ANDROID)
+  if(ANDROID OR OHOS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfloat-abi=softfp -mfpu=neon")
   endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funsafe-math-optimizations")

@@ -92,6 +92,10 @@ if(ANDROID)
   link_libraries(log)
   target_link_libraries(lite_static PRIVATE log)
   target_link_libraries(lite_shared PRIVATE log)
+elseif(OHOS)
+  link_libraries(hilog_ndk.z)
+  target_link_libraries(lite_static PRIVATE hilog_ndk.z)
+  target_link_libraries(lite_shared PRIVATE hilog_ndk.z)
 endif()
 
 # define a shared lib for whl
@@ -105,6 +109,8 @@ if(LITE_BUILD_WITH_MGE)
 endif()
 if(ANDROID)
   target_link_libraries(lite_shared_whl PRIVATE log)
+elseif(OHOS)
+  target_link_libraries(lite_shared_whl PRIVATE hilog_ndk.z)
 endif()
 
 # add lite_static_all_in_one same name build by BUILD please do not change
@@ -161,7 +167,7 @@ if(NOT MSVC AND NOT WIN32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 endif()
 # TODO: implemente version script for other OS
-if(UNIX AND NOT APPLE)
+if((UNIX OR OHOS) AND NOT APPLE)
   target_link_options(lite_shared PRIVATE -Wl,--version-script=${LITE_VERSION_SCRIPT})
   set_target_properties(lite_shared PROPERTIES LINK_DEPENDS ${LITE_VERSION_SCRIPT})
   target_link_options(lite_shared_whl PRIVATE

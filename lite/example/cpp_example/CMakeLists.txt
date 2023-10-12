@@ -14,7 +14,9 @@ if(LITE_BUILD_WITH_MGE AND MGE_WITH_ROCM)
 endif()
 
 if(UNIX)
-  if(APPLE OR ANDROID)
+  if(APPLE
+     OR ANDROID
+     OR OHOS)
     target_link_libraries(lite_examples dl)
   else()
     target_link_libraries(lite_examples dl rt)
@@ -38,7 +40,9 @@ target_link_libraries(lite_examples_depends_shared lite_shared)
 target_include_directories(lite_examples_depends_shared PUBLIC ./)
 
 if(UNIX)
-  if(APPLE OR ANDROID)
+  if(APPLE
+     OR ANDROID
+     OR OHOS)
     target_link_libraries(lite_examples_depends_shared dl)
   else()
     target_link_libraries(lite_examples_depends_shared dl rt)

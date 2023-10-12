@@ -55,7 +55,9 @@ endif()
 target_include_directories(megdnn_test
                            PRIVATE ${PROJECT_SOURCE_DIR}/third_party/midout/src)
 
-if(APPLE OR ANDROID)
+if(APPLE
+   OR ANDROID
+   OR OHOS)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 else()
   set(CMAKE_EXE_LINKER_FLAGS
@@ -71,7 +73,9 @@ if(MEG_WITH_ROCM)
 endif()
 
 if(UNIX)
-  if(APPLE OR ANDROID)
+  if(APPLE
+     OR ANDROID
+     OR OHOS)
     target_link_libraries(megdnn_test dl)
   else()
     target_link_libraries(megdnn_test dl rt)
