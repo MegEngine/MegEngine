@@ -898,20 +898,21 @@ std::unique_ptr<ConvertF32ToF16Pass> ConvertF32ToF16Pass::make(bool use_f32_comp
                                       const VarNodeArray& new_inp) {
         auto& reduce_opr = opr->cast_final_safe<opr::Reduce>();
         auto new_param = reduce_opr.param();
-        if (use_f32_comp) {
+        if (use_f32_comp &&
+            opr->input(0)->dtype().category() == megdnn::DTypeCategory::FLOAT) {
             new_param.data_type = megdnn::param::Reduce::DataType::FLOAT_O16xC32;
         }
         if (opr->input().size() == 1) {
-            auto new_matmul_opr =
+            auto new_reduce_opr =
                     opr::Reduce::make(new_inp[0], new_param, {}, reduce_opr.config());
-            return new_matmul_opr.node()->owner_opr();
+            return new_reduce_opr.node()->owner_opr();
         } else {
             mgb_assert(
                     opr->input().size() == 2, "invalid input size %zu",
                     opr->input().size());
-            auto new_matmul_opr = opr::Reduce::make(
+            auto new_reduce_opr = opr::Reduce::make(
                     new_inp[0], new_param, new_inp[1], reduce_opr.config());
-            return new_matmul_opr.node()->owner_opr();
+            return new_reduce_opr.node()->owner_opr();
         }
     };
 
