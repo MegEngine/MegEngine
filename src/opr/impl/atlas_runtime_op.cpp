@@ -38,8 +38,8 @@ TensorShape acl_shape_to_mgb_shape_for_output(
                 "shapes other than the batch. expect 0, but got %zu\n",
                 batch % chw);
         batch /= chw;
+        ret[0] = batch;
     }
-    ret[0] = batch;
     return ret;
 }
 
@@ -460,6 +460,7 @@ void AtlasRuntimeOpr::get_output_var_shape(
                 "from megbrain");
     }
     for (size_t i = 0; i < inp_shape.size(); ++i) {
+        batch_size = inp_shape[i][0];
         aclmdlIODims input_dims;
         MGB_ATLAS_CHECK(aclmdlGetInputDimsV2(m_model_desc, i, &input_dims));
         auto om_format = aclmdlGetInputFormat(m_model_desc, i);
