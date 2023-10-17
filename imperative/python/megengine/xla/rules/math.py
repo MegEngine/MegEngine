@@ -8,8 +8,10 @@ from ..ir_utils import bool_attr, i64_attr
 from ..lib.mlir import ir
 from ..lib.mlir.dialects import chlo, hlo
 from ..utils import flatten_list
+from .elemwise import log, logical_and, logical_not, maximum, minimum, pow, round
 from .hlotensor import HLOTensor
 from .indexing import ScatterDimensionNumbers, scatter
+from .reduction import sum
 from .tensor import concat, expand_dims, fill, iota
 from .utils import _can_broadcast_to, _shape_equal, register_lower_rule
 
@@ -434,3 +436,74 @@ def topk_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         assert len(ctx.vars_out) == 1, f"{len(ctx.vars_out)}"
 
     return topk(args[0], k, descending, kth_only, no_sort)
+
+
+@register_lower_rule(mops.FakeQuant)
+def fakequant_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 3 and len(ctx.vars_in) == 3
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    assert args[1].ndim == args[2].ndim, f"{args[1].shape}, {args[2].shape}"
+    qmax = np.array(ctx.param["qmax"], dtype=args[0].dtype)
+    qmin = np.array(ctx.param["qmin"], dtype=args[0].dtype)
+    inp, scale, zero_point = args[:3]
+    res = round(inp / scale) + zero_point
+    res = minimum(maximum(res, qmin), qmax)
+    res = (res - zero_point) * scale
+    return res
+
+
+@register_lower_rule("FakeQuantBackward")
+def fakequant_grad_rule(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 4 and len(ctx.vars_in) == 4
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    assert args[0].ndim == args[1].ndim, f"{args[0].shape}, {args[1].shape}"
+    assert args[2].ndim == args[3].ndim, f"{args[2].shape}, {args[3].shape}"
+    diff, inp, scale, zere_point = args[:4]
+    x = round(inp / scale) + zere_point
+    qmax = np.array(ctx.param["qmax"], dtype=x.dtype)
+    qmin = np.array(ctx.param["qmin"], dtype=x.dtype)
+    mask1 = x <= qmax
+    mask2 = x >= qmin
+    mask = logical_and(mask1, mask2).astype(diff.dtype)
+    return diff * mask
+
+
+@register_lower_rule(mops.TQT)
+def tqt_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 2 and len(ctx.vars_in) == 2
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    qmax = np.array(ctx.param["qmax"], dtype=args[0].dtype)
+    qmin = np.array(ctx.param["qmin"], dtype=args[0].dtype)
+    t = pow(np.array(2, dtype=args[1].dtype), args[1])
+    res = round(args[0] / t)
+    res = maximum(minimum(res, qmax), qmin)
+    return res * t
+
+
+@register_lower_rule("TQTBackward")
+def tqt_grad_rule(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 3 and len(ctx.vars_in) == 3
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    assert args[0].ndim == args[1].ndim, f"{args[0].shape}, {args[1].shape}"
+    t = pow(np.array(2, dtype=args[1].dtype), args[2])
+    scaled = args[1] / t
+    rounded = round(scaled)
+    qmax = np.array(ctx.param["qmax"], dtype=rounded.dtype)
+    qmin = np.array(ctx.param["qmin"], dtype=rounded.dtype)
+    rounded = maximum(minimum(rounded, qmax), qmin)
+    mask1 = scaled < -0.5 + qmin
+    mask2 = scaled > 0.5 + qmax
+    mask_clip = mask1 + mask2
+    mask_quant = logical_not(mask_clip)
+
+    grad_x = args[0] * mask_quant.astype(args[0].dtype)
+    grad_quant = (
+        args[0] * mask_quant.astype(args[0].dtype) * (rounded - scaled) * t * log(2.0)
+    )
+    grad_clip = args[0] * mask_clip.astype(args[0].dtype) * rounded * t * log(2.0)
+    grad_s = grad_quant + grad_clip
+    return [grad_x, grad_s]

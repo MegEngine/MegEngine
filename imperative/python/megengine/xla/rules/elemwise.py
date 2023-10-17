@@ -287,6 +287,10 @@ def gelu_grad(x, dy, approximate: bool = True):
     return ret
 
 
+def fuse_add_relu(x, y):
+    return relu(x + y)
+
+
 def relu(inp):
     mask = (inp > 0.0).astype(inp.dtype)
     return inp * mask
@@ -427,6 +431,7 @@ mge_elemwise_to_xla = {
     str(mops.Elemwise.Mode.POW): pow,
     str(mops.Elemwise.Mode.EXPM1): expm1,
     str(mops.Elemwise.Mode.RELU): relu,
+    str(mops.Elemwise.Mode.FUSE_ADD_RELU): fuse_add_relu,
     str(mops.Elemwise.Mode.EQ): equal,
     str(mops.Elemwise.Mode.NEQ): not_equal,
     str(mops.Elemwise.Mode.LT): less,
