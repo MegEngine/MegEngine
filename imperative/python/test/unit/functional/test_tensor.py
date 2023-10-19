@@ -19,7 +19,7 @@ from megengine.utils.network_node import VarNode
 
 
 def test_eye():
-    dtypes = [np.float32, np.bool]
+    dtypes = [np.float32, np.bool_]
     cases = [{"input": [10, 20]}, {"input": [30]}]
     for dtype in dtypes:
         for case in cases:

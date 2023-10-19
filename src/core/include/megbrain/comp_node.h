@@ -225,6 +225,9 @@ public:
     //! deallocate device buffer; see alloc_device() for more details
     MGE_WIN_DECLSPEC_FUC void free_device(void* ptr) const;
 
+    //! make a free memory block with specified size in the memory pool
+    MGE_WIN_DECLSPEC_FUC void make_free_mem_block_device(size_t size) const;
+
     /*!
      * \brief allocate memory on host that is associated with the device,
      *      which may accelerate I/O
@@ -311,6 +314,9 @@ public:
     MGE_WIN_DECLSPEC_FUC static DeviceProperties get_device_prop(
             int dev, DeviceType device_type);
 
+    MGE_WIN_DECLSPEC_FUC static size_t get_device_left_memory(
+            int dev, DeviceType device_type);
+
     /*!
      * \brief get control of host ptr to user
      */
@@ -387,6 +393,8 @@ public:
             size_t begin_ptr, size_t end_ptr) {
         return m_impl->get_free_left_and_right(begin_ptr, end_ptr);
     }
+
+    void log_mem_pool_details() const { m_impl->log_mem_pool_details(); }
 
     size_t get_used_memory() const { return m_impl->get_used_memory(); }
 
@@ -614,6 +622,11 @@ protected:
 #if !MGB_BUILD_SLIM_SERVING
         virtual std::pair<size_t, size_t> get_free_left_and_right(size_t x, size_t y) {
             return {x - x, y - y};
+        }
+        virtual void log_mem_pool_details() {
+            mgb_log_debug(
+                    "log_mem_pool_details is not implemented on %s\n",
+                    locator().to_string().c_str());
         }
         virtual size_t get_used_memory() { return 0; }
         virtual size_t get_reserved_memory() { return 0; }

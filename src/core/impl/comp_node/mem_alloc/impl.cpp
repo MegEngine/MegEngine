@@ -73,16 +73,6 @@ MemAllocImplHelper::MemAddr MemAllocImplHelper::do_alloc(
         }
         return alloc_from_parent(size);
     }
-
-    constexpr size_t threshold = 512 * 1024 * 1024;
-    if (iter->first.size > size * 8 && iter->first.addr.is_head &&
-        iter->first.size > threshold && pubapi::is_xla_used()) {
-#if !__DEPLOY_ON_XP_SP2__
-        m_mutex.unlock();
-#endif
-        return alloc_from_parent(size);
-    }
-
     size_t remain = iter->first.size - size;
     auto alloc_addr = iter->first.addr;
     m_free_blk_addr.erase(iter->second.aiter);
@@ -162,9 +152,88 @@ FreeMemStat MemAllocImplHelper::get_free_memory() {
     return get_free_memory_self_unsafe();
 }
 
+std::string MemAllocImplHelper::str_free_info(size_t threshold) {
+    if (m_free_blk_size.size() == 0) {
+        return "{}";
+    }
+
+    auto iter = m_free_blk_size.begin();
+    size_t print_item_cnt = m_free_blk_size.size();
+    if (threshold != 0) {
+        print_item_cnt = 5;
+        for (iter = m_free_blk_size.begin(); iter != m_free_blk_size.end(); ++iter) {
+            if (iter->first.size >= threshold) {
+                break;
+            }
+        }
+    }
+
+    std::string ret = "{";
+    for (size_t i = 0; iter != m_free_blk_size.end() && i < print_item_cnt;
+         ++i, ++iter) {
+        ret += std::to_string(iter->first.size);
+        ret += "(";
+        ret += std::to_string(iter->first.addr.is_head);
+        ret += "),";
+    }
+
+    ret.pop_back();
+    ret += "}";
+    return ret;
+}
+
 /* ===================== StreamMemAllocImpl ===================== */
 std::string StreamMemAllocImpl::get_name() const {
     return ssprintf("stream allocator %d@%d", m_stream_id, m_dev_alloc->device());
+}
+
+void StreamMemAllocImpl::print_memory_state() {
+    auto in_detail = MGB_GETENV("_DEBUG_LOG_MEM_ALLOC_DETAIL");
+    if (in_detail) {
+        MemAllocImplHelper::print_memory_state();
+        return;
+    }
+
+    std::map<size_t, size_t> used_info, free_info;
+    size_t total_used_size = 0, total_free_size = 0;
+
+    {
+        MGB_LOCK_GUARD(m_mutex);
+        for (auto&& kv : m_allocated_blocks) {
+            total_used_size += kv.second.size;
+            if (used_info.find(kv.second.size) == used_info.end()) {
+                used_info[kv.second.size] = 1;
+            } else {
+                used_info[kv.second.size] += 1;
+            }
+        }
+
+        for (auto&& kv : m_free_blk_size) {
+            total_free_size += kv.first.size;
+            if (free_info.find(kv.first.size) == free_info.end()) {
+                free_info[kv.first.size] = 1;
+            } else {
+                free_info[kv.first.size] += 1;
+            }
+        }
+    }
+
+    auto mem_info_to_str = [](const std::map<size_t, size_t>& mp) -> std::string {
+        std::string ret;
+        for (auto&& kv : mp) {
+            std::string tmp =
+                    std::to_string(kv.first) + "(" + std::to_string(kv.second) + ") ";
+            ret += tmp;
+        }
+        return ret;
+    };
+
+    mgb_log("%s: used %zu block, total size %zu KB, list used block as below\n%s\n",
+            get_name().c_str(), m_allocated_blocks.size(), total_used_size / 1024,
+            mem_info_to_str(used_info).c_str());
+    mgb_log("%s: free %zu block, total size %zu KB, list free block as below\n%s\n",
+            get_name().c_str(), m_allocated_blocks.size(), total_used_size / 1024,
+            mem_info_to_str(used_info).c_str());
 }
 
 void* StreamMemAllocImpl::alloc(size_t size) {

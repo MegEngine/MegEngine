@@ -839,7 +839,7 @@ def where(mask: Tensor, x: Tensor = None, y: Tensor = None) -> Tensor:
 
     Examples:
         >>> import numpy as np
-        >>> mask = Tensor(np.array([[True, False], [False, True]], dtype=np.bool))
+        >>> mask = Tensor(np.array([[True, False], [False, True]], dtype=np.bool_))
         >>> x = Tensor(np.array([[1, np.inf], [np.nan, 4]],
         ...     dtype=np.float32))
         >>> y = Tensor(np.array([[5, 6], [7, 8]], dtype=np.float32))

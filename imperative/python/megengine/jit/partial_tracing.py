@@ -226,6 +226,15 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                     if len(backward_trace_obj._trace.ops) > 0:
                         custom_autodiff = CustomAutodiff(trace_obj, backward_trace_obj)
                     else:
+                        # we always construct two xla_trace obj in partial_trace,
+                        # one for forward and another for backward. so the value of the
+                        # _expect_xlacompile_cnt is updated by "+= 2". but in some times
+                        # there is no backward, so we should minus one at this time for
+                        # _expect_xlacompile_cnt
+                        from .xla_backend import _expect_xlacompile_cnt_minus_one
+
+                        if backend == "xla":
+                            _expect_xlacompile_cnt_minus_one()
                         custom_autodiff = CustomFwd(trace_obj, backward_trace_obj)
                 fargs = trace_obj.flatten_inputs(*args, **kwargs)
                 if check_shape and get_shape_hash(*fargs) != shape_hash:

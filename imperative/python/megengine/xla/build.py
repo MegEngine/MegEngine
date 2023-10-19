@@ -116,5 +116,5 @@ def build_xla(
 
     ret = compiled.unsafe_call
     if return_with_io:
-        return ret, tr.inputs, tr.outputs
-    return ret
+        return tr, ret, tr.inputs, tr.outputs
+    return tr, ret

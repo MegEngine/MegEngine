@@ -21,6 +21,7 @@ public:
     static Impl* load_cuda(const Locator& locator, const Locator& locator_logical);
     static void sync_all();
     static DeviceProperties get_device_prop(int dev);
+    static size_t get_device_left_memory(int dev);
 
     static void set_prealloc_config(
             size_t alignment, size_t min_req, size_t max_overhead,

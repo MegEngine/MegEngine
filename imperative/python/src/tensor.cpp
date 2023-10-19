@@ -1,4 +1,5 @@
 #include "megbrain/common.h"
+#include "megbrain/comp_node_api.h"
 #include "megbrain/dtype.h"
 #include "megbrain/imperative/backtrace.h"
 #include "megbrain/imperative/cpp_cupti.h"
@@ -1929,6 +1930,11 @@ void init_tensor(py::module m) {
         return py::reinterpret_steal<py::object>(
                 tensor_from_dlpack(data.ptr(), stream.ptr()));
     });
+
+    m.def("log_xla_mem_states", []() { pubapi::log_xla_mem_states(); });
+
+    m.def("reset_xla_mem_states", []() { pubapi::reset_xla_mem_states(); });
+
     py::register_exception<TraceError>(m, "TraceError");
 
     m.def("create_complex", [](py::object real, py::object imag) {

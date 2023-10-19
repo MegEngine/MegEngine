@@ -57,14 +57,12 @@ class Pass(ABC):
 # rng key tensor to the graph and set it as the input of the graph and rng op
 class RngKeyAdder(Pass):
     def __call__(self, tr) -> Any:
-        has_rng_opr = False
-
         for eqn in tr.eqns:
             if _is_rng_op(eqn.op):
-                has_rng_opr = True
+                tr.has_rng_opr = True
                 break
 
-        if not has_rng_opr:
+        if not tr.has_rng_opr:
             return tr
 
         # it should be [2, np.uint64], however, megengine donot support np.uint64/np.int64/np.uint32
@@ -124,6 +122,7 @@ class TraceResult:
         self.custom_vid = 0
 
         self.effects = []
+        self.has_rng_opr = False
 
         for var in self.traced.vars:
             self.add_var(var)

@@ -112,6 +112,8 @@ void init_common(py::module m) {
                                 res.append(locator.stream);
                                 return res;
                             })
+                    .def("_log_mem_pool_details",
+                         [](const CompNode& cn) -> void { cn.log_mem_pool_details(); })
                     .def_property_readonly(
                             "get_mem_status_bytes",
                             [](const CompNode& cn) {
@@ -137,6 +139,10 @@ void init_common(py::module m) {
                                 cn.reset_max_used_memory();
                                 cn.reset_max_reserved_memory();
                             })
+                    .def("make_free_mem_block_device",
+                         [](const CompNode& cn, int64_t size) {
+                             cn.make_free_mem_block_device(static_cast<size_t>(size));
+                         })
                     .def("create_event", &CompNode::create_event,
                          py::arg("flags") = 0ul)
                     .def_static("_set_default_device", &set_default_device)
@@ -287,6 +293,7 @@ void init_common(py::module m) {
           "specifies how to pre-allocate from raw dev allocator");
 
     m.def("get_device_prop", &CompNode::get_device_prop);
+    m.def("get_device_left_memory", &CompNode::get_device_left_memory);
 
     m.def("get_supported_sm_versions", []() {
 #if MEGDNN_WITH_CUDA

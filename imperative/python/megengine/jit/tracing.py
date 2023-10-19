@@ -306,11 +306,11 @@ class trace:
                         if k == "params":
                             continue
                         if not isinstance(v, (Tensor, Sequence)):
-                            param_group[k] = Tensor(v)
+                            param_group[k] = Tensor(v, dtype="float32")
                         elif isinstance(v, Sequence) and not isinstance(v[0], Tensor):
                             new_v = []
                             for i in range(len(v)):
-                                new_v.append(Tensor(v[i]))
+                                new_v.append(Tensor(v[i], dtype="float32"))
                             param_group[k] = new_v
 
     def setup_io_without_trace(self, inputs, outputs):

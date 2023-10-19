@@ -293,6 +293,8 @@ public:
     uint64_t get_uid() override { return m_uid; }
 
 #if !MGB_BUILD_SLIM_SERVING
+    void log_mem_pool_details() override;
+
     size_t get_used_memory() override;
 
     size_t get_max_used_memory() override;
@@ -527,6 +529,11 @@ void CudaCompNodeImpl::free_device(void* ptr) {
 }
 
 #if !MGB_BUILD_SLIM_SERVING
+
+void CudaCompNodeImpl::log_mem_pool_details() {
+    m_mem_alloc->print_memory_state();
+}
+
 size_t CudaCompNodeImpl::get_used_memory() {
     return m_device_info->m_used_mem.load();
 }
@@ -1123,6 +1130,16 @@ CompNode::DeviceProperties CudaCompNode::get_device_prop(int dev) {
     return rec.prop;
 }
 
+size_t CudaCompNode::get_device_left_memory(int dev) {
+    int cnt = static_cast<int>(get_device_count());
+    mgb_assert(
+            dev >= 0 && dev < cnt, "request gpu %d out of valid range [0, %d)", dev,
+            cnt);
+    size_t free_bytes, total_bytes;
+    MGB_CALL_CUDA_FORKSAFE(cuMemGetInfo, &free_bytes, 1, &total_bytes);
+    return free_bytes;
+}
+
 #else
 
 bool CudaCompNode::available() {
@@ -1144,6 +1161,10 @@ void CudaCompNode::set_prealloc_config(
 
 CompNode::DeviceProperties CudaCompNode::get_device_prop(int dev) {
     return CompNode::DeviceProperties{};
+}
+
+size_t CudaCompNode::get_device_left_memory(int dev) {
+    return 0;
 }
 
 #undef err

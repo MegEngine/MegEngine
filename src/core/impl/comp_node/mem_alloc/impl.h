@@ -111,6 +111,8 @@ public:
 #if !MGB_BUILD_SLIM_SERVING
     size_t get_max_block_size_available() override final;
 #endif
+
+    std::string str_free_info(size_t threshold);
 };
 
 class StreamMemAllocImpl final : public StreamMemAlloc, public MemAllocImplHelper {
@@ -138,6 +140,7 @@ class StreamMemAllocImpl final : public StreamMemAlloc, public MemAllocImplHelpe
     FreeMemStat get_free_memory_dev() override;
 
 public:
+    void print_memory_state() override;
     StreamMemAllocImpl(DevMemAllocImpl* dev_alloc, int stream_id)
             : m_dev_alloc(dev_alloc), m_stream_id(stream_id) {}
 };

@@ -307,7 +307,7 @@ def test_topk(descending, sorted, inp1d, kth_only):
 
 @pytest.mark.parametrize("is_trace", [True, False])
 def test_reduce_on_empty_tensor(is_trace):
-    dtypes = [np.float32, np.int32, np.bool]
+    dtypes = [np.float32, np.int32, np.bool_]
     inputs = [
         (np.random.random((0,)), None),
         (np.random.random((3, 0, 2)), 1),

@@ -1,4 +1,4 @@
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 import numpy as np
 
@@ -15,6 +15,7 @@ from ..core._imperative_rt.core2 import (
 from ..core._imperative_rt.ops import get_global_rng_seed as _get_global_rng_seed
 from ..core._trace_option import set_use_xla_backend
 from ..device import get_default_device
+from ..logger import get_logger
 from ..tensor import Tensor
 from ..utils.dlpack import from_dlpack, to_dlpack
 from .tracing import trace
@@ -25,7 +26,25 @@ try:
 except ImportError as e:
     pass
 
+logger = get_logger(__name__)
+
 xla_client_compute_stream = None
+# to record how much memory imperative mode occupying
+_max_reserved_before_compile = None
+# we want to alloc a huge block after all xla compilation completed to avoid memory
+# fragment. we use these three varible to do that. everytime we construct a xlatrace
+# object, we increase `_expect_xlacompile_cnt` by 1, which means it will be compiled.
+# everytime we have compiled a xlatrace object, we increase `_actual_xlacompile_cnt`
+# by 1. if `_actual_xlacompile_cnt` == `_expect_xlacompile_cnt`, that means all
+# compilation have been completed, so we can alloc the huge block at this time.
+_all_compilation_completed = False
+_expect_xlacompile_cnt = 0
+_actual_xlacompile_cnt = 0
+
+
+def _expect_xlacompile_cnt_minus_one():
+    global _expect_xlacompile_cnt
+    _expect_xlacompile_cnt -= 1
 
 
 def apply_external_convert_hook(input, cn):
@@ -82,6 +101,11 @@ class xla_trace(trace):
         set_py_external_type(ArrayImpl)
         set_external_convert()
 
+        # everytime we construct a xla_trace object, which means a compilation will
+        # happen soon, so we increase `_expect_xlacompile_cnt` by one.
+        global _expect_xlacompile_cnt
+        _expect_xlacompile_cnt = _expect_xlacompile_cnt + 1
+
         super().__init__(
             function, without_host=without_host, symbolic_shape=symbolic_shape, **kwargs
         )
@@ -132,27 +156,84 @@ class xla_trace(trace):
 
     def compile(self):
         from ..xla import build_xla
-        from ..traced_module.pytree import SUPPORTED_LEAF_TYPE, register_supported_type
-        from ..utils.module_utils import get_expand_structure
-        from ..xla.device import get_xla_backend_and_device
         from ..tensor import Tensor
         from ..distributed import get_mm_server_addr, is_distributed, get_rank
-        from ..device import coalesce_free_memory
+        from ..device import (
+            coalesce_free_memory,
+            get_max_reserved_memory,
+            _get_cuda_left_memory,
+            get_cuda_device_property,
+            _make_free_mem_block_device,
+        )
 
         assert self.traced
+
+        global _max_reserved_before_compile, _all_compilation_completed
+
+        # some huge memory blocks will be used when xla executing in general, which can
+        # easily lead to memory fragmentation, so we prealloc a block to avoid this
+        # problem.
+        if _all_compilation_completed is True:
+            logger.warning(
+                "using xla in two independent workload in one process, which may cause memory fragment"
+            )
+        # the xla device is the "gpux" but the megengine default device is "xpux". they
+        # have different memory allocator, which may cause memory fragment
+        if "gpu" not in get_default_device():
+            logger.warning(
+                "should specify default device as `gpu` rather than `xpu` before use xla, if not may cause memory fragment"
+            )
+
+        if _max_reserved_before_compile is None:
+            _full_sync()
+            _max_reserved_before_compile = get_max_reserved_memory(get_default_device())
+
+        # several ~GB level memory blocks will be applied when compiling in general,
+        # which can easily lead to memory fragmentation. so we prealloc a huge block to
+        # avoid this problem before compilation. concretely, wo prealloc 90% of the left
+        # memory.
         coalesce_free_memory()
         _full_sync()
-        self.xla_exec, self.inp_ids, self.out_ids = build_xla(
+        _make_free_mem_block_device(
+            get_default_device(), int(_get_cuda_left_memory(get_rank()) * 0.9)
+        )
+        _full_sync()
+
+        self.tr, self.xla_exec, self.inp_ids, self.out_ids = build_xla(
             self,
             return_with_io=True,
             return_device_array=True,
             ip=get_mm_server_addr()[0] if is_distributed() else None,
             port=get_mm_server_addr()[1] + 1 if is_distributed() else None,
         )
+        global _expect_xlacompile_cnt, _actual_xlacompile_cnt
+        # everytime we have compiled once, we increase `_actual_xlacompile_cnt` by 1
+        _actual_xlacompile_cnt += 1
         if self.overall:
             self.convert_params_to_xla()
+
+        # release the huge memory block after compilation
         coalesce_free_memory()
         _full_sync()
+
+        # some huge memory blocks will be used when xla executing in general, which can
+        # easily lead to memory fragmentation, so we prealloc a block to avoid this
+        # problem. we do the preallocation after all compilation have been completed.
+        # we set `_all_compilation_completed` to true when the `_actual_xlacompile_cnt`
+        # equal to the `_expect_xlacompile_cnt`. you can read the notes of
+        if _actual_xlacompile_cnt == _expect_xlacompile_cnt:
+            _all_compilation_completed = True
+
+            # because we hope the memory occupancy of xla version <= the memory occupancy of
+            # imperative version, so we prealloc a block of size (mem_occup_of_imperative - cur_mem_use).
+            # however, in megengine getting the current memory usage accurately is hard,
+            # so we prealloc according to the system left memory. the result is similar
+            total = get_cuda_device_property(get_rank()).total_memory
+            left = _get_cuda_left_memory(get_rank())
+            should_left = total - _max_reserved_before_compile
+            if left > should_left:
+                _make_free_mem_block_device(get_default_device(), left - should_left)
+
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
         # map inp id to the 0, 1, 2, 3, ...
@@ -162,7 +243,11 @@ class xla_trace(trace):
             id2outidx[oup_id].append(idx)
         self.inpkey2idx = {}
         self.outkey2idx = {}
-        if self.input_num == len(set(self.inp_ids)) - 1:
+        if self.tr.has_rng_opr:
+            assert self.input_num == len(set(self.inp_ids)) - 1, (
+                self.input_num,
+                len(self.inp_ids),
+            )
             self.has_randomstate = True
             default_rng_seed = _get_global_rng_seed()
             high = default_rng_seed >> 32
@@ -300,6 +385,10 @@ class xla_trace(trace):
             if hasattr(self, "outdef")
             else out_tensors
         )
+
+        if self.has_randomstate:
+            self.random_seed = tensor(outputs[-1], device=cn)
+
         if keeped_features:
             return rst, keeped_features
         else:

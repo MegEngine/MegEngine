@@ -5,7 +5,7 @@ from typing import Iterable, Union
 from ..core import _config
 from ..functional.inplace import _inplace_add_
 from ..jit.tracing import is_tracing
-from ..tensor import Parameter, tensor
+from ..tensor import Parameter, Tensor, tensor
 from .optimizer import Optimizer
 
 
@@ -84,7 +84,11 @@ class SGD(Optimizer):
                 grad = grad + param * _weight_decay
 
             if inplace_mode:
-                if is_tracing() or momentum != 0.0:
+                if (
+                    momentum != tensor(0.0)
+                    if isinstance(momentum, Tensor)
+                    else momentum != 0.0
+                ):
                     v = self._state[param]["momentum_buffer"]
                     _inplace_add_(v, grad, alpha=_momentum, beta=c1)
                     if self.nesterov:
@@ -94,7 +98,11 @@ class SGD(Optimizer):
                 _inplace_add_(param, grad, alpha=c1, beta=_neg_lr)
                 continue
 
-            if is_tracing() or momentum != 0.0:
+            if (
+                momentum != tensor(0.0)
+                if isinstance(momentum, Tensor)
+                else momentum != 0.0
+            ):
                 v = self._state[param]["momentum_buffer"]
                 v *= _momentum
                 v += grad

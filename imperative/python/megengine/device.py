@@ -9,6 +9,9 @@ from .core._imperative_rt.common import (
 )
 from .core._imperative_rt.common import get_cuda_version as _get_cuda_version
 from .core._imperative_rt.common import get_cudnn_version as _get_cudnn_version
+from .core._imperative_rt.common import (
+    get_device_left_memory as _get_device_left_memory,
+)
 from .core._imperative_rt.common import get_device_prop as _get_device_prop
 from .core._imperative_rt.common import get_tensorrt_version as _get_tensorrt_version
 from .core._imperative_rt.common import set_prealloc_config as _set_prealloc_config
@@ -173,6 +176,15 @@ def get_cuda_device_property(device: int, device_type=DeviceType.CUDA):
     return _get_device_prop(device, device_type)
 
 
+def _get_cuda_left_memory(device: int):
+    r"""Get the size of the left cuda memory of the specified device in bytes.
+
+    Due to the asynchronous execution of MegEngine, please call megengine._full_sync
+    before calling this function in order to get accurate value.
+    """
+    return _get_device_left_memory(device, DeviceType.CUDA)
+
+
 def get_allocated_memory(device: Optional[str] = None):
     r"""Returns the current memory occupied by tensors on the computing device in bytes.
 
@@ -226,6 +238,20 @@ def reset_max_memory_stats(device: Optional[str] = None):
     if device is None:
         device = get_default_device()
     CompNode.reset_max_memory_stats(device)
+
+
+def _make_free_mem_block_device(device: Optional[str] = None, size: int = 0):
+    r"""Make a free memory block with specified size on the computing device."""
+    if device is None:
+        device = get_default_device()
+    CompNode(device).make_free_mem_block_device(size)
+
+
+def _log_cn_mem_pool_details(device: Optional[str] = None):
+    r"""Log memory pool details on the computing device."""
+    if device is None:
+        device = get_default_device()
+    CompNode(device)._log_mem_pool_details()
 
 
 set_default_device(os.getenv("MGE_DEFAULT_DEVICE", "xpux"))

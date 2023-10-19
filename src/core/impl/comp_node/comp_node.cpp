@@ -429,6 +429,15 @@ CompNode::DeviceProperties CompNode::get_device_prop(int dev, DeviceType device_
     };
 }
 
+size_t CompNode::get_device_left_memory(int dev, DeviceType device_type) {
+    switch (device_type) {
+        case DeviceType::CUDA:
+            return CudaCompNode::get_device_left_memory(dev);
+        default:
+            mgb_throw(MegBrainError, "unsupport device type for get_device_prop");
+    };
+}
+
 void* CompNode::alloc_device(size_t size) const {
     auto ret = m_impl->alloc_device(size);
     static_cast<Impl*>(m_impl)->env().on_mem_event(size, true, ret);
@@ -449,6 +458,19 @@ void* CompNode::alloc_host(size_t size) const {
 void CompNode::free_host(void* ptr) const {
     static_cast<Impl*>(m_impl)->env().on_mem_event(0, false, ptr);
     return m_impl->free_host(m_impl, ptr);
+}
+
+void CompNode::make_free_mem_block_device(size_t size) const {
+    if (size == 0) {
+        return;
+    }
+    MGB_TRY {
+        auto ptr = alloc_device(size);
+        free_device(ptr);
+    }
+    MGB_CATCH(std::exception & exc, {
+        mgb_log_error("failed to make free memory block of size %zu byte", size);
+    })
 }
 
 std::unique_ptr<MegBrainError> CompNode::check_async_error() const {
