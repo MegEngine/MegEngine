@@ -9,6 +9,7 @@
 #include "megbrain/opr/dnn/images2neibs.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/pooling.h"
+#include "megbrain/opr/dnn/softmax.h"
 #include "megbrain/opr/imgproc.h"
 #include "megbrain/opr/misc.h"
 #include "megbrain/opr/nn_int.h"
@@ -1096,6 +1097,7 @@ void ConvertFormatPass::apply(OptState& state) const {
                     new_param.mode = megdnn::param::RelayoutFormat::Mode::NHWC_NHWCD4I;
                     auto new_opr = opr::RelayoutFormat::make(inp, new_param);
                     rewriter.replace_var(opr->output(0), new_opr.node(), nullptr);
+                    return;
                 }
             } else {
                 rewriter.auto_replace_outputs(opr);
@@ -1117,6 +1119,7 @@ void ConvertFormatPass::apply(OptState& state) const {
                     new_param.mode = megdnn::param::RelayoutFormat::Mode::NHWCD4I_NHWC;
                     auto new_opr = opr::RelayoutFormat::make(inp, new_param);
                     rewriter.replace_var(opr->output(0), new_opr.node(), nullptr);
+                    return;
                 }
             } else {
                 rewriter.auto_replace_outputs(opr);
@@ -1808,6 +1811,7 @@ std::unique_ptr<ConvertFormatPass> ConvertFormatPass::make_nhwcd4_converter() {
     replace_func[opr::WarpAffineForward::typeinfo()] = replace_warp_affine_opr;
     replace_func[opr::LocalForward::typeinfo()] = relayout_first_inp_to_chw;
     replace_func[opr::GroupLocalForward::typeinfo()] = relayout_first_inp_to_chw;
+    replace_func[opr::SoftmaxForward::typeinfo()] = relayout_first_inp_to_chw;
     return ret;
     MIDOUT_E
 }
