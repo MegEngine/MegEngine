@@ -29,6 +29,12 @@ bool ConvBiasForwardImpl::AlgoCUDNNConv::is_available(const SizeArgs& args) cons
         return false;
     }
 
+    if (args.src_layout->dtype.enumv() == DTypeEnum::Int8 &&
+        args.src_layout->dtype.enumv() == DTypeEnum::Int8 &&
+        args.dst_layout->dtype.enumv() == DTypeEnum::Int32) {
+        return false;
+    }
+
     // In conv_args.init_conv_desc will call cudnnSetTensor4dDescriptorEx(),which can't
     // been supported when total_nr_elems() > 2 ^ 31
     if (args.src_layout->total_nr_elems() > INT_MAX ||
