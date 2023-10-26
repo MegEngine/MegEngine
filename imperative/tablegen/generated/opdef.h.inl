@@ -1030,6 +1030,24 @@ public:
     }
 };
 
+class GaussianBlur : public OpDefImplBase<GaussianBlur> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    using BorderMode = ::megdnn::param::GaussianBlur::BorderMode;
+    BorderMode border_mode = ::megdnn::param::GaussianBlur::BorderMode::REPLICATE;
+    uint32_t kernel_height = 0;
+    uint32_t kernel_width = 0;
+    float sigma_x = 0.f;
+    float sigma_y = 0.f;
+    GaussianBlur() = default;
+    GaussianBlur(BorderMode border_mode_, uint32_t kernel_height_, uint32_t kernel_width_, float sigma_x_, float sigma_y_, std::string scope_ = {}): border_mode(border_mode_), kernel_height(kernel_height_), kernel_width(kernel_width_), sigma_x(sigma_x_), sigma_y(sigma_y_) { set_scope(scope_); }
+    GaussianBlur(::megdnn::param::GaussianBlur packed_param_0): border_mode(packed_param_0.border_mode), kernel_height(packed_param_0.kernel_height), kernel_width(packed_param_0.kernel_width), sigma_x(packed_param_0.sigma_x), sigma_y(packed_param_0.sigma_y) {}
+    ::megdnn::param::GaussianBlur param() const {
+        return {border_mode, kernel_height, kernel_width, sigma_x, sigma_y};
+    }
+};
+
 class GaussianRNG : public OpDefImplBase<GaussianRNG> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

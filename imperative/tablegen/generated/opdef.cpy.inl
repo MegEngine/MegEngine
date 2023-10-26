@@ -11219,6 +11219,288 @@ void _init_py_GammaRNG(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(GammaRNG::typeinfo(), &py_type).second);
 }
 
+template<> struct EnumTrait<GaussianBlur::BorderMode> {
+    static constexpr const char *name = "GaussianBlur.BorderMode";
+    static constexpr std::underlying_type_t<GaussianBlur::BorderMode> max = 7 - 1;
+};
+template<> PyTypeObject* EnumWrapper<GaussianBlur::BorderMode>::type = nullptr;
+
+template<> const char*
+EnumWrapper<GaussianBlur::BorderMode>::members[] = {"REPLICATE", "REFLECT", "REFLECT_101", "WRAP", "CONSTANT", "TRANSPARENT", "ISOLATED"};
+
+template<> std::unordered_map<std::string, GaussianBlur::BorderMode>
+EnumWrapper<GaussianBlur::BorderMode>::mem2value = {{normalize_enum("REPLICATE"), GaussianBlur::BorderMode::REPLICATE}, {normalize_enum("REFLECT"), GaussianBlur::BorderMode::REFLECT}, {normalize_enum("REFLECT_101"), GaussianBlur::BorderMode::REFLECT_101}, {normalize_enum("WRAP"), GaussianBlur::BorderMode::WRAP}, {normalize_enum("CONSTANT"), GaussianBlur::BorderMode::CONSTANT}, {normalize_enum("TRANSPARENT"), GaussianBlur::BorderMode::TRANSPARENT}, {normalize_enum("ISOLATED"), GaussianBlur::BorderMode::ISOLATED}};
+template<> PyObject* EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[7] = {nullptr};
+
+void _init_py_GaussianBlur_BorderMode(PyTypeObject& py_type) {
+    auto& e_type = EnumWrapper<GaussianBlur::BorderMode>::type;
+
+    static PyMethodDef tp_methods[] = {
+        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<GaussianBlur::BorderMode>::py_dump, METH_NOARGS, NULL},
+        {NULL}  /* Sentinel */
+        };
+    
+    static PyType_Slot slots[] = {
+        {Py_tp_repr, (void*)EnumWrapper<GaussianBlur::BorderMode>::py_repr},
+        {Py_tp_richcompare, (void*)EnumWrapper<GaussianBlur::BorderMode>::tp_richcompare},
+        {Py_tp_methods, tp_methods},
+
+        {0, NULL}
+    };
+    static PyType_Spec spec = {
+        // name
+        "megengine.core._imperative_rt.ops.GaussianBlur.BorderMode",
+        // basicsize
+        sizeof(EnumWrapper<GaussianBlur::BorderMode>),
+        // itemsize
+        0,
+        // flags
+        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
+        // slots
+        slots
+    };
+    e_type = reinterpret_cast<PyTypeObject*>(PyType_FromSpec(&spec));
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__name__").release().ptr(),
+                    py::cast("BorderMode").release().ptr()) >= 0);
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__module__").release().ptr(),
+                    py::cast("megengine.core._imperative_rt.ops").release().ptr()) >= 0);
+
+    mgb_assert(
+            e_type->tp_setattro(
+                    reinterpret_cast<PyObject*>(e_type),
+                    py::cast("__qualname__").release().ptr(),
+                    py::cast("GaussianBlur.BorderMode").release().ptr()) >= 0);
+{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::REPLICATE;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "REPLICATE", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[0] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::REFLECT;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "REFLECT", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[1] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::REFLECT_101;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "REFLECT_101", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[2] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::WRAP;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "WRAP", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[3] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::CONSTANT;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "CONSTANT", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[4] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::TRANSPARENT;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "TRANSPARENT", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[5] = inst;
+}{
+    PyObject* inst = e_type->tp_alloc(e_type, 0);
+    reinterpret_cast<EnumWrapper<GaussianBlur::BorderMode>*>(inst)->value = GaussianBlur::BorderMode::ISOLATED;
+    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ISOLATED", inst) >= 0);
+    EnumWrapper<GaussianBlur::BorderMode>::pyobj_insts[6] = inst;
+}
+    Py_INCREF(e_type);
+    mgb_assert(PyDict_SetItemString(
+        py_type.tp_dict, "BorderMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
+}
+
+PyOpDefBegin(GaussianBlur) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"border_mode", serialization<decltype(opdef.border_mode)>::dump(opdef.border_mode)},
+            {"kernel_height", serialization<decltype(opdef.kernel_height)>::dump(opdef.kernel_height)},
+            {"kernel_width", serialization<decltype(opdef.kernel_width)>::dump(opdef.kernel_width)},
+            {"sigma_x", serialization<decltype(opdef.sigma_x)>::dump(opdef.sigma_x)},
+            {"sigma_y", serialization<decltype(opdef.sigma_y)>::dump(opdef.sigma_y)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("border_mode");
+        if (iter != state.end()) {
+            opdef.border_mode = serialization<decltype(opdef.border_mode)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("kernel_height");
+        if (iter != state.end()) {
+            opdef.kernel_height = serialization<decltype(opdef.kernel_height)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("kernel_width");
+        if (iter != state.end()) {
+            opdef.kernel_width = serialization<decltype(opdef.kernel_width)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("sigma_x");
+        if (iter != state.end()) {
+            opdef.sigma_x = serialization<decltype(opdef.sigma_x)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("sigma_y");
+        if (iter != state.end()) {
+            opdef.sigma_y = serialization<decltype(opdef.sigma_y)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(GaussianBlur)
+
+int PyOp(GaussianBlur)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"border_mode", "kernel_height", "kernel_width", "sigma_x", "sigma_y", "scope", NULL};
+    PyObject *border_mode = NULL, *kernel_height = NULL, *kernel_width = NULL, *sigma_x = NULL, *sigma_y = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOO", const_cast<char**>(kwlist), &border_mode, &kernel_height, &kernel_width, &sigma_x, &sigma_y, &scope))
+    return -1;
+
+    if (border_mode) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst().border_mode =
+                    py::cast<decltype(GaussianBlur::border_mode)>(py::handle(border_mode));
+        } CATCH_ALL(-1)
+    }
+
+    if (kernel_height) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst().kernel_height =
+                    py::cast<decltype(GaussianBlur::kernel_height)>(py::handle(kernel_height));
+        } CATCH_ALL(-1)
+    }
+
+    if (kernel_width) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst().kernel_width =
+                    py::cast<decltype(GaussianBlur::kernel_width)>(py::handle(kernel_width));
+        } CATCH_ALL(-1)
+    }
+
+    if (sigma_x) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst().sigma_x =
+                    py::cast<decltype(GaussianBlur::sigma_x)>(py::handle(sigma_x));
+        } CATCH_ALL(-1)
+    }
+
+    if (sigma_y) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(GaussianBlur)*>(self)->inst().sigma_y =
+                    py::cast<decltype(GaussianBlur::sigma_y)>(py::handle(sigma_y));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(GaussianBlur)::py_getsetters[] = {
+    {const_cast<char*>("border_mode"), py_get_generic(GaussianBlur, border_mode), py_set_generic(GaussianBlur, border_mode), const_cast<char*>("border_mode"), NULL},
+    {const_cast<char*>("kernel_height"), py_get_generic(GaussianBlur, kernel_height), py_set_generic(GaussianBlur, kernel_height), const_cast<char*>("kernel_height"), NULL},
+    {const_cast<char*>("kernel_width"), py_get_generic(GaussianBlur, kernel_width), py_set_generic(GaussianBlur, kernel_width), const_cast<char*>("kernel_width"), NULL},
+    {const_cast<char*>("sigma_x"), py_get_generic(GaussianBlur, sigma_x), py_set_generic(GaussianBlur, sigma_x), const_cast<char*>("sigma_x"), NULL},
+    {const_cast<char*>("sigma_y"), py_get_generic(GaussianBlur, sigma_y), py_set_generic(GaussianBlur, sigma_y), const_cast<char*>("sigma_y"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(GaussianBlur)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(GaussianBlur)::getstate, METH_NOARGS, "GaussianBlur getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(GaussianBlur)::setstate, METH_VARARGS, "GaussianBlur setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(GaussianBlur)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(GaussianBlur)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(GaussianBlur)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(GaussianBlur)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, border_mode: Union[str, BorderMode] = ..., kernel_height: int = ..., kernel_width: int = ..., sigma_x: float = ..., sigma_y: float = ...) -> None\n"
+};
+
+void _init_py_GaussianBlur(py::module m) {
+    using py_op = PyOp(GaussianBlur);
+    auto& py_type = PyOpType(GaussianBlur);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.GaussianBlur";
+    py_type.tp_basicsize = sizeof(PyOp(GaussianBlur));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "GaussianBlur";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(GaussianBlur), &PyOp(GaussianBlur)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+        _init_py_GaussianBlur_BorderMode(py_type);
+
+    PyType_Modified(&py_type);
+    m.add_object("GaussianBlur", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(GaussianBlur::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(GaussianRNG) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -20109,101 +20391,9 @@ void _init_py_Remap_InterpolationMode(PyTypeObject& py_type) {
         py_type.tp_dict, "InterpolationMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
 }
 
-template<> struct EnumTrait<Remap::BorderMode> {
-    static constexpr const char *name = "Remap.BorderMode";
-    static constexpr std::underlying_type_t<Remap::BorderMode> max = 7 - 1;
-};
-template<> PyTypeObject* EnumWrapper<Remap::BorderMode>::type = nullptr;
-
-template<> const char*
-EnumWrapper<Remap::BorderMode>::members[] = {"REPLICATE", "REFLECT", "REFLECT_101", "WRAP", "CONSTANT", "TRANSPARENT", "ISOLATED"};
-
-template<> std::unordered_map<std::string, Remap::BorderMode>
-EnumWrapper<Remap::BorderMode>::mem2value = {{normalize_enum("REPLICATE"), Remap::BorderMode::REPLICATE}, {normalize_enum("REFLECT"), Remap::BorderMode::REFLECT}, {normalize_enum("REFLECT_101"), Remap::BorderMode::REFLECT_101}, {normalize_enum("WRAP"), Remap::BorderMode::WRAP}, {normalize_enum("CONSTANT"), Remap::BorderMode::CONSTANT}, {normalize_enum("TRANSPARENT"), Remap::BorderMode::TRANSPARENT}, {normalize_enum("ISOLATED"), Remap::BorderMode::ISOLATED}};
-template<> PyObject* EnumWrapper<Remap::BorderMode>::pyobj_insts[7] = {nullptr};
-
 void _init_py_Remap_BorderMode(PyTypeObject& py_type) {
     auto& e_type = EnumWrapper<Remap::BorderMode>::type;
 
-    static PyMethodDef tp_methods[] = {
-        {const_cast<char*>("dump"), (PyCFunction)EnumWrapper<Remap::BorderMode>::py_dump, METH_NOARGS, NULL},
-        {NULL}  /* Sentinel */
-        };
-    
-    static PyType_Slot slots[] = {
-        {Py_tp_repr, (void*)EnumWrapper<Remap::BorderMode>::py_repr},
-        {Py_tp_richcompare, (void*)EnumWrapper<Remap::BorderMode>::tp_richcompare},
-        {Py_tp_methods, tp_methods},
-
-        {0, NULL}
-    };
-    static PyType_Spec spec = {
-        // name
-        "megengine.core._imperative_rt.ops.Remap.BorderMode",
-        // basicsize
-        sizeof(EnumWrapper<Remap::BorderMode>),
-        // itemsize
-        0,
-        // flags
-        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
-        // slots
-        slots
-    };
-    e_type = reinterpret_cast<PyTypeObject*>(PyType_FromSpec(&spec));
-
-    mgb_assert(
-            e_type->tp_setattro(
-                    reinterpret_cast<PyObject*>(e_type),
-                    py::cast("__name__").release().ptr(),
-                    py::cast("BorderMode").release().ptr()) >= 0);
-
-    mgb_assert(
-            e_type->tp_setattro(
-                    reinterpret_cast<PyObject*>(e_type),
-                    py::cast("__module__").release().ptr(),
-                    py::cast("megengine.core._imperative_rt.ops").release().ptr()) >= 0);
-
-    mgb_assert(
-            e_type->tp_setattro(
-                    reinterpret_cast<PyObject*>(e_type),
-                    py::cast("__qualname__").release().ptr(),
-                    py::cast("Remap.BorderMode").release().ptr()) >= 0);
-{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::REPLICATE;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "REPLICATE", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[0] = inst;
-}{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::REFLECT;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "REFLECT", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[1] = inst;
-}{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::REFLECT_101;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "REFLECT_101", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[2] = inst;
-}{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::WRAP;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "WRAP", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[3] = inst;
-}{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::CONSTANT;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "CONSTANT", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[4] = inst;
-}{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::TRANSPARENT;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "TRANSPARENT", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[5] = inst;
-}{
-    PyObject* inst = e_type->tp_alloc(e_type, 0);
-    reinterpret_cast<EnumWrapper<Remap::BorderMode>*>(inst)->value = Remap::BorderMode::ISOLATED;
-    mgb_assert(PyDict_SetItemString(e_type->tp_dict, "ISOLATED", inst) >= 0);
-    EnumWrapper<Remap::BorderMode>::pyobj_insts[6] = inst;
-}
     Py_INCREF(e_type);
     mgb_assert(PyDict_SetItemString(
         py_type.tp_dict, "BorderMode", reinterpret_cast<PyObject*>(e_type)) >= 0);
@@ -24357,6 +24547,7 @@ void _init_py_WhereBackward(py::module m) {
     _init_py_FillLike(m); \
     _init_py_Flip(m); \
     _init_py_GammaRNG(m); \
+    _init_py_GaussianBlur(m); \
     _init_py_GaussianRNG(m); \
     _init_py_GeneralNorm(m); \
     _init_py_GetVarShape(m); \

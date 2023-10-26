@@ -3806,6 +3806,80 @@ OP_TRAIT_REG(GammaRNG, GammaRNG)
     .props(GammaRNG_props_impl)
     .make_name(GammaRNG_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(GaussianBlur);
+
+namespace {
+size_t GaussianBlur_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GaussianBlur>();
+    static_cast<void>(op_);
+    size_t val = mgb::hash(op_.dyn_typeinfo());
+    val = mgb::hash_pair_combine(val, mgb::enumhash()(op_.border_mode));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.kernel_height));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.kernel_width));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.sigma_x));
+    val = mgb::hash_pair_combine(val, mgb::hash(op_.sigma_y));
+    return val;
+}
+bool GaussianBlur_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<GaussianBlur>(),
+         &&b_ = rhs_.cast_final_safe<GaussianBlur>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+    if (a_.border_mode != b_.border_mode) return false;
+    if (a_.kernel_height != b_.kernel_height) return false;
+    if (a_.kernel_width != b_.kernel_width) return false;
+    if (a_.sigma_x != b_.sigma_x) return false;
+    if (a_.sigma_y != b_.sigma_y) return false;
+    return true;
+}
+std::vector<std::pair<const char*, std::string>> GaussianBlur_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GaussianBlur>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    switch (op_.border_mode){
+    case GaussianBlur::BorderMode::REPLICATE:
+        props_.emplace_back("border_mode", "REPLICATE");
+        break;
+    case GaussianBlur::BorderMode::REFLECT:
+        props_.emplace_back("border_mode", "REFLECT");
+        break;
+    case GaussianBlur::BorderMode::REFLECT_101:
+        props_.emplace_back("border_mode", "REFLECT_101");
+        break;
+    case GaussianBlur::BorderMode::WRAP:
+        props_.emplace_back("border_mode", "WRAP");
+        break;
+    case GaussianBlur::BorderMode::CONSTANT:
+        props_.emplace_back("border_mode", "CONSTANT");
+        break;
+    case GaussianBlur::BorderMode::TRANSPARENT:
+        props_.emplace_back("border_mode", "TRANSPARENT");
+        break;
+    case GaussianBlur::BorderMode::ISOLATED:
+        props_.emplace_back("border_mode", "ISOLATED");
+        break;
+    default:
+        props_.emplace_back("border_mode", "INVALID");
+        break;
+    }
+    props_.emplace_back("kernel_height", std::to_string(op_.kernel_height));
+    props_.emplace_back("kernel_width", std::to_string(op_.kernel_width));
+    props_.emplace_back("sigma_x", std::to_string(op_.sigma_x));
+    props_.emplace_back("sigma_y", std::to_string(op_.sigma_y));
+    return props_;
+}
+std::string GaussianBlur_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<GaussianBlur>();
+    static_cast<void>(op_);
+    return "GaussianBlur";
+}
+} // anonymous namespace
+OP_TRAIT_REG(GaussianBlur, GaussianBlur)
+    .hash(GaussianBlur_hash_impl)
+    .is_same_st(GaussianBlur_is_same_st_impl)
+    .props(GaussianBlur_props_impl)
+    .make_name(GaussianBlur_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(GaussianRNG);
 
 namespace {

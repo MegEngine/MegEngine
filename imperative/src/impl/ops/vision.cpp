@@ -135,6 +135,65 @@ OP_TRAIT_REG(Rotate, Rotate)
 }  // namespace
 
 namespace {
+namespace gaussianblur {
+
+auto apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
+    auto&& op = static_cast<const GaussianBlur&>(def);
+    mgb_assert(inputs.size() == 1);
+    OperatorNodeConfig config{op.make_name()};
+    return opr::GaussianBlur::make(inputs[0], op.param(), config);
+}
+
+std::tuple<SmallVector<LogicalTensorDesc>, bool> infer_output_attrs_fallible(
+        const OpDef& def, const SmallVector<LogicalTensorDesc>& inputs) {
+    auto&& op = def.cast_final_safe<GaussianBlur>();
+    DnnOprHelper<megdnn::GaussianBlur> dnn_opr(op.param());
+    auto cn = inputs[0].comp_node;
+    auto out_layout = dnn_opr.deduce_layout(inputs[0].layout);
+    bool validated = out_layout.ndim == 0;
+    return {{{out_layout, cn}}, validated};
+}
+
+SmallVector<TensorPtr> apply_on_physical_tensor(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs,
+        SmallVector<LogicalTensorDesc>& output_descs, const bool& validated) {
+    auto&& op = def.cast_final_safe<GaussianBlur>();
+    auto cn = inputs[0]->comp_node();
+
+    DnnOprCaller<megdnn::GaussianBlur> dnn_opr(cn, op.param());
+    auto&& out_layout = [&]() -> TensorLayout {
+        if (validated) {
+            return output_descs[0].layout;
+        } else {
+            return dnn_opr.deduce_layout(inputs[0]->layout());
+        }
+    }();
+
+    auto out = Tensor::make(out_layout, cn);
+    dnn_opr.exec_with_ws(inputs[0], out);
+    return {out};
+}
+
+SmallVector<VarNode::LayoutConstraintCallback> get_input_layout_constraint(
+        const OpDef& def, const SmallVector<TensorPtr>& inputs) {
+    SmallVector<VarNode::LayoutConstraintCallback> layout_checker(inputs.size());
+    layout_checker[0] = [](const TensorLayout& layout) {
+        return layout.is_contiguous();
+    };
+    return layout_checker;
+}
+
+OP_TRAIT_REG(GaussianBlur, GaussianBlur)
+        .apply_on_var_node(apply_on_var_node)
+        .apply_on_physical_tensor(apply_on_physical_tensor)
+        .infer_output_attrs_fallible(infer_output_attrs_fallible)
+        .get_input_layout_constraint(get_input_layout_constraint)
+        .fallback();
+
+}  // namespace gaussianblur
+}  // namespace
+
+namespace {
 namespace roi_align {
 VarNodeArray apply_on_var_node(const OpDef& def, const VarNodeArray& inputs) {
     auto&& op = static_cast<const ROIAlign&>(def);

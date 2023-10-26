@@ -1237,6 +1237,37 @@ GammaRNGInst
     .def_readwrite("seed", &GammaRNG::seed)
     .def_readwrite("handle", &GammaRNG::handle);
 
+py::class_<GaussianBlur, std::shared_ptr<GaussianBlur>, OpDef> GaussianBlurInst(m, "GaussianBlur");
+
+py::enum_<GaussianBlur::BorderMode>(GaussianBlurInst, "BorderMode")
+    .value("REPLICATE", GaussianBlur::BorderMode::REPLICATE)
+    .value("REFLECT", GaussianBlur::BorderMode::REFLECT)
+    .value("REFLECT_101", GaussianBlur::BorderMode::REFLECT_101)
+    .value("WRAP", GaussianBlur::BorderMode::WRAP)
+    .value("CONSTANT", GaussianBlur::BorderMode::CONSTANT)
+    .value("TRANSPARENT", GaussianBlur::BorderMode::TRANSPARENT)
+    .value("ISOLATED", GaussianBlur::BorderMode::ISOLATED)
+    .def(py::init([](const std::string& in) {
+        auto&& str = normalize_enum(in);
+        if (str == "REPLICATE") return GaussianBlur::BorderMode::REPLICATE;
+        if (str == "REFLECT") return GaussianBlur::BorderMode::REFLECT;
+        if (str == "REFLECT_101") return GaussianBlur::BorderMode::REFLECT_101;
+        if (str == "WRAP") return GaussianBlur::BorderMode::WRAP;
+        if (str == "CONSTANT") return GaussianBlur::BorderMode::CONSTANT;
+        if (str == "TRANSPARENT") return GaussianBlur::BorderMode::TRANSPARENT;
+        if (str == "ISOLATED") return GaussianBlur::BorderMode::ISOLATED;
+        throw py::cast_error("invalid enum value " + in);
+    }));
+py::implicitly_convertible<std::string, GaussianBlur::BorderMode>();
+
+GaussianBlurInst
+    .def(py::init<::megdnn::param::GaussianBlur::BorderMode, uint32_t, uint32_t, float, float, std::string>(), py::arg("border_mode") = ::megdnn::param::GaussianBlur::BorderMode::REPLICATE, py::arg("kernel_height") = 0, py::arg("kernel_width") = 0, py::arg("sigma_x") = 0.f, py::arg("sigma_y") = 0.f, py::arg("scope") = {})
+    .def_readwrite("border_mode", &GaussianBlur::border_mode)
+    .def_readwrite("kernel_height", &GaussianBlur::kernel_height)
+    .def_readwrite("kernel_width", &GaussianBlur::kernel_width)
+    .def_readwrite("sigma_x", &GaussianBlur::sigma_x)
+    .def_readwrite("sigma_y", &GaussianBlur::sigma_y);
+
 py::class_<GaussianRNG, std::shared_ptr<GaussianRNG>, OpDef> GaussianRNGInst(m, "GaussianRNG");
 
 GaussianRNGInst
@@ -1881,26 +1912,7 @@ py::enum_<Remap::InterpolationMode>(RemapInst, "InterpolationMode")
     }));
 py::implicitly_convertible<std::string, Remap::InterpolationMode>();
 
-py::enum_<Remap::BorderMode>(RemapInst, "BorderMode")
-    .value("REPLICATE", Remap::BorderMode::REPLICATE)
-    .value("REFLECT", Remap::BorderMode::REFLECT)
-    .value("REFLECT_101", Remap::BorderMode::REFLECT_101)
-    .value("WRAP", Remap::BorderMode::WRAP)
-    .value("CONSTANT", Remap::BorderMode::CONSTANT)
-    .value("TRANSPARENT", Remap::BorderMode::TRANSPARENT)
-    .value("ISOLATED", Remap::BorderMode::ISOLATED)
-    .def(py::init([](const std::string& in) {
-        auto&& str = normalize_enum(in);
-        if (str == "REPLICATE") return Remap::BorderMode::REPLICATE;
-        if (str == "REFLECT") return Remap::BorderMode::REFLECT;
-        if (str == "REFLECT_101") return Remap::BorderMode::REFLECT_101;
-        if (str == "WRAP") return Remap::BorderMode::WRAP;
-        if (str == "CONSTANT") return Remap::BorderMode::CONSTANT;
-        if (str == "TRANSPARENT") return Remap::BorderMode::TRANSPARENT;
-        if (str == "ISOLATED") return Remap::BorderMode::ISOLATED;
-        throw py::cast_error("invalid enum value " + in);
-    }));
-py::implicitly_convertible<std::string, Remap::BorderMode>();
+RemapInst.attr("BorderMode") = GaussianBlurInst.attr("BorderMode");
 
 RemapInst.attr("Format") = AdaptivePoolingInst.attr("Format");
 
@@ -2108,7 +2120,7 @@ py::class_<WarpAffine, std::shared_ptr<WarpAffine>, OpDef> WarpAffineInst(m, "Wa
 
 WarpAffineInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
 
-WarpAffineInst.attr("BorderMode") = RemapInst.attr("BorderMode");
+WarpAffineInst.attr("BorderMode") = GaussianBlurInst.attr("BorderMode");
 
 WarpAffineInst.attr("Format") = AdaptivePoolingInst.attr("Format");
 
@@ -2123,7 +2135,7 @@ py::class_<WarpPerspective, std::shared_ptr<WarpPerspective>, OpDef> WarpPerspec
 
 WarpPerspectiveInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
 
-WarpPerspectiveInst.attr("BorderMode") = RemapInst.attr("BorderMode");
+WarpPerspectiveInst.attr("BorderMode") = GaussianBlurInst.attr("BorderMode");
 
 WarpPerspectiveInst.attr("Format") = AdaptivePoolingInst.attr("Format");
 
@@ -2138,7 +2150,7 @@ py::class_<WarpPerspectiveBackwardData, std::shared_ptr<WarpPerspectiveBackwardD
 
 WarpPerspectiveBackwardDataInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
 
-WarpPerspectiveBackwardDataInst.attr("BorderMode") = RemapInst.attr("BorderMode");
+WarpPerspectiveBackwardDataInst.attr("BorderMode") = GaussianBlurInst.attr("BorderMode");
 
 WarpPerspectiveBackwardDataInst.attr("Format") = AdaptivePoolingInst.attr("Format");
 
@@ -2153,7 +2165,7 @@ py::class_<WarpPerspectiveBackwardMat, std::shared_ptr<WarpPerspectiveBackwardMa
 
 WarpPerspectiveBackwardMatInst.attr("InterpolationMode") = RemapInst.attr("InterpolationMode");
 
-WarpPerspectiveBackwardMatInst.attr("BorderMode") = RemapInst.attr("BorderMode");
+WarpPerspectiveBackwardMatInst.attr("BorderMode") = GaussianBlurInst.attr("BorderMode");
 
 WarpPerspectiveBackwardMatInst.attr("Format") = AdaptivePoolingInst.attr("Format");
 

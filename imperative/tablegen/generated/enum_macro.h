@@ -20,6 +20,7 @@
     cb(::megdnn::param::CvtColor::Mode); \
     cb(::megdnn::param::Elemwise::Mode); \
     cb(::megdnn::param::ElemwiseMultiType::Mode); \
+    cb(::megdnn::param::WarpPerspectiveV1::BorderMode); \
     cb(::megdnn::param::MultiHeadAttn::AttnMaskType); \
     cb(::megdnn::param::MultiHeadAttn::TensorCombinationType); \
     cb(::megdnn::param::Padding::PaddingMode); \
@@ -29,7 +30,6 @@
     cb(::megdnn::param::Reduce::Mode); \
     cb(::megdnn::param::Reduce::DataType); \
     cb(::megdnn::param::WarpPerspectiveV1::InterpolationMode); \
-    cb(::megdnn::param::WarpPerspectiveV1::BorderMode); \
     cb(::megdnn::param::TopK::Mode);
 #define FOR_EACH_BIT_COMBINED_ENUM_PARAM(cb) \
     cb(::megdnn::param::ExecutionPolicy::Strategy);

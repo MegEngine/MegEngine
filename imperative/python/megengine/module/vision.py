@@ -1,6 +1,7 @@
 import math
 import numbers
 from functools import lru_cache
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -951,4 +952,76 @@ class Remap(Module):
             ndim = map_1.ndim
             map_xy = stack([map_1, map_2], axis=ndim)
         out = remap(inp, map_xy, borderMode, borderValue, interpolation)
+        return out
+
+
+class GaussianBlur(Module):
+    r"""Blurs an image using a Gaussian filter.
+
+    Note:
+        Input format must be nhwc.
+
+    Args:
+        kernel_size(Union[int, Tuple[int, int]]): Gaussian kernel size consisting of height and weight. height and width can differ but they both must be positive and odd.
+        sigma_x(int): Gaussian kernel standard deviation in X direction.
+        sigma_y(int): Gaussian kernel standard deviation in Y direction.
+        border_mode(str): pixel extrapolation mode.
+    
+    Examples:
+        >>> import numpy
+        >>> import torch
+        >>> from torchvision import transforms
+        >>> data = numpy.arange(75).reshape((1,3,5,5))
+        >>> data = torch.Tensor(data)
+        >>> gaussian_blur = transforms.GaussianBlur((3,3,),1)
+        >>> dst = gaussian_blur(data)
+        >>> dst[0][0].numpy()
+        array([[ 3.2888236,  3.7406862,  4.7406864,  5.7406864,  6.1925488],
+            [ 5.548137 ,  6.       ,  7.       ,  8.       ,  8.451862 ],
+            [10.548138 , 11.       , 12.       , 13.       , 13.451862 ],
+            [15.548139 , 16.000002 , 17.       , 17.999998 , 18.451864 ],
+            [17.807451 , 18.259315 , 19.259314 , 20.259314 , 20.711178 ]],
+            dtype=float32)
+
+    """
+
+    def __init__(
+        self,
+        kernel_size: Union[int, Tuple[int, int]],
+        sigma_x=0,
+        sigma_y=0,
+        border_mode="REPLICATE",
+    ):
+        super().__init__()
+        assert border_mode in [
+            "REPLICATE",
+            "REFLECT",
+            "REFLECT_101",
+            "WRAP",
+            "CONSTANT",
+            "TRANSPARENT",
+            "ISOLATED",
+        ]
+        if isinstance(kernel_size, int):
+            self.kernel_size = (kernel_size, kernel_size)
+        else:
+            assert len(kernel_size) == 2
+            self.kernel_size = tuple(kernel_size)
+        self.sigma_x = sigma_x
+        self.sigma_y = sigma_y
+        self.border_mode = border_mode
+
+    def forward(self, inp):
+        assert isinstance(
+            inp, Tensor
+        ), "expected input is megengine.Tensor, got {}".format(type(inp))
+        kernel_height, kernel_width = self.kernel_size
+        op = builtin.GaussianBlur(
+            kernel_height=kernel_height,
+            kernel_width=kernel_width,
+            sigma_x=self.sigma_x,
+            sigma_y=self.sigma_y,
+            border_mode=self.border_mode,
+        )
+        out = apply(op, inp)[0]
         return out

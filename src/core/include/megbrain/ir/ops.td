@@ -116,6 +116,8 @@ def Resize3D: MgbHashableOp<"Resize3D", [Resize3DParam]>;
 
 def Rotate: MgbHashableOp<"Rotate", [RotateParam]>;
 
+def GaussianBlur: MgbHashableOp<"GaussianBlur", [GaussianBlurParam]>;
+
 def Flip: MgbHashableOp<"Flip", [FlipParam]>;
 
 def IndexingOneHot: MgbHashableOp<"IndexingOneHot", [AxisParam]> {
