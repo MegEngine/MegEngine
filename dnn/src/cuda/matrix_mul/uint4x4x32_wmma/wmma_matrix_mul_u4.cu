@@ -38,6 +38,10 @@ namespace wmma_matrix_mul_u4 {
 
 constexpr uint32_t WMMA_M = 8, WMMA_N = 8, WMMA_K = 32, WARP_SIZE = 32;
 
+#if CUDA_VERSION == 11080
+constexpr uint32_t MAX_THREADS_PER_BLOCK = 512;
+#endif
+
 template <size_t WARP_X_, size_t WARP_Y_, size_t ROW_PER_WARP_, size_t COL_PER_WARP_>
 struct BlockConfig {
     static const size_t WARP_X = WARP_X_;
@@ -224,9 +228,15 @@ __device__ void inline consume_tile(
 }
 
 template <typename BlockConfig_>
-__global__ void u4_gemm_template_device_nt(
-        const uint8_t* A, const uint8_t* B, int32_t* C, int M, int N, int K, int lda,
-        int ldb, int ldc) {
+#if CUDA_VERSION == 11080
+// TODO: optimize the method to avoid too many resources requested.
+//! Set the MAX_THREADS_PER_BLOCK to avoid too many resources requested. But this may
+//! affect performance.
+__launch_bounds__(MAX_THREADS_PER_BLOCK)
+#endif
+        __global__ void u4_gemm_template_device_nt(
+                const uint8_t* A, const uint8_t* B, int32_t* C, int M, int N, int K,
+                int lda, int ldb, int ldc) {
     typedef GlobalToShareMemStreamConfig<BlockConfig_::BM, BlockConfig_> Config_A;
     typedef GlobalToShareMemStreamConfig<BlockConfig_::BN, BlockConfig_> Config_B;
     __shared__ uint8_t smem_a[BlockConfig_::BM][Config_A::SMEM_STRIDE / 2];
