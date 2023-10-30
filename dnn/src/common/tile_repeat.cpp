@@ -53,9 +53,15 @@ size_t TileRepeatBase::get_workspace_in_bytes_fwd(
     }
     if (nr_workspace == 0) {
         return 0;
+    }
+    if (nr_workspace == 1) {
+        WorkspaceBundle workspaces{nullptr, {dst.total_nr_elems() * dtype.size()}};
+        return workspaces.total_size_in_bytes();
     } else {
         WorkspaceBundle workspaces{
-                nullptr, {nr_workspace, dst.total_nr_elems() * dtype.size()}};
+                nullptr,
+                {dst.total_nr_elems() * dtype.size(),
+                 dst.total_nr_elems() * dtype.size()}};
         return workspaces.total_size_in_bytes();
     }
 }
