@@ -1165,6 +1165,14 @@ ElemwiseMultiTypeInst
     .def_readwrite("mode", &ElemwiseMultiType::mode)
     .def_readwrite("dtype", &ElemwiseMultiType::dtype);
 
+py::class_<ExponentialRNG, std::shared_ptr<ExponentialRNG>, OpDef> ExponentialRNGInst(m, "ExponentialRNG");
+
+ExponentialRNGInst
+    .def(py::init<uint64_t, size_t, std::string>(), py::arg("seed") = 0, py::arg("handle"), py::arg("scope") = {})
+    .def(py::init<>())
+    .def_readwrite("seed", &ExponentialRNG::seed)
+    .def_readwrite("handle", &ExponentialRNG::handle);
+
 py::class_<ExternOpr, std::shared_ptr<ExternOpr>, OpDef> ExternOprInst(m, "ExternOpr");
 
 ExternOprInst

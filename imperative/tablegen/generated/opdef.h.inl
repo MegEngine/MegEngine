@@ -914,6 +914,20 @@ case ElemwiseMultiType::Mode::ISINF: return "ISINF";
         }
     }
 };
+class ExponentialRNG : public OpDefImplBase<ExponentialRNG> {
+    MGB_DYN_TYPE_OBJ_FINAL_DECL;
+
+public:
+    uint64_t seed = 0;
+    size_t handle;
+    ExponentialRNG() = default;
+    ExponentialRNG(uint64_t seed_, size_t handle_, std::string scope_ = {}): seed(seed_), handle(handle_) { set_scope(scope_); }
+    ExponentialRNG(::megdnn::param::ExponentialRNG packed_param_0, size_t handle_): seed(packed_param_0.seed), handle(handle_) {}
+    ::megdnn::param::ExponentialRNG param() const {
+        return {seed};
+    }
+};
+
 class ExternOpr : public OpDefImplBase<ExternOpr> {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
 

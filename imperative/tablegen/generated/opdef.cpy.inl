@@ -10031,6 +10031,133 @@ void _init_py_ElemwiseMultiType(py::module m) {
     mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(ElemwiseMultiType::typeinfo(), &py_type).second);
 }
 
+PyOpDefBegin(ExponentialRNG) // {
+    static PyGetSetDef py_getsetters[];
+    static PyMethodDef tp_methods[];
+    
+    static PyObject* getstate(PyObject* self, PyObject*) {
+        auto& opdef = reinterpret_cast<PyOp(ExponentialRNG)*>(self)->inst();
+        static_cast<void>(opdef);
+        std::unordered_map<std::string, py::object> state {
+            
+            {"seed", serialization<decltype(opdef.seed)>::dump(opdef.seed)},
+            {"handle", serialization<decltype(opdef.handle)>::dump(opdef.handle)}
+        };
+        return py::cast(state).release().ptr();
+    }
+    static PyObject* setstate(PyObject* self, PyObject* args) {
+        PyObject* dict = PyTuple_GetItem(args, 0);
+        if (!dict) return NULL;
+        auto state = py::cast<std::unordered_map<std::string, py::object>>(dict);
+        auto& opdef = reinterpret_cast<PyOp(ExponentialRNG)*>(self)->inst();
+        static_cast<void>(opdef);
+        
+        {
+        auto&& iter = state.find("seed");
+        if (iter != state.end()) {
+            opdef.seed = serialization<decltype(opdef.seed)>::load(iter->second);
+        }
+        }
+
+        {
+        auto&& iter = state.find("handle");
+        if (iter != state.end()) {
+            opdef.handle = serialization<decltype(opdef.handle)>::load(iter->second);
+        }
+        }
+        Py_RETURN_NONE;
+    }
+    static int py_init(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyObject* py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds);
+    static PyMethodDef py_init_methoddef;
+// };
+PyOpDefEnd(ExponentialRNG)
+
+int PyOp(ExponentialRNG)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    static const char* kwlist[] = {"seed", "handle", "scope", NULL};
+    PyObject *seed = NULL, *handle = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOO", const_cast<char**>(kwlist), &seed, &handle, &scope))
+    return -1;
+
+    if (seed) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(ExponentialRNG)*>(self)->inst().seed =
+                    py::cast<decltype(ExponentialRNG::seed)>(py::handle(seed));
+        } CATCH_ALL(-1)
+    }
+
+    if (handle) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(ExponentialRNG)*>(self)->inst().handle =
+                    py::cast<decltype(ExponentialRNG::handle)>(py::handle(handle));
+        } CATCH_ALL(-1)
+    }
+
+    if (scope) {
+        try {
+            reinterpret_cast<PyOp(OpDef)*>(self)->op
+                ->set_scope(py::cast<std::string>(py::handle(scope)));
+        } CATCH_ALL(-1)
+    }
+
+    return 0;
+}
+
+PyGetSetDef PyOp(ExponentialRNG)::py_getsetters[] = {
+    {const_cast<char*>("seed"), py_get_generic(ExponentialRNG, seed), py_set_generic(ExponentialRNG, seed), const_cast<char*>("seed"), NULL},
+    {const_cast<char*>("handle"), py_get_generic(ExponentialRNG, handle), py_set_generic(ExponentialRNG, handle), const_cast<char*>("handle"), NULL},
+    {NULL}  /* Sentinel */
+};
+
+    PyMethodDef PyOp(ExponentialRNG)::tp_methods[] = {
+        {const_cast<char*>("__getstate__"), PyOp(ExponentialRNG)::getstate, METH_NOARGS, "ExponentialRNG getstate"},
+    {const_cast<char*>("__setstate__"), PyOp(ExponentialRNG)::setstate, METH_VARARGS, "ExponentialRNG setstate"},
+        {NULL}  /* Sentinel */
+    };
+    
+PyObject *PyOp(ExponentialRNG)::py_init_proxy(PyObject *self, PyObject *args, PyObject *kwds) {
+    if (PyOp(ExponentialRNG)::py_init(self, args, kwds) < 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyMethodDef PyOp(ExponentialRNG)::py_init_methoddef = {
+    "__init__",
+    (PyCFunction)PyOp(ExponentialRNG)::py_init_proxy,
+    METH_VARARGS | METH_KEYWORDS,
+    "__init__(self, seed: int = ..., handle: int = ...) -> None\n"
+};
+
+void _init_py_ExponentialRNG(py::module m) {
+    using py_op = PyOp(ExponentialRNG);
+    auto& py_type = PyOpType(ExponentialRNG);
+    py_type = {PyVarObject_HEAD_INIT(NULL, 0)};
+    py_type.tp_name = "megengine.core._imperative_rt.ops.ExponentialRNG";
+    py_type.tp_basicsize = sizeof(PyOp(ExponentialRNG));
+    py_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    py_type.tp_doc = "ExponentialRNG";
+    py_type.tp_base = &PyOpType(OpDef);
+    py_type.tp_dealloc = py_dealloc_generic<py_op>;
+    py_type.tp_new = py_new_generic<py_op>;
+    py_type.tp_init = py_op::py_init;
+    py_type.tp_methods = py_op::tp_methods;
+    py_type.tp_getset = py_op::py_getsetters;
+
+    py_type.tp_dict = PyDict_New();
+    PyObject* descr = PyDescr_NewMethod(&PyOpType(ExponentialRNG), &PyOp(ExponentialRNG)::py_init_methoddef);
+    PyDict_SetItemString(py_type.tp_dict, "__init__", descr);
+    mgb_assert(PyType_Ready(&py_type) >= 0);
+    
+    PyType_Modified(&py_type);
+    m.add_object("ExponentialRNG", reinterpret_cast<PyObject*>(&py_type));
+    mgb_assert(PyOp(OpDef)::ctype2pytype.emplace(ExponentialRNG::typeinfo(), &py_type).second);
+}
+
 PyOpDefBegin(ExternOpr) // {
     static PyGetSetDef py_getsetters[];
     static PyMethodDef tp_methods[];
@@ -24058,6 +24185,7 @@ void _init_py_WhereBackward(py::module m) {
     _init_py_Dropout(m); \
     _init_py_Elemwise(m); \
     _init_py_ElemwiseMultiType(m); \
+    _init_py_ExponentialRNG(m); \
     _init_py_ExternOpr(m); \
     _init_py_Eye(m); \
     _init_py_FakeQuant(m); \

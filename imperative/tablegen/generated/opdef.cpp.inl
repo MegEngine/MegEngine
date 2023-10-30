@@ -3441,6 +3441,44 @@ OP_TRAIT_REG(ElemwiseMultiType, ElemwiseMultiType)
     .props(ElemwiseMultiType_props_impl)
     .make_name(ElemwiseMultiType_make_name_impl);
 
+MGB_DYN_TYPE_OBJ_FINAL_IMPL(ExponentialRNG);
+
+namespace {
+size_t ExponentialRNG_hash_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<ExponentialRNG>();
+    static_cast<void>(op_);
+
+    return mgb::hash_pair_combine(
+      mgb::hash(op_.dyn_typeinfo()),
+      mgb::hash(op_.handle)
+      );
+  }
+bool ExponentialRNG_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
+    auto &&a_ = lhs_.cast_final_safe<ExponentialRNG>(),
+         &&b_ = rhs_.cast_final_safe<ExponentialRNG>();
+    static_cast<void>(a_);
+    static_cast<void>(b_);
+return a_.handle == b_.handle;}
+std::vector<std::pair<const char*, std::string>> ExponentialRNG_props_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<ExponentialRNG>();
+    static_cast<void>(op_);
+    std::vector<std::pair<const char*, std::string>> props_;
+    props_.emplace_back("seed", std::to_string(op_.seed));
+    props_.emplace_back("handle", std::to_string(op_.handle));
+    return props_;
+}
+std::string ExponentialRNG_make_name_impl(const OpDef& def_) {
+    auto&& op_ = def_.cast_final_safe<ExponentialRNG>();
+    static_cast<void>(op_);
+    return "ExponentialRNG";
+}
+} // anonymous namespace
+OP_TRAIT_REG(ExponentialRNG, ExponentialRNG)
+    .hash(ExponentialRNG_hash_impl)
+    .is_same_st(ExponentialRNG_is_same_st_impl)
+    .props(ExponentialRNG_props_impl)
+    .make_name(ExponentialRNG_make_name_impl);
+
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(ExternOpr);
 
 namespace {

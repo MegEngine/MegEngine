@@ -224,6 +224,15 @@ void fill_permutation(Xoroshiro128plus* rng, T* dst, size_t size) {
     }
 }
 
+template <typename T, typename U>
+void fill_exponential(Xoroshiro128plus* rng, U* dst, U* rate, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        T r = static_cast<T>(rate[i]);
+        T u = uniform_sample<T>(rng);
+        dst[i] = static_cast<U>(-std::log(u) / r);
+    }
+}
+
 template <typename T>
 void shuffle_fwd(
         const T* __restrict sptr, T* __restrict dptr, const dt_int32* iptr,
@@ -448,6 +457,27 @@ void ShuffleRNGBackwardImpl::exec(
     }
     MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
 #undef cb
+}
+
+void ExponentialRNGImpl::exec(
+        _megdnn_tensor_in rate, _megdnn_tensor_inout dst, _megdnn_workspace workspace) {
+    check_exec(rate.layout, dst.layout, workspace.size);
+    auto size = dst.layout.total_nr_elems();
+    auto prng = &m_rng.ensure_seed(m_param.seed);
+    switch (dst.layout.dtype.enumv()) {
+#define cb(_dt)                                                                       \
+    case DTypeTrait<_dt>::enumv: {                                                    \
+        using ctype = DTypeTrait<_dt>::ctype;                                         \
+        MEGDNN_DISPATCH_CPU_KERN_OPR({                                                \
+            fill_exponential<float>(prng, dst.ptr<ctype>(), rate.ptr<ctype>(), size); \
+        };);                                                                          \
+        return;                                                                       \
+    }
+        MEGDNN_FOREACH_COMPUTING_DTYPE_FLOAT(cb)
+#undef cb
+        default:
+            megdnn_throw("bad dtype");
+    }
 }
 
 // vim: syntax=cpp.doxygen

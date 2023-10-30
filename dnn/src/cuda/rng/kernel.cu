@@ -213,7 +213,10 @@ ARGSORT_FOREACH_CTYPE(INST_SHUFFLE)
             DTypeTrait<_dtype>::ctype, 0);                                             \
     INST_RUN_ELEMWISE(                                                                 \
             random::BetaKernel<DTypeTrait<_dtype>::ctype>, DTypeTrait<_dtype>::ctype,  \
-            0);
+            0);                                                                        \
+    INST_RUN_ELEMWISE(                                                                 \
+            random::ExponentialKernel<DTypeTrait<_dtype>::ctype>,                      \
+            DTypeTrait<_dtype>::ctype, 0);
 
 INST(megdnn::dtype::Float32)
 INST(megdnn::dtype::Float16)

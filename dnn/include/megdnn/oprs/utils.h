@@ -136,6 +136,24 @@ protected:
             const TensorLayout& grad, size_t workspace_in_bytes);
 };
 
+//! sample from exponential distribution
+class ExponentialRNG : public OperatorBase {
+    DEF_OPR_IMPL(ExponentialRNG, OperatorBase, 1, 1);
+    DEF_OPR_PARAM(ExponentialRNG);
+
+public:
+    virtual void exec(
+            _megdnn_tensor_in rate, _megdnn_tensor_out dst,
+            _megdnn_workspace workspace) = 0;
+    virtual size_t get_workspace_in_bytes(
+            const TensorLayout& rate, const TensorLayout& dst) = 0;
+
+protected:
+    void check_exec(
+            const TensorLayout& rate, const TensorLayout& dst,
+            size_t workspace_in_bytes);
+};
+
 /*!
  * \brief sleep for specific time on the computing device; useful for testing
  *      async problems

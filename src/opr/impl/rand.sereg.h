@@ -145,6 +145,7 @@ MGB_SEREG_OPR(PermutationRNG, 1);
 MGB_SEREG_OPR(BetaRNG, 2);
 MGB_SEREG_OPR(ShuffleRNG, 1);
 MGB_SEREG_OPR(ShuffleRNGBackward, 3);
+MGB_SEREG_OPR(ExponentialRNG, 1);
 MGB_SEREG_OPR_WITH_CONVERTER(
         Dropout, 1,
         (mgb::serialization::OprLoadDumpImpl<opr::DropoutForward, 1>::replace_opr));

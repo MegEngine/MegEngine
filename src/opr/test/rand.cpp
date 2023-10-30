@@ -234,6 +234,33 @@ TEST(TestOprRand, PermutationRNG) {
     }
 }
 
+TEST(TestOprRand, ExponentialRNG) {
+    std::shared_ptr<HostTensorND> rate_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{200000 * 5}, dtype::Float32()});
+    auto rate_ptr = rate_host->ptr<float>();
+    for (int i = 0; i < 5; ++i) {
+        for (int j = 0; j < 200000; ++j) {
+            rate_ptr[i * 200000 + j] = 0.1 * (i + 1);
+        }
+    }
+    auto graph = ComputingGraph::make();
+    auto rate_sym = opr::Host2DeviceCopy::make(*graph, rate_host);
+    auto y = opr::PoissonRNG::make(rate_sym, {10});
+
+    HostTensorND host_y;
+    auto func = graph->compile({make_callback_copy(y, host_y)});
+
+    func->execute();
+
+    ASSERT_EQ(TensorShape({200000 * 5}), host_y.shape());
+    for (int i = 0; i < 5; ++i) {
+        float rate = 0.1 * (i + 1);
+        auto stat = BasicStat::make(host_y.ptr<float>() + 200000 * i, 200000, rate);
+        ASSERT_LT(fabs(stat.mean - rate), 0.01);
+        ASSERT_LT(fabs(stat.std - sqrt(rate)), 0.1);
+    }
+}
+
 TEST(TestOprRand, EmptyShape) {
     auto test_uniform = []() {
         static constexpr size_t M = 128, N = 0;
@@ -310,12 +337,24 @@ TEST(TestOprRand, EmptyShape) {
         func->execute();
         ASSERT_EQ(TensorShape({SIZE}), host_y.shape());
     };
+    auto test_exponential = []() {
+        std::shared_ptr<HostTensorND> rate_host(new HostTensorND{
+                CompNode::load("xpux"), TensorShape{10, 0}, dtype::Float32()});
+        auto graph = ComputingGraph::make();
+        auto rate_sym = opr::Host2DeviceCopy::make(*graph, rate_host);
+        SymbolVar dev_out = opr::ExponentialRNG::make(rate_sym, {123});
+        HostTensorND host_out;
+        auto func = graph->compile({make_callback_copy(dev_out, host_out)});
+        func->execute();
+        ASSERT_EQ(host_out.shape(), TensorShape({10, 0}));
+    };
     test_uniform();
     test_gaussian();
     test_gamma();
     test_poisson();
     test_beta();
     test_permutation();
+    test_exponential();
 }
 
 TEST(TestOprRand, ShuffleForward) {
@@ -471,6 +510,20 @@ TEST(TestOprRand, Dropout) {
     };
     run({100000}, 0, 0.2);
     run({64, 32, 16, 16}, 1, 0.4);
+}
+
+TEST(TestOprRand, ExponentialReprod) {
+    static constexpr size_t SIZE = 123;
+    std::shared_ptr<HostTensorND> lam_host(new HostTensorND{
+            CompNode::load("xpux"), TensorShape{SIZE}, dtype::Float32()});
+    auto lam_ptr = lam_host->ptr<float>();
+    for (size_t i = 0; i < SIZE; ++i)
+        lam_ptr[i] = 2;
+    auto graph = ComputingGraph::make();
+    auto scale_sym = opr::Host2DeviceCopy::make(*graph, lam_host);
+    check_reproducibility(graph, SIZE, [&scale_sym](uint64_t seed) {
+        return opr::ExponentialRNG::make(scale_sym, {seed});
+    });
 }
 
 // vim: syntax=cpp.doxygen foldmethod=marker foldmarker=f{{{,f}}}
