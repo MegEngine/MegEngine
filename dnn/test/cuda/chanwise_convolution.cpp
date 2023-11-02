@@ -554,7 +554,13 @@ MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL(cb)
 
 #undef MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_FMA_KERNEL
 
-#if CUDA_VERSION >= 10010
+#if CUDA_VERSION == 11080
+#define MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_HMMA_KERNEL(cb) \
+    cb(1, 128, 256, 32, 64, 64, 32);                         \
+    cb(2, 128, 64, 32, 32, 32, 32);                          \
+    cb(3, 64, 128, 32, 32, 32, 32);                          \
+    cb(4, 64, 64, 32, 32, 32, 32);
+#elif CUDA_VERSION >= 10010
 #define MEGDNN_FOREACH_CUTLASS_CHANWISE_CONV_HMMA_KERNEL(cb) \
     cb(1, 128, 128, 32, 32, 32, 32);                         \
     cb(2, 128, 256, 32, 64, 64, 32);                         \

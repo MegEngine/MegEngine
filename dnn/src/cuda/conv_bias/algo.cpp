@@ -347,7 +347,12 @@ void ConvBiasForwardImpl::AlgoPack::fill_dwconv_algos() {
 #if CUDA_VERSION >= 10010
     /// preferred algo
     f16_implicit_bmm.emplace_back(AlgoParam{64, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+//  TODO: optimize the method to avoid too many resources requested.
+//! Remove this config to avoid too many resources requested with cuda118 when align is
+//! 8 or 1.
+#if CUDA_VERSION != 11080
     f16_implicit_bmm.emplace_back(AlgoParam{128, 128, 32, 32, 32, 32, 8, 8, 4, 2});
+#endif
     f16_implicit_bmm.emplace_back(AlgoParam{128, 256, 32, 64, 64, 32, 8, 8, 4, 2});
     f16_implicit_bmm.emplace_back(AlgoParam{128, 64, 32, 32, 32, 32, 8, 8, 4, 2});
     f16_implicit_bmm.emplace_back(AlgoParam{64, 64, 32, 32, 32, 32, 8, 8, 4, 2});
