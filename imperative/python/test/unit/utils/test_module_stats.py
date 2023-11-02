@@ -10,6 +10,7 @@ import megengine.functional as F
 import megengine.hub as hub
 import megengine.module as M
 from megengine.core._trace_option import use_symbolic_shape
+from megengine.traced_module import trace_module
 from megengine.utils.module_stats import (
     hook_modules,
     module_stats,
@@ -99,6 +100,31 @@ def test_getattribute_param():
     assert "conv1-w" in param_names and "conv1-b" in param_names
     conv1_b_param = params[param_names.index("conv1-b")]
     assert int(conv1_b_param["mean"]) == 0 and int(conv1_b_param["std"]) == 0
+
+
+@pytest.mark.skipif(
+    use_symbolic_shape(), reason="This test do not support symbolic shape.",
+)
+def test_tm_get_weights():
+    class Net(M.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = mge.tensor(np.random.randn(3, 3))
+
+        def forward(self, x):
+            return x * self.weight
+
+    fake_inputs = mge.tensor(np.random.randn(3, 3))
+    tm_model = trace_module(Net(), fake_inputs)
+
+    _, _ = module_stats(
+        tm_model,
+        inputs=fake_inputs,
+        cal_params=True,
+        cal_flops=True,
+        cal_activations=True,
+        logging_to_stdout=True,
+    )
 
 
 class TestNet0(M.Module):

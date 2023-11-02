@@ -533,11 +533,11 @@ def module_stats(
 
     module_to_name = dict()
     for (name, module) in model.named_modules():
+        module_to_name[module] = name
         if isinstance(module, tuple(hook_modules)):
             hooks.append(
                 module.register_forward_hook(partial(module_stats_hook, name=name))
             )
-            module_to_name[module] = name
 
     @contextmanager
     def param_stat_context():
