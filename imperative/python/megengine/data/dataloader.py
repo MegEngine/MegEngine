@@ -674,14 +674,17 @@ class _SerialStreamDataLoaderIter(_BaseStreamDataLoaderIter):
             pid = os.getpid()
             if monitor_workers[0] == 0:
                 monitor_workers[0] = pid
+            total_dataset_time, total_transform_time = 0, 0
             while len(ret) < self.sampler.batch_size:
                 if pid == monitor_workers[0]:
-                    raw_data, dataset_time = get_monitor_time_stats(
+                    raw_data, _dataset_time = get_monitor_time_stats(
                         self._try_get_raw_data, start_time
                     )
-                    raw_data, transform_time = get_monitor_time_stats(
+                    raw_data, _transform_time = get_monitor_time_stats(
                         self.transform.apply, raw_data
                     )
+                    total_dataset_time += _dataset_time
+                    total_transform_time += _transform_time
                     ret.append(raw_data)
                 else:
                     raw_data = self._try_get_raw_data(start_time)
@@ -691,7 +694,7 @@ class _SerialStreamDataLoaderIter(_BaseStreamDataLoaderIter):
                     self.collator.apply, ret
                 )
                 print(
-                    f"pid: {pid}, dataset_time: {dataset_time:.6f}, transform_time: {transform_time:.6f}, collate_time: {collate_time:.6f}"
+                    f"pid: {pid}, dataset_time: {total_dataset_time:.6f}, transform_time: {total_transform_time:.6f}, collate_time: {collate_time:.6f}"
                 )
             else:
                 collate_ret = self.collator.apply(ret)
@@ -757,20 +760,23 @@ def stream_fetcher(
     pid = os.getpid()
     global dataset_time, transform_time, collate_time
     data = []
+    total_transform_time, total_dataset_time = 0, 0
     for idx in place_holder:
         try:
             if parallel_stream is False:
                 raw_data = idx
             else:
                 if data_monitor:
-                    raw_data, dataset_time = get_monitor_time_stats(next, dataset_iter)
+                    raw_data, _dataset_time = get_monitor_time_stats(next, dataset_iter)
+                    total_dataset_time += _dataset_time
                 else:
                     raw_data = next(dataset_iter)
 
             if data_monitor:
-                trans_items, transform_time = get_monitor_time_stats(
+                trans_items, _transform_time = get_monitor_time_stats(
                     transform.apply, raw_data
                 )
+                total_transform_time += _transform_time
             else:
                 trans_items = transform.apply(raw_data)
             data.append(trans_items)
@@ -781,6 +787,8 @@ def stream_fetcher(
     if len(data) == 0:
         raise StopIteration
     if data_monitor:
+        dataset_time = total_dataset_time
+        transform_time = total_transform_time
         data, collate_time = get_monitor_time_stats(collate.apply, data)
         return data, pid, dataset_time, transform_time, collate_time
     else:
