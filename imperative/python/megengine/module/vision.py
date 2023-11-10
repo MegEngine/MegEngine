@@ -21,8 +21,8 @@ from ..functional import (
 from ..functional.elemwise import abs, add, clip, floor, log, sqrt
 from ..functional.math import sign
 from ..functional.nn import conv2d, pad
-from ..functional.tensor import broadcast_to
-from ..functional.vision import flip, resize, rot90, rotate
+from ..functional.tensor import broadcast_to, stack
+from ..functional.vision import flip, remap, resize, rot90, rotate
 from ..random.rng import RNG
 from ..tensor import Tensor
 from .module import Module
@@ -878,3 +878,77 @@ class Rotate(Module):
             inp, Tensor
         ), "expected input is megengine.Tensor, got {}".format(type(inp))
         return rotate(inp, self.angle, self.format, self.interp_mode)
+
+
+class Remap(Module):
+    r"""
+    Applies remap transformation to batched 2D images. Remap is an operation that relocates pixels in a image to another location in a new image.
+
+    Note:
+        Input format must be nchw.
+
+    The input images are transformed to the output images by the tensor ``map_1`` and ``map_2``.
+    The output's H and W are same as ``map_1`` and ``map_2``'s H and W.
+
+    Args:
+    inp: input image, its shape represents ``[b, c, in_h, in_w]``.
+    map_1: transformation matrix, the first map of ethier (x,y) points or just x values.
+        if map_2.size == 0(the map of (x,y)), its shape shoule be ``[b, o_h, o_w, 2]``. The shape of output is determined by o_h and o_w.
+        For each element in output, its value is determined by inp and ``map_xy``.
+        ``map_1[..., 0]`` and ``map_1[..., 1]`` are the positions of
+        the current element in inp, respectively. Therefore, their ranges are ``[0, in_w - 1]`` and ``[0, in_h - 1]``.
+        if map_2.size == map_2.size(the map of(x)), its shape should be ``[b, o_h, o_w]``. it's shape are [``o, in_w-1]``.
+
+    map_2:
+        the second map of y values.
+        if map2.size == map_2.size(the map of (y)), its shape should be ``[b, o_h, o_w]``. it's range are [``o, in_h-1]``.
+    interpolation: interpolation methods. Default: "linear". Currently also support "nearest" mode.
+    borderMode: pixel extrapolation method. Default: "replicate". Currently also support "constant", "reflect", "reflect_101", "wrap".
+        "replicate": repeatedly fills the edge pixel values of the duplicate image, expanding the new boundary pixel values with
+        the edge pixel values.
+        "constant": fills the edges of the image with a fixed numeric value.
+    borderValue: value used in case of a constant border. Default: 0.0
+
+    Returns:
+        output tensor. [b, c, o_h, o_w]
+
+    Examples:
+        >>> from megengine.module import Remap
+        >>> from megengine.tensor import Tensor
+        >>> import numpy
+        >>> inp_shape = (1, 1, 4, 4)
+        >>> inp = Tensor(numpy.arange(16, dtype=numpy.float32)).reshape(inp_shape)
+        >>> x_map = Tensor([[[1,0],[0,0]]],dtype=numpy.float32)
+        >>> y_map = Tensor([[[1,1],[1,1]]],dtype=numpy.float32)
+        >>> remap = Remap()
+        >>> out = remap(inp, x_map, y_map)
+        >>> out.numpy()
+        array([[[[5., 4.],
+                 [4., 4.]]]], dtype=float32)
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(
+        self,
+        inp: Tensor,
+        map_1: Tensor,
+        map_2: Tensor,
+        interpolation: str = "linear",
+        borderMode: str = "replicate",
+        borderValue: float = 0.0,
+    ):
+        assert all(
+            isinstance(ele, Tensor) for ele in [inp, map_1, map_2]
+        ), "expected input is megengine.Tensor"
+        assert map_1.size > 0, "expect map_1.size > 0"
+        assert map_2.size == 0 or (
+            list(map_1.shape) == list(map_2.shape)
+        ), "expected map_1.size == 0 or map_1.shape == map_2.shape"
+        map_xy = map_1
+        if map_2.size > 0:
+            ndim = map_1.ndim
+            map_xy = stack([map_1, map_2], axis=ndim)
+        out = remap(inp, map_xy, borderMode, borderValue, interpolation)
+        return out

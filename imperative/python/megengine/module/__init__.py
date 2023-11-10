@@ -49,6 +49,7 @@ from .vision import (
     Flip,
     LinearContrast,
     Mixup,
+    Remap,
     Resize,
     Rot90,
     Rotate,
