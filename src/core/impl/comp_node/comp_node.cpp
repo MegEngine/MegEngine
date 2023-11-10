@@ -498,8 +498,13 @@ std::unique_ptr<MegBrainError> CompNode::check_async_error() const {
     copy_to_device(ptr, &zero_info, sizeof(zero_info));
     sync();
 
+    std::string addi_info =
+            "\nIf you are using megengine in python, you can get more error "
+            "information by `export MEGENGINE_INTERP_ASYNC_LEVEL=0`.";
+
     // throw exception
-    mgb_assert(error_info.tracker_ptr, "error tracker unavailable");
+    mgb_assert(
+            error_info.tracker_ptr, "error tracker unavailable. %s", addi_info.c_str());
     return cg::OperatorNodeExcExtraInfo::ExcMaker{
             static_cast<cg::OperatorNodeBase*>(error_info.tracker_ptr)}
             .make_unique<MegBrainError>(
@@ -509,7 +514,8 @@ std::unique_ptr<MegBrainError> CompNode::check_async_error() const {
                     ssprintf(
                             error_info.msg, error_info.msg_args[0],
                             error_info.msg_args[1], error_info.msg_args[2],
-                            error_info.msg_args[3]));
+                            error_info.msg_args[3]) +
+                    addi_info);
 #else
     return nullptr;
 #endif
