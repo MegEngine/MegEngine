@@ -5351,16 +5351,19 @@ size_t MultiHeadAttn_hash_impl(const OpDef& def_) {
                                       mgb::hash_pair_combine(
                                         mgb::hash(op_.tensor_combination_type),
                                         mgb::hash_pair_combine(
-                                          mgb::hash(op_.add_zero_attn),
+                                          mgb::hash(op_.add_bias_kv),
                                           mgb::hash_pair_combine(
-                                            mgb::hash(op_.need_weights),
+                                            mgb::hash(op_.add_zero_attn),
                                             mgb::hash_pair_combine(
-                                              mgb::hash(op_.reslink),
+                                              mgb::hash(op_.need_weights),
                                               mgb::hash_pair_combine(
-                                                mgb::hash(op_.training),
+                                                mgb::hash(op_.reslink),
                                                 mgb::hash_pair_combine(
-                                                  mgb::hash(op_.attn_prob),
-                                                  mgb::hash(op_.out_prob))
+                                                  mgb::hash(op_.training),
+                                                  mgb::hash_pair_combine(
+                                                    mgb::hash(op_.attn_prob),
+                                                    mgb::hash(op_.out_prob))
+                                                  )
                                                 )
                                               )
                                             )
@@ -5389,7 +5392,7 @@ bool MultiHeadAttn_is_same_st_impl(const OpDef& lhs_, const OpDef& rhs_) {
          &&b_ = rhs_.cast_final_safe<MultiHeadAttn>();
     static_cast<void>(a_);
     static_cast<void>(b_);
-return a_.handle == b_.handle && a_.num_heads == b_.num_heads && a_.embeding_size == b_.embeding_size && a_.k_size == b_.k_size && a_.v_size == b_.v_size && a_.qproj_size == b_.qproj_size && a_.kproj_size == b_.kproj_size && a_.vproj_size == b_.vproj_size && a_.oproj_size == b_.oproj_size && a_.qbias == b_.qbias && a_.kbias == b_.kbias && a_.vbias == b_.vbias && a_.obias == b_.obias && a_.sm_scaler == b_.sm_scaler && a_.input_order == b_.input_order && a_.reslink == b_.reslink && a_.training == b_.training && a_.need_weights == b_.need_weights && a_.attn_mask_type == b_.attn_mask_type && a_.add_zero_attn == b_.add_zero_attn && a_.tensor_combination_type == b_.tensor_combination_type && a_.attn_prob == b_.attn_prob && a_.out_prob == b_.out_prob;}
+return a_.handle == b_.handle && a_.num_heads == b_.num_heads && a_.embeding_size == b_.embeding_size && a_.k_size == b_.k_size && a_.v_size == b_.v_size && a_.qproj_size == b_.qproj_size && a_.kproj_size == b_.kproj_size && a_.vproj_size == b_.vproj_size && a_.oproj_size == b_.oproj_size && a_.qbias == b_.qbias && a_.kbias == b_.kbias && a_.vbias == b_.vbias && a_.obias == b_.obias && a_.sm_scaler == b_.sm_scaler && a_.input_order == b_.input_order && a_.reslink == b_.reslink && a_.training == b_.training && a_.need_weights == b_.need_weights && a_.attn_mask_type == b_.attn_mask_type && a_.add_bias_kv == b_.add_bias_kv && a_.add_zero_attn == b_.add_zero_attn && a_.tensor_combination_type == b_.tensor_combination_type && a_.attn_prob == b_.attn_prob && a_.out_prob == b_.out_prob;}
 std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const OpDef& def_) {
     auto&& op_ = def_.cast_final_safe<MultiHeadAttn>();
     static_cast<void>(op_);
@@ -5442,6 +5445,7 @@ std::vector<std::pair<const char*, std::string>> MultiHeadAttn_props_impl(const 
         props_.emplace_back("tensor_combination_type", "INVALID");
         break;
     }
+    props_.emplace_back("add_bias_kv", std::to_string(op_.add_bias_kv));
     props_.emplace_back("add_zero_attn", std::to_string(op_.add_zero_attn));
     props_.emplace_back("need_weights", std::to_string(op_.need_weights));
     props_.emplace_back("reslink", std::to_string(op_.reslink));

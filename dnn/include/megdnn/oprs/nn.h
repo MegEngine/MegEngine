@@ -2686,33 +2686,31 @@ public:
             _megdnn_tensor_out dbias_k, _megdnn_tensor_out dbias_v,
             _megdnn_workspace workspace) = 0;
     MGE_WIN_DECLSPEC_FUC void deduce_layout(
-            const TensorLayout& diff, const TensorLayout& queries,
-            const TensorLayout& keys, const TensorLayout& values,
-            const TensorLayout& qkvo_weight_bias, const TensorLayout& attn_mask,
-            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
-            const TensorLayout& othr_reservespace, TensorLayout& dqueries,
-            TensorLayout& dkeys, TensorLayout& dvalues, TensorLayout& dqkvo_weight_bias,
-            TensorLayout& dbias_k, TensorLayout& dbias_v);
+            const TensorLayout& diff, const TensorLayout& queries, const TensorLayout& keys,
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& attn_weight, 
+            const TensorLayout& mask_reservespace, const TensorLayout& othr_reservespace,
+            TensorLayout& dqueries, TensorLayout& dkeys, TensorLayout& dvalues,
+            TensorLayout& dqkvo_weight_bias, TensorLayout& dbias_k, TensorLayout& dbias_v);
     virtual size_t get_workspace_in_bytes(
-            const TensorLayout& diff, const TensorLayout& queries,
-            const TensorLayout& keys, const TensorLayout& values,
-            const TensorLayout& qkvo_weight_bias, const TensorLayout& attn_mask,
-            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
-            const TensorLayout& othr_reservespace, const TensorLayout& dqueries,
-            const TensorLayout& dkeys, const TensorLayout& dvalues,
-            const TensorLayout& dqkvo_weight_bias, const TensorLayout& dbias_k,
-            const TensorLayout& dbias_v) = 0;
+            const TensorLayout& diff, const TensorLayout& queries, const TensorLayout& keys,
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& attn_weight,
+            const TensorLayout& mask_reservespace, const TensorLayout& othr_reservespace, 
+            const TensorLayout& dqueries, const TensorLayout& dkeys,
+            const TensorLayout& dvalues, const TensorLayout& dqkvo_weight_bias,
+            const TensorLayout& dbias_k, const TensorLayout& dbias_v) = 0;
 
 protected:
     void check_exec(
-            const TensorLayout& diff, const TensorLayout& queries,
-            const TensorLayout& keys, const TensorLayout& values,
-            const TensorLayout& qkvo_weight_bias, const TensorLayout& attn_mask,
-            const TensorLayout& attn_weight, const TensorLayout& mask_reservespace,
-            const TensorLayout& othr_reservespace, const TensorLayout& dqueries,
-            const TensorLayout& dkeys, const TensorLayout& dvalues,
-            const TensorLayout& dqkvo_weight_bias, const TensorLayout& dbias_k,
-            const TensorLayout& dbias_v, size_t workspace_in_bytes);
+            const TensorLayout& diff, const TensorLayout& queries, const TensorLayout& keys,
+            const TensorLayout& values, const TensorLayout& qkvo_weight_bias,
+            const TensorLayout& attn_mask, const TensorLayout& attn_weight,
+            const TensorLayout& mask_reservespace, const TensorLayout& othr_reservespace,
+            const TensorLayout& dqueries, const TensorLayout& dkeys,
+            const TensorLayout& dvalues, const TensorLayout& dqkvo_weight_bias,
+            const TensorLayout& dbias_k, const TensorLayout& dbias_v,
+            size_t workspace_in_bytes);
 };
 }  // namespace megdnn
 #include "megdnn/internal/opr_header_epilogue.h"

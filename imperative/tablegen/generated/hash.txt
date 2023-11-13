@@ -4,4 +4,10 @@ cf46e11b1dd0589c5b729000cb4837b3  generated/opdef.h.inl
 e4dbcfaeffaea82c93a771ac61f5e492  generated/opdef.cpp.inl
 da38d9642aa4366de79672881124d567  generated/opdef.py.inl
 0fdbe0238a3b8402302ffefaa0ca1b0f  generated/opdef.cpy.inl
+e5e42b0ec5dff924eee893df4ddfa301  ../../dnn/scripts/opr_param_defs.py
+3eecac2a1ee025072ed6eafdf0c30b58  ../../src/core/include/megbrain/ir/ops.td
+9d638b8fe8f90de881b7a68e0fa1929d  generated/opdef.h.inl
+fc8c50d024df6695ae55ed984f8efe49  generated/opdef.cpp.inl
+ef8291a5a9341b47c028854f0851fa80  generated/opdef.py.inl
+3fb384e3e4faceeac3bf987582b3c1b4  generated/opdef.cpy.inl
 911001ef0dd771024919f7a1a3a009db  generated/enum_macro.h

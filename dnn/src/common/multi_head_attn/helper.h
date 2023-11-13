@@ -112,10 +112,11 @@ using InputType = Param::TensorCombinationType;
     queries.layout, keys.layout, values.layout, qkvo_weight_bias.layout, \
             attn_mask.layout, bias_k.layout, bias_v.layout, out.layout,  \
             attn_weight.layout, mask_reservespace.layout, othr_reservespace.layout
-#define MHA_BACKWARD_TENSOR_TO_LAYOUT_CALL                                            \
-    diff.layout, queries.layout, keys.layout, values.layout, qkvo_weight_bias.layout, \
-            attn_mask.layout, attn_weight.layout, mask_reservespace.layout,           \
-            othr_reservespace.layout, dqueries.layout, dkeys.layout, dvalues.layout,  \
+#define MHA_BACKWARD_TENSOR_TO_LAYOUT_CALL                                 \
+    diff.layout, queries.layout, keys.layout, values.layout,               \
+            qkvo_weight_bias.layout, attn_mask.layout, attn_weight.layout, \
+            mask_reservespace.layout, othr_reservespace.layout,            \
+            dqueries.layout, dkeys.layout, dvalues.layout,                 \
             dqkvo_weight_bias.layout, dbias_k.layout, dbias_v.layout
 #define MHA_PROXY_FORWARD_TENSOR_TO_LAYOUT_CALL \
     MHA_PROXY_PRE_CALL, MHA_FORWARD_TENSOR_TO_LAYOUT_CALL

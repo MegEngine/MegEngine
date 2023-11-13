@@ -52,6 +52,8 @@ struct MHAForwardProxyBase {
     std::unique_ptr<Dropout> m_dropout_opr;
     std::unique_ptr<Relayout> m_relayout_opr;
     std::unique_ptr<RepeatForward> m_repeat_opr;
+    // std::unique_ptr<ConcatForward> m_concat_opr;
+    // std::unique_ptr<Fill> m_fill_opr;
 
     // metadata
     size_t m_sizeof_datatype;
@@ -61,6 +63,14 @@ struct MHAForwardProxyBase {
     size_t m_heads, m_embed_size, m_ksize, m_vsize, m_qproj_size, m_kproj_size,
             m_vproj_size, m_oproj_size;
     bool m_qbias, m_kbias, m_vbias, m_obias;
+
+    // add bias_kv
+    // TensorLayout m_nbias_k_layout, m_nbias_v_layout;
+    // size_t m_bias_k_repeat_workspacesize, m_bias_v_repeat_workspacesize;
+    // add zero_attn
+    // TensorLayout m_zero_k_layout, m_zero_v_layout;
+    // TensorLayout m_added_bias_zero_k_layout, m_added_bias_zero_v_layout;
+    // size_t m_added_bias_zero_k_workspacesize, m_added_bias_zero_v_workspacesize;
 
     // q/k/v = matmul(qu/ky/va, wq/wk/wv, bq/bk/bv)
     // nq/nk/nv = dimshuffle(q/k/v) (norm to multihead)

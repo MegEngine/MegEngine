@@ -620,16 +620,19 @@ def MultiHeadAttn: MgbHashableOp<"MultiHeadAttn", [MultiHeadAttnParam]> {
                                       mgb::hash_pair_combine(
                                         mgb::hash($_self.tensor_combination_type),
                                         mgb::hash_pair_combine(
-                                          mgb::hash($_self.add_zero_attn),
+                                          mgb::hash($_self.add_bias_kv),
                                           mgb::hash_pair_combine(
-                                            mgb::hash($_self.need_weights),
+                                            mgb::hash($_self.add_zero_attn),
                                             mgb::hash_pair_combine(
-                                              mgb::hash($_self.reslink),
+                                              mgb::hash($_self.need_weights),
                                               mgb::hash_pair_combine(
-                                                mgb::hash($_self.training),
+                                                mgb::hash($_self.reslink),
                                                 mgb::hash_pair_combine(
-                                                  mgb::hash($_self.attn_prob),
-                                                  mgb::hash($_self.out_prob))
+                                                  mgb::hash($_self.training),
+                                                  mgb::hash_pair_combine(
+                                                    mgb::hash($_self.attn_prob),
+                                                    mgb::hash($_self.out_prob))
+                                                  )
                                                 )
                                               )
                                             )
@@ -653,7 +656,7 @@ def MultiHeadAttn: MgbHashableOp<"MultiHeadAttn", [MultiHeadAttnParam]> {
         )
       );
   }];
-  let cmpFunction = [{return $0.handle == $1.handle && $0.num_heads == $1.num_heads && $0.embeding_size == $1.embeding_size && $0.k_size == $1.k_size && $0.v_size == $1.v_size && $0.qproj_size == $1.qproj_size && $0.kproj_size == $1.kproj_size && $0.vproj_size == $1.vproj_size && $0.oproj_size == $1.oproj_size && $0.qbias == $1.qbias && $0.kbias == $1.kbias && $0.vbias == $1.vbias && $0.obias == $1.obias && $0.sm_scaler == $1.sm_scaler && $0.input_order == $1.input_order && $0.reslink == $1.reslink && $0.training == $1.training && $0.need_weights == $1.need_weights && $0.attn_mask_type == $1.attn_mask_type && $0.add_zero_attn == $1.add_zero_attn && $0.tensor_combination_type == $1.tensor_combination_type && $0.attn_prob == $1.attn_prob && $0.out_prob == $1.out_prob;}];
+  let cmpFunction = [{return $0.handle == $1.handle && $0.num_heads == $1.num_heads && $0.embeding_size == $1.embeding_size && $0.k_size == $1.k_size && $0.v_size == $1.v_size && $0.qproj_size == $1.qproj_size && $0.kproj_size == $1.kproj_size && $0.vproj_size == $1.vproj_size && $0.oproj_size == $1.oproj_size && $0.qbias == $1.qbias && $0.kbias == $1.kbias && $0.vbias == $1.vbias && $0.obias == $1.obias && $0.sm_scaler == $1.sm_scaler && $0.input_order == $1.input_order && $0.reslink == $1.reslink && $0.training == $1.training && $0.need_weights == $1.need_weights && $0.attn_mask_type == $1.attn_mask_type && $0.add_bias_kv == $1.add_bias_kv && $0.add_zero_attn == $1.add_zero_attn && $0.tensor_combination_type == $1.tensor_combination_type && $0.attn_prob == $1.attn_prob && $0.out_prob == $1.out_prob;}];
 
 }
 

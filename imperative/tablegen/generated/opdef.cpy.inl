@@ -15637,6 +15637,7 @@ PyOpDefBegin(MultiHeadAttn) // {
             {"input_order", serialization<decltype(opdef.input_order)>::dump(opdef.input_order)},
             {"attn_mask_type", serialization<decltype(opdef.attn_mask_type)>::dump(opdef.attn_mask_type)},
             {"tensor_combination_type", serialization<decltype(opdef.tensor_combination_type)>::dump(opdef.tensor_combination_type)},
+            {"add_bias_kv", serialization<decltype(opdef.add_bias_kv)>::dump(opdef.add_bias_kv)},
             {"add_zero_attn", serialization<decltype(opdef.add_zero_attn)>::dump(opdef.add_zero_attn)},
             {"need_weights", serialization<decltype(opdef.need_weights)>::dump(opdef.need_weights)},
             {"reslink", serialization<decltype(opdef.reslink)>::dump(opdef.reslink)},
@@ -15768,6 +15769,13 @@ PyOpDefBegin(MultiHeadAttn) // {
         }
 
         {
+        auto&& iter = state.find("add_bias_kv");
+        if (iter != state.end()) {
+            opdef.add_bias_kv = serialization<decltype(opdef.add_bias_kv)>::load(iter->second);
+        }
+        }
+
+        {
         auto&& iter = state.find("add_zero_attn");
         if (iter != state.end()) {
             opdef.add_zero_attn = serialization<decltype(opdef.add_zero_attn)>::load(iter->second);
@@ -15831,9 +15839,9 @@ PyOpDefBegin(MultiHeadAttn) // {
 PyOpDefEnd(MultiHeadAttn)
 
 int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds) {
-    static const char* kwlist[] = {"num_heads", "embeding_size", "k_size", "v_size", "qproj_size", "kproj_size", "vproj_size", "oproj_size", "qbias", "kbias", "vbias", "obias", "sm_scaler", "input_order", "attn_mask_type", "tensor_combination_type", "add_zero_attn", "need_weights", "reslink", "training", "seed", "attn_prob", "out_prob", "handle", "scope", NULL};
-    PyObject *num_heads = NULL, *embeding_size = NULL, *k_size = NULL, *v_size = NULL, *qproj_size = NULL, *kproj_size = NULL, *vproj_size = NULL, *oproj_size = NULL, *qbias = NULL, *kbias = NULL, *vbias = NULL, *obias = NULL, *sm_scaler = NULL, *input_order = NULL, *attn_mask_type = NULL, *tensor_combination_type = NULL, *add_zero_attn = NULL, *need_weights = NULL, *reslink = NULL, *training = NULL, *seed = NULL, *attn_prob = NULL, *out_prob = NULL, *handle = NULL, *scope = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOOOOOOOOOOOOOOOO", const_cast<char**>(kwlist), &num_heads, &embeding_size, &k_size, &v_size, &qproj_size, &kproj_size, &vproj_size, &oproj_size, &qbias, &kbias, &vbias, &obias, &sm_scaler, &input_order, &attn_mask_type, &tensor_combination_type, &add_zero_attn, &need_weights, &reslink, &training, &seed, &attn_prob, &out_prob, &handle, &scope))
+    static const char* kwlist[] = {"num_heads", "embeding_size", "k_size", "v_size", "qproj_size", "kproj_size", "vproj_size", "oproj_size", "qbias", "kbias", "vbias", "obias", "sm_scaler", "input_order", "attn_mask_type", "tensor_combination_type", "add_bias_kv", "add_zero_attn", "need_weights", "reslink", "training", "seed", "attn_prob", "out_prob", "handle", "scope", NULL};
+    PyObject *num_heads = NULL, *embeding_size = NULL, *k_size = NULL, *v_size = NULL, *qproj_size = NULL, *kproj_size = NULL, *vproj_size = NULL, *oproj_size = NULL, *qbias = NULL, *kbias = NULL, *vbias = NULL, *obias = NULL, *sm_scaler = NULL, *input_order = NULL, *attn_mask_type = NULL, *tensor_combination_type = NULL, *add_bias_kv = NULL, *add_zero_attn = NULL, *need_weights = NULL, *reslink = NULL, *training = NULL, *seed = NULL, *attn_prob = NULL, *out_prob = NULL, *handle = NULL, *scope = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOOOOOOOOOOOOOOOOOOOOOOOOO", const_cast<char**>(kwlist), &num_heads, &embeding_size, &k_size, &v_size, &qproj_size, &kproj_size, &vproj_size, &oproj_size, &qbias, &kbias, &vbias, &obias, &sm_scaler, &input_order, &attn_mask_type, &tensor_combination_type, &add_bias_kv, &add_zero_attn, &need_weights, &reslink, &training, &seed, &attn_prob, &out_prob, &handle, &scope))
     return -1;
 
     if (num_heads) {
@@ -15980,6 +15988,15 @@ int PyOp(MultiHeadAttn)::py_init(PyObject *self, PyObject *args, PyObject *kwds)
         } CATCH_ALL(-1)
     }
 
+    if (add_bias_kv) {
+        try {
+            // TODO: remove this guard which is used for pybind11 implicit conversion
+            py::detail::loader_life_support guard{};
+            reinterpret_cast<PyOp(MultiHeadAttn)*>(self)->inst().add_bias_kv =
+                    py::cast<decltype(MultiHeadAttn::add_bias_kv)>(py::handle(add_bias_kv));
+        } CATCH_ALL(-1)
+    }
+
     if (add_zero_attn) {
         try {
             // TODO: remove this guard which is used for pybind11 implicit conversion
@@ -16079,6 +16096,7 @@ PyGetSetDef PyOp(MultiHeadAttn)::py_getsetters[] = {
     {const_cast<char*>("input_order"), py_get_generic(MultiHeadAttn, input_order), py_set_generic(MultiHeadAttn, input_order), const_cast<char*>("input_order"), NULL},
     {const_cast<char*>("attn_mask_type"), py_get_generic(MultiHeadAttn, attn_mask_type), py_set_generic(MultiHeadAttn, attn_mask_type), const_cast<char*>("attn_mask_type"), NULL},
     {const_cast<char*>("tensor_combination_type"), py_get_generic(MultiHeadAttn, tensor_combination_type), py_set_generic(MultiHeadAttn, tensor_combination_type), const_cast<char*>("tensor_combination_type"), NULL},
+    {const_cast<char*>("add_bias_kv"), py_get_generic(MultiHeadAttn, add_bias_kv), py_set_generic(MultiHeadAttn, add_bias_kv), const_cast<char*>("add_bias_kv"), NULL},
     {const_cast<char*>("add_zero_attn"), py_get_generic(MultiHeadAttn, add_zero_attn), py_set_generic(MultiHeadAttn, add_zero_attn), const_cast<char*>("add_zero_attn"), NULL},
     {const_cast<char*>("need_weights"), py_get_generic(MultiHeadAttn, need_weights), py_set_generic(MultiHeadAttn, need_weights), const_cast<char*>("need_weights"), NULL},
     {const_cast<char*>("reslink"), py_get_generic(MultiHeadAttn, reslink), py_set_generic(MultiHeadAttn, reslink), const_cast<char*>("reslink"), NULL},
@@ -16107,7 +16125,7 @@ PyMethodDef PyOp(MultiHeadAttn)::py_init_methoddef = {
     "__init__",
     (PyCFunction)PyOp(MultiHeadAttn)::py_init_proxy,
     METH_VARARGS | METH_KEYWORDS,
-    "__init__(self, num_heads: int = ..., embeding_size: int = ..., k_size: int = ..., v_size: int = ..., qproj_size: int = ..., kproj_size: int = ..., vproj_size: int = ..., oproj_size: int = ..., qbias: bool = ..., kbias: bool = ..., vbias: bool = ..., obias: bool = ..., sm_scaler: float = ..., input_order: int = ..., attn_mask_type: Union[str, AttnMaskType] = ..., tensor_combination_type: Union[str, TensorCombinationType] = ..., add_zero_attn: bool = ..., need_weights: bool = ..., reslink: bool = ..., training: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
+    "__init__(self, num_heads: int = ..., embeding_size: int = ..., k_size: int = ..., v_size: int = ..., qproj_size: int = ..., kproj_size: int = ..., vproj_size: int = ..., oproj_size: int = ..., qbias: bool = ..., kbias: bool = ..., vbias: bool = ..., obias: bool = ..., sm_scaler: float = ..., input_order: int = ..., attn_mask_type: Union[str, AttnMaskType] = ..., tensor_combination_type: Union[str, TensorCombinationType] = ..., add_bias_kv: bool = ..., add_zero_attn: bool = ..., need_weights: bool = ..., reslink: bool = ..., training: bool = ..., seed: int = ..., attn_prob: float = ..., out_prob: float = ..., handle: int = ...) -> None\n"
 };
 
 void _init_py_MultiHeadAttn(py::module m) {
