@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cfloat>
 #include "../utils.cuh"
+#include "../utils.h"
 #include "./opr_impl.h"
 #if MGB_CUSTOM_OP
 #include "megbrain/custom/custom.h"
@@ -19,11 +20,6 @@ __device__ int roundf_to_int(T val) {
 }
 
 // ==================  nearest implementation  ==============================
-
-template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
-CUSTOM_HOST_DEVICE T ceil_div(T a, T b) {
-    return (a + b - 1) / b;
-}
 
 __device__ __forceinline__ static int nearest_neighbor_compute_source_index(
         const float scale, int dst_index, int input_size) {
@@ -285,15 +281,6 @@ __global__ void bilinear2d_cropandpad(
 
         output[b_idx * stride_b2 + c_idx * stride_c2 + h2 * stride_h2 + w2] = val;
     }
-}
-
-int last_pow2(unsigned int n) {
-    n |= (n >> 1);
-    n |= (n >> 2);
-    n |= (n >> 4);
-    n |= (n >> 8);
-    n |= (n >> 16);
-    return std::max<int>(1, n - (n >> 1));
 }
 
 void launch_cropandpad_kernel(

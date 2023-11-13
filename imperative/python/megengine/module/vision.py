@@ -1025,3 +1025,42 @@ class GaussianBlur(Module):
         )
         out = apply(op, inp)[0]
         return out
+
+
+class Dilation(Module):
+    BorderModes = [
+        "BORDER_REPLICATE ",
+        "BORDER_REFLECT",
+        "BORDER_REFLECT_101 ",
+        "BORDER_WRAP",
+        "BORDER_CONSTANT",
+        "BORDER_TRANSPARENT",
+        "BORDER_ISOLATED",
+    ]
+
+    def __init__(
+        self,
+        iterations: int = 1,
+        border_type: str = "BORDER_CONSTANT",
+        border_value: float = 0.0,
+    ):
+        super().__init__()
+        assert iterations >= 1, "expected interations >= 1"
+        assert (
+            border_type in self.BorderModes
+        ), f"expected border_typein {self.BorderModes}"
+        self.custom_func = custom.dilate_forward(
+            iterations=iterations, border_type=border_type, border_value=border_value
+        )
+
+    def forward(
+        self, inp: Tensor, kernel: Tensor,
+    ):
+        assert all(
+            isinstance(ele, Tensor) for ele in [inp, kernel]
+        ), f"expected inp and kernel is megengine.Tensor, but got type(inp):{type(inp)}, type(kernel):{type(kernel)}"
+        assert (
+            kernel.ndim == 2
+        ), f"expected kernel.ndim ==2, but got kernel.ndim = {kernel.ndim}"
+        out = apply(self.custom_func, inp, kernel)[0]
+        return out

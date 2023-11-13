@@ -45,6 +45,7 @@ from .vision import (
     AdditivePoissonNoise,
     CropAndPad,
     Cutmix,
+    Dilation,
     Emboss,
     Flip,
     GaussianBlur,

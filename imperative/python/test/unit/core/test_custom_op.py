@@ -259,7 +259,7 @@ def test_custom_op():
     assert lib_path1 not in custom._get_custom_op_lib_info()
 
     assert len(custom._get_custom_op_lib_info()) == 0
-    assert custom._get_custom_op_list() == org_op_list
+    assert set(custom._get_custom_op_list()) == set(org_op_list)
 
     custom.load(lib_path2)
     assert "MatMulScaleForward" in custom._get_custom_op_list()
@@ -273,4 +273,4 @@ def test_custom_op():
     assert lib_path1 not in custom._get_custom_op_lib_info()
 
     assert len(custom._get_custom_op_lib_info()) == 0
-    assert custom._get_custom_op_list() == org_op_list
+    assert set(custom._get_custom_op_list()) == set(org_op_list)
