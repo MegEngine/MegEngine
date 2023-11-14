@@ -55,13 +55,44 @@ def _infer_elemwise_oshape(inp_shapes):
     return oshape
 
 
-def _infer_elemwise_odtype(inp_dtypes):
-    oup_dtype = inp_dtypes[0]
-    for inp_dtype in inp_dtypes:
-        assert (
-            inp_dtype == oup_dtype
-        ), f"elemwise inputs has different dtype {inp_dtypes}"
-    return oup_dtype
+def _elemwise_dtype_promote(
+    *inps: Sequence[Union[int, float, bool, np.array, HLOTensor]]
+):
+    """
+    promote dtypes.
+    input with dtype (int, float, bool) will be converted as np.array
+    """
+    if len(inps) == 1 and isinstance(inps[0], (tuple, list)):
+        inps = inps[0]
+
+    promote_order = [
+        np.bool_,
+        np.uint8,
+        np.int8,
+        np.uint16,
+        np.int16,
+        np.uint32,
+        np.int32,
+        np.uint64,
+        np.int64,
+        np.float16,
+        np.float32,
+        np.float64,
+    ]
+    inps = [inp if isinstance(inp, HLOTensor) else np.array(inp) for inp in inps]
+    dtype_indices = [promote_order.index(inp.dtype) for inp in inps]
+    biggest_index = max(dtype_indices)
+    target_dtype = promote_order[biggest_index]
+
+    # 64 bit is not supported now
+    target_dtype = np.float32 if target_dtype == np.float64 else target_dtype
+    target_dtype = np.int32 if target_dtype == np.int64 else target_dtype
+    target_dtype = np.uint32 if target_dtype == np.uint64 else target_dtype
+
+    out = [
+        inp if inp.dtype == target_dtype else inp.astype(target_dtype) for inp in inps
+    ]
+    return out
 
 
 def bitcast(inp, oshape, odtype):
@@ -93,6 +124,7 @@ def _compare(lhs, rhs, mode, comparison_type=None):
         'LT' (less-than)
     comparision_type: can be 'UNSIGNED', 'SIGNED', 'FLOAT'
     """
+    lhs, rhs = _elemwise_dtype_promote(lhs, rhs)
     lhs = HLOTensor(lhs) if not isinstance(lhs, HLOTensor) else lhs
     rhs = HLOTensor(rhs) if not isinstance(rhs, HLOTensor) else rhs
     oshape = _infer_elemwise_oshape([lhs.shape, rhs.shape])
@@ -101,17 +133,11 @@ def _compare(lhs, rhs, mode, comparison_type=None):
     rhs = rhs.broadcast_to(oshape)
 
     if comparison_type is None:
-        if lhs.dtype in [np.int64, np.int32, np.int16, np.int8]:
-            assert rhs.dtype in [np.int64, np.int32, np.int16, np.int8]
-            comparison_type = "SIGNED"
-        elif lhs.dtype in [np.uint64, np.uint32, np.uint16, np.uint8]:
-            assert rhs.dtype in [np.uint64, np.uint32, np.uint16, np.uint8]
-            comparison_type = "UNSIGNED"
-        elif lhs.dtype in [np.float64, np.float32, np.float16]:
-            assert rhs.dtype in [np.float64, np.float32, np.float16]
-            comparison_type = "FLOAT"
-        else:
-            assert False, f"invalid dtype for compare {lhs.dtype} .vs {rhs.dtype}"
+        err_info = f"invalid dtype for compare {lhs.dtype} .vs {rhs.dtype}"
+        kind_map = {"i": "SIGNED", "u": "UNSIGNED", "f": "FLOAT"}
+        assert lhs.dtype.kind == rhs.dtype.kind, err_info
+        assert lhs.dtype.kind in kind_map, err_info
+        comparison_type = kind_map[lhs.dtype.kind]
 
     return HLOTensor(
         hlo.CompareOp(
@@ -123,31 +149,30 @@ def _compare(lhs, rhs, mode, comparison_type=None):
     )
 
 
-def _elemwise(hlo_op, inps, oshape=None, odtype=None):
+def _elemwise(hlo_op, inps):
+    inps = _elemwise_dtype_promote(inps)
     hinps = [HLOTensor(inp) if not isinstance(inp, HLOTensor) else inp for inp in inps]
 
     ishapes = [inp.shape for inp in hinps]
-    idtypes = [inp.dtype for inp in hinps]
-
-    oshape = _infer_elemwise_oshape(ishapes) if oshape is None else oshape
-    odtype = _infer_elemwise_odtype(idtypes) if odtype is None else odtype
+    oshape = _infer_elemwise_oshape(ishapes)
 
     broadcasted_inps = [hinp.broadcast_to(oshape) for hinp in hinps]
     results = hlo_op(*[binp.tensor for binp in broadcasted_inps]).results
     assert len(results) == 1, f"elemwise op {hlo_op} should have only one output"
-    return HLOTensor(results[0], oshape, odtype)
+
+    return HLOTensor(results[0])
 
 
-def _elemwise_unary(hlo_op, a, oshape=None, odtype=None):
-    return _elemwise(hlo_op, [a], oshape=oshape, odtype=odtype)
+def _elemwise_unary(hlo_op, a):
+    return _elemwise(hlo_op, [a])
 
 
-def _elemwise_binary(hlo_op, a, b, oshape=None, odtype=None):
-    return _elemwise(hlo_op, [a, b], oshape=oshape, odtype=odtype)
+def _elemwise_binary(hlo_op, a, b):
+    return _elemwise(hlo_op, [a, b])
 
 
-def _elemwise_ternary(hlo_op, a, b, c, oshape=None, odtype=None):
-    return _elemwise(hlo_op, [a, b, c], oshape=oshape, odtype=odtype)
+def _elemwise_ternary(hlo_op, a, b, c):
+    return _elemwise(hlo_op, [a, b, c])
 
 
 neg = partial(_elemwise_unary, hlo.NegOp)
@@ -173,7 +198,7 @@ expm1 = partial(_elemwise_unary, hlo.Expm1Op)
 floor = partial(_elemwise_unary, hlo.FloorOp)
 ceil = partial(_elemwise_unary, hlo.CeilOp)
 round = partial(_elemwise_unary, hlo.RoundOp)
-isinf = partial(_elemwise_unary, chlo.IsInfOp, odtype=np.bool_)
+sign = partial(_elemwise_unary, hlo.SignOp)
 
 add = partial(_elemwise_binary, hlo.AddOp)
 sub = partial(_elemwise_binary, hlo.SubtractOp)
@@ -230,7 +255,9 @@ def square(x):
 
 
 def abs_grad(x, dy):
-    return (x / abs(x)) * dy
+    from .tensor import where
+
+    return where(x > 0, dy, -dy)
 
 
 def tan_grad(x, dy):
@@ -385,6 +412,10 @@ def isnan(x):
     return x != x
 
 
+def isinf(x):
+    return _elemwise_unary(chlo.IsInfOp, x).astype(np.bool_)
+
+
 # Elemwise.Mode is unhashable, so we convert it to str
 mge_elemwise_to_xla = {
     str(mops.Elemwise.Mode.ADD): add,
@@ -460,6 +491,7 @@ mge_elemwise_to_xla = {
     str(mops.Elemwise.Mode.SOFTPLUS_GRAD): softplus_grad,
     str(mops.Elemwise.Mode.ISINF): isinf,
     str(mops.Elemwise.Mode.ISNAN): isnan,
+    str(mops.Elemwise.Mode.SIGN): sign,
 }
 
 

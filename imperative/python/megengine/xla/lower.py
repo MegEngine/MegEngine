@@ -161,6 +161,9 @@ def lowering_ops(
             assert _shape_equal(
                 var_out.shape, hlo_out.shape
             ), f"{eqn.op}: {var_out.shape} != {hlo_out.shape}"
+            assert (
+                var_out.dtype == hlo_out.dtype
+            ), f"{eqn.op}: {var_out.dtype} != {hlo_out.dtype}"
             out_nodes.append(hlo_out.tensor)
         out_nodes = tuple(map(_wrap_singleton_ir_values, out_nodes))
         write(eqn.outputs, out_nodes)

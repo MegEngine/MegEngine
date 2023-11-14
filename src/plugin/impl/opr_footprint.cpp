@@ -573,6 +573,7 @@ REGISTE_PARAM_JSON_FUNC(InstanceNormBackward)
 REGISTE_PARAM_JSON_FUNC(GroupNormBackward)
 REGISTE_PARAM_JSON_FUNC(FakeQuantBackward)
 REGISTE_PARAM_JSON_FUNC(TQTBackward)
+REGISTE_PARAM_JSON_FUNC(ResizeBackward)
 
 std::shared_ptr<json::Value> dimshuffle_param2json(
         const opr::Dimshuffle::Param& param) {
@@ -876,6 +877,7 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::GroupNormBackward>();
     add_single_param_json<opr::FakeQuantBackward>();
     add_single_param_json<opr::TQTBackward>();
+    add_single_param_json<opr::ResizeBackward>();
 
 #endif
 }

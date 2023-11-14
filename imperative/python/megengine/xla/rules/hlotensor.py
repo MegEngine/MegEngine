@@ -24,15 +24,16 @@ class HLOTensor:
         if isinstance(
             tensor, (int, float, np.int_, np.float16, np.float32, np.float64)
         ):
+            tensor = tensor if dtype is None else np.array(tensor).astype(dtype)
             tensor = ir_utils.ir_constant(tensor)
         elif isinstance(tensor, np.ndarray):
+            tensor = tensor if dtype is None else np.array(tensor).astype(dtype)
             tensor = ir_utils.ir_constant(tensor)
         else:
-            pass
+            assert isinstance(
+                tensor, (ir.RankedTensorType, ir.BlockArgument, ir.OpResult)
+            ), type(tensor)
 
-        assert isinstance(
-            tensor, (ir.RankedTensorType, ir.BlockArgument, ir.OpResult)
-        ), type(tensor)
         infered_shape = get_irnode_shape(tensor)
         infered_dtype = get_irnode_dtype(tensor)
 

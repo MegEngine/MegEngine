@@ -447,6 +447,7 @@ def _get_adaptive_pool_param(ishape, oshape, tensor_format):
     else:
         assert False, f"adaptive pooling only nchw or nhwc, get {tensor_format}"
 
+    assert 0 not in oshape_hw, f"oshape of pooling cannot have zero, get {oshape_hw}"
     stride_hw = [(isize // osize) for isize, osize in zip(ishape_hw, oshape_hw)]
     kernel_hw = [
         (isize - (osize - 1) * stride)

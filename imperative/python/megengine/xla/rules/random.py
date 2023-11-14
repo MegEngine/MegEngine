@@ -70,6 +70,7 @@ def dropout_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     random_val, new_key = rng_uint_generator(key, inp.shape, "uint32")
     mask = random_val > np.array(ctx.op.drop_prob * np.iinfo(np.uint32).max, np.uint32)
     multiplier = mask.astype(inp.dtype)
+    assert ctx.op.drop_prob < 1 and ctx.op.drop_prob >= 0, ctx.op.drop_prob
     multiplier = multiplier / (1.0 - ctx.op.drop_prob)
     out = inp * multiplier
     mask = mask.reshape((-1,)).astype("uint8")
@@ -80,6 +81,9 @@ def dropout_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
 def droupout_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(args) == 2 and len(ctx.vars_in) == 2 and len(ctx.vars_out) == 1
     dy, mask = args[0], args[1]
-    scale = 1.0 - ctx.param["drop_prob"]
+    drop_prob = ctx.param["drop_prob"]
+    assert drop_prob < 1 and drop_prob >= 0, drop_prob
+
+    scale = 1.0 - drop_prob
     multiplier = mask.reshape(dy.shape).astype(dy.dtype) / scale
     return dy * multiplier

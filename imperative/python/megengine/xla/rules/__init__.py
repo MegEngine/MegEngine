@@ -9,5 +9,6 @@ from . import (
     reduction,
     tensor,
     trivial,
+    vision,
 )
 from .utils import get_rule

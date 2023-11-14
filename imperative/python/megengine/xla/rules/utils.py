@@ -51,9 +51,9 @@ def _shape_equal(lhs_shape, rhs_shape):
     if len(lhs_shape) == 0 and len(rhs_shape) == 0:
         return True
     if len(lhs_shape) != 0:
-        assert isinstance(lhs_shape[0], int)
+        assert isinstance(lhs_shape[0], (int, np.int32)), f"{lhs_shape}, {rhs_shape}"
     if len(rhs_shape) != 0:
-        assert isinstance(rhs_shape[0], int)
+        assert isinstance(rhs_shape[0], (int, np.int32)), f"{lhs_shape}, {rhs_shape}"
 
     if len(lhs_shape) != len(rhs_shape):
         return False

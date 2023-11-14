@@ -144,6 +144,7 @@ def _normalize_grad(dy, x, x_mean, rstd, axes):
     if x_mean.ndim < x.ndim or rstd.ndim < x.ndim:
         reduced_shape = [x.shape[i] if i not in axes else 1 for i in range(x.ndim)]
         axes_divider = np.prod([x.shape[i] for i in axes]).astype("float32")
+        assert axes_divider != 0, f"input shape of normalize error {x.shape}"
 
         x_mean = x_mean.reshape(reduced_shape)
         rstd = rstd.reshape(reduced_shape)

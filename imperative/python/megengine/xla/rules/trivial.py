@@ -3,7 +3,6 @@ from typing import Sequence, Union
 import numpy as np
 
 from ...core._imperative_rt import ops as mops
-from ..lib.mlir import ir
 from .hlotensor import HLOTensor
 from .tensor import fill
 from .utils import _check_shape, register_lower_rule

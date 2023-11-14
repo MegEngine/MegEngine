@@ -10,9 +10,7 @@ from ..lib.mlir.dialects import chlo, hlo
 from ..utils import flatten_list
 from .elemwise import log, logical_and, logical_not, maximum, minimum, pow, round
 from .hlotensor import HLOTensor
-from .indexing import ScatterDimensionNumbers, scatter
-from .reduction import sum
-from .tensor import concat, expand_dims, fill, iota
+from .tensor import concat, expand_dims, fill, iota, xla_scatter
 from .utils import _can_broadcast_to, _shape_equal, register_lower_rule
 
 
@@ -377,12 +375,15 @@ def argsort_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         expander = expand_dims(expander, -1)
         idx = concat([expander, idx], -1)
 
-        dnums = ScatterDimensionNumbers(
-            update_window_dims=(),
+        dx = xla_scatter(
+            dx,
+            idx,
+            dy,
+            update_window_dims=tuple(),
             inserted_window_dims=(0, 1),
-            scatter_dims_to_operand_dims=(0, 1),
+            scattered_dims_to_operand_dims=(0, 1),
+            unique_indices=True,
         )
-        dx = scatter(dx, idx, dy, dnums, unique_indices=True)
     return dx
 
 

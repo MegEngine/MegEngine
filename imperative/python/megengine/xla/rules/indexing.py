@@ -9,6 +9,7 @@ from .. import ir_utils
 from ..lib.mlir import ir
 from ..lib.mlir.dialects import hlo
 from .hlotensor import HLOTensor
+from .tensor import xla_gather, xla_scatter
 from .utils import _parse_var_as_value, register_lower_rule
 
 
@@ -389,74 +390,6 @@ def _index_to_gather(
     )
 
 
-def scatter(
-    x,
-    indices,
-    y,
-    dnums,
-    oup_var=None,
-    indices_are_sorted=False,
-    unique_indices=False,
-    mode=None,
-):
-    scatter_dnums = hlo.ScatterDimensionNumbers.get(
-        update_window_dims=list(dnums.update_window_dims),
-        inserted_window_dims=list(dnums.inserted_window_dims),
-        scattered_dims_to_operand_dims=list(dnums.scatter_dims_to_operand_dims),
-        index_vector_dim=len(indices.shape) - 1,
-    )
-    if oup_var is not None:
-        oshape, odtype = oup_var.shape, oup_var.dtype
-    else:
-        oshape, odtype = x.shape, x.dtype
-    indices = (
-        ir_utils.ir_constant(indices)
-        if not isinstance(indices, HLOTensor)
-        else indices.tensor
-    )
-    op = hlo.ScatterOp(
-        ir_utils.make_ir_type_according_meta_tuple(oshape, odtype),
-        [x.tensor],
-        indices,
-        [y.tensor],
-        scatter_dnums,
-        indices_are_sorted=ir.BoolAttr.get(indices_are_sorted),
-        unique_indices=ir.BoolAttr.get(unique_indices),
-    )
-
-    scalar_type = ir_utils.make_ir_type_according_meta(tuple(), odtype)
-    update = op.update_computation.blocks.append(scalar_type, scalar_type)
-
-    with ir.InsertionPoint(update):
-        if mode == "add":
-            add = hlo.AddOp(*update.arguments)
-            hlo.ReturnOp(add.results)
-        else:
-            hlo.ReturnOp((update.arguments[1],))
-
-    return HLOTensor(op.results)
-
-
-def gather(
-    x, indices, dnums, slice_sizes, indices_are_sorted=False, unique_indices=False,
-):
-    gather_dnums = hlo.GatherDimensionNumbers.get(
-        collapsed_slice_dims=list(dnums.collapsed_slice_dims),
-        index_vector_dim=len(indices.shape) - 1,
-        offset_dims=list(dnums.offset_dims),
-        start_index_map=list(dnums.start_index_map),
-    )
-
-    op = hlo.GatherOp(
-        x.tensor,
-        indices.tensor,
-        gather_dnums,
-        indices_are_sorted=ir.BoolAttr.get(indices_are_sorted),
-        slice_sizes=ir_utils.dense_int_elements(slice_sizes),
-    )
-    return HLOTensor(op.results)
-
-
 @register_lower_rule(mops.SetSubtensor)
 def setsubtensor_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(ctx.vars_out) == 1
@@ -476,21 +409,16 @@ def setsubtensor_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     if len(indexer.reversed_y_dims) != 0:
         assert False, "not support"
 
-    dnums = ScatterDimensionNumbers(
+    out = xla_scatter(
+        x,
+        HLOTensor(indexer.gather_indices),
+        y,
         update_window_dims=indexer.dnums.offset_dims,
         inserted_window_dims=indexer.dnums.collapsed_slice_dims,
-        scatter_dims_to_operand_dims=indexer.dnums.start_index_map,
+        scattered_dims_to_operand_dims=indexer.dnums.start_index_map,
+        reduce_mode=None,
     )
 
-    out = scatter(
-        x,
-        indexer.gather_indices,
-        y,
-        dnums,
-        indices_are_sorted=indexer.indices_are_sorted,
-        unique_indices=indexer.unique_indices,
-        mode=None,
-    )
     return out
 
 
@@ -602,21 +530,19 @@ def vec_indexing_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(ctx.param["items"]) == 1
     axis, _, _, _, is_index = ctx.param["items"][0]
     assert is_index
-    inp = args[0]
-    indices = args[1]
+    inp, indices = args[0], args[1]
     indices = convert_negative_index(indices, inp.shape[axis])
-    offset_dims = tuple(i for i in range(len(inp.shape)) if i != axis)
-    collapsed_slice_dims = (axis,)
-    start_index_map = (axis,)
     indices = indices.reshape(indices.shape + (1,))
     slices_size = tuple(
         (inp.shape[i] if i != axis else 1 for i in range(len(inp.shape)))
     )
-    return gather(
+    return xla_gather(
         inp,
         indices,
-        GatherDimensionNumbers(offset_dims, collapsed_slice_dims, start_index_map),
         slices_size,
+        offset_dims=tuple(i for i in range(len(inp.shape)) if i != axis),
+        collapsed_slice_dims=(axis,),
+        start_index_map=(axis,),
     )
 
 
@@ -625,26 +551,17 @@ def vec_indexing_incr_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(ctx.param["items"]) == 1
     axis, _, _, _, is_index = ctx.param["items"][0]
     assert is_index
-    inp = args[0]
-    indices = args[2]
+    inp, y, indices = args[0], args[1], args[2]
     indices = convert_negative_index(indices, inp.shape[axis])
     indices = indices.reshape(indices.shape + (1,))
-    y = args[1]
-    offset_dims = tuple(i for i in range(len(inp.shape)) if i != axis)
-    collapsed_slice_dims = (axis,)
-    start_index_map = (axis,)
-    dnums = ScatterDimensionNumbers(
-        update_window_dims=offset_dims,
-        inserted_window_dims=collapsed_slice_dims,
-        scatter_dims_to_operand_dims=start_index_map,
-    )
-    out = scatter(
+
+    out = xla_scatter(
         inp,
         indices,
         y,
-        dnums,
-        indices_are_sorted=False,
-        unique_indices=False,
-        mode="add",
+        update_window_dims=tuple(i for i in range(len(inp.shape)) if i != axis),
+        inserted_window_dims=(axis,),
+        scattered_dims_to_operand_dims=(axis,),
+        reduce_mode="sum",
     )
     return out

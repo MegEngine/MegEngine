@@ -219,6 +219,40 @@ def test_split():
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
 @pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
 @pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_stack():
+    def tester(ishape, nr, axis, dtype=None):
+        dtype = dtype or np.float32
+        inps = [tensor(np.random.randn(*ishape), dtype=dtype) for i in range(nr)]
+        oshape = F.stack(inps, axis=axis).shape
+        dout = tensor(np.random.randn(*oshape), dtype=dtype)
+
+        gm = GradManager()
+
+        @jit.xla_trace(without_host=True)
+        def func(*inps, dout):
+            gm.attach(inps)
+            with gm:
+                out = F.stack(inps, axis=axis)
+                gm.backward(out, dout)
+            rets = [inp.grad for inp in inps] + [out]
+            return rets
+
+        mge_rsts = func(*inps, dout=dout)
+        xla_rsts = func(*inps, dout=dout)
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+
+    tester((2, 5, 4), 1, axis=0)
+    tester((2, 1, 4), 2, axis=1)
+    tester((6, 5, 4), 3, axis=2)
+    tester((2, 3, 2), 4, axis=-1)
+    tester((5, 1, 2), 5, axis=-2)
+    tester((7, 4, 2), 6, axis=-3)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_fill_and_fill_like():
     def tester(ref_shape, value, dtype=None):
         dtype = dtype or np.float32
@@ -246,3 +280,69 @@ def test_fill_and_fill_like():
     tester((32, 16), 0.1)
     tester((32, 16), 0)
     tester((1, 1, 16), 1)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_where():
+    def tester(shape, dtype=None):
+        dtype = dtype or np.float32
+        mask = tensor(np.random.randn(*shape), dtype=np.int32)
+        x = tensor(np.random.randn(*shape), dtype=dtype)
+        y = tensor(np.random.randn(*shape), dtype=dtype)
+        dout = tensor(np.random.randn(*shape), dtype=dtype)
+
+        gm = GradManager()
+
+        @jit.xla_trace(without_host=True)
+        def func(mask, x, y, dout):
+            mask = mask.astype(np.bool_)
+            if x.dtype == np.int32:
+                return [F.where(mask, x, y)]
+            else:
+                gm.attach([x, y])
+                with gm:
+                    out = F.where(mask, x, y)
+                    gm.backward(out, dout)
+                return out, x.grad, y.grad
+
+        mge_rsts = func(mask, x, y, dout)
+        xla_rsts = func(mask, x, y, dout)
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+
+    for dty in [np.float32, np.int32]:
+        tester((2, 5, 4), dty)
+        tester((3, 6, 12), dty)
+        tester((1, 1), dty)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_linspace():
+    def tester(start, stop, num, dtype=None):
+        dtype = dtype or np.float32
+
+        @jit.xla_trace(without_host=True, capture_as_const=True)
+        def func():
+            return F.linspace(start, stop, num, dtype=dtype)
+
+        mge_rst = func()
+        xla_rst = func()
+        np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+
+    for dty in ["float32", "int32"]:
+        tester(0, 0, 0, dty)
+        tester(0, 1, 1, dty)
+        tester(0, 1, 12, dty)
+        tester(1, 0, 0, dty)
+        tester(1, 0, 12, dty)
+        tester(4, 6, 1, dty)
+        tester(4, 6, 0, dty)
+        tester(4, 6, 12, dty)
+        tester(-4, 6, 0, dty)
+        tester(-4, 6, 12, dty)
+        tester(4, -6, 0, dty)
+        tester(4, -6, 12, dty)

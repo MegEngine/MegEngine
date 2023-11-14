@@ -88,6 +88,7 @@ def test_elemwise():
     tester(F.silu, (4, 16, 12, 12), dtype=np.float32, atol=1e-5)
     tester(F.logsigmoid, (4, 16, 12, 12), dtype=np.float32, atol=1e-5)
     tester(F.softplus, (4, 16, 12, 12), dtype=np.float32, atol=1e-5)
+    tester(F.sign, (4, 1, 16, 1), dtype=np.float32, atol=1e-5, backward=False)
     tester(F.add, (4, 16, 12, 12), (4, 16, 12, 12), dtype=np.float32, atol=1e-5)
     tester(F.sub, (4, 16, 12, 12), (4, 16, 1, 1), dtype=np.float32, atol=1e-5)
     tester(F.mul, (4, 16, 12, 12), (1, 1, 12, 12), dtype=np.float32, atol=1e-5)
