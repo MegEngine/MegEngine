@@ -2239,6 +2239,7 @@ def _merge_masks(
         key_padding_mask.shape if key_padding_mask is not None else 0
     )
 
+    attn_add = (1 if add_zero_attn else 0) + (1 if add_bias_kv else 0)
     # is_causal is used to hint whether to use a causal mask, where the upper right triangle is all -inf,
     # and the diagonal and lower left triangle are all 0. But if attn_mask is given, attn_mask is used first.
     if (
@@ -2258,6 +2259,8 @@ def _merge_masks(
         # At this point, merged_mask = attn_mask
         mask_type = "default_mask"
         merged_mask = attn_mask
+        if add_zero_attn or add_bias_kv:
+            merged_mask = pad(merged_mask, ((0, 0), (0, attn_add)))
     elif maybe_cudnn_style_mask and not add_zero_attn and not add_bias_kv:
         # Please be careful, we only check if the shape is correct,
         # and we will not check if the values in attn_mask_tensor and key_padding_mask_tensor are correct.
@@ -2280,6 +2283,8 @@ def _merge_masks(
             # At this point, merged_mask = attn_mask
             mask_type = "user_defined_mask"
             merged_mask = attn_mask
+            if add_zero_attn or add_bias_kv:
+                merged_mask = pad(merged_mask, ((0, 0), (0, 0), (0, attn_add)))
         elif key_padding_mask is not None and attn_mask is None:
             mask_type = "user_defined_mask"
             # At this point, merged_mask.ndim = 4
@@ -2293,6 +2298,8 @@ def _merge_masks(
             merged_mask = reshape(
                 merged_mask, (batch_size * num_heads, seq_qlen, seq_klen)
             )
+            if add_zero_attn or add_bias_kv:
+                merged_mask = pad(merged_mask, ((0, 0), (0, 0), (0, attn_add)))
         elif (attn_mask is not None) and (key_padding_mask is not None):
             # At this point, merged_mask.ndim = 3
             mask_type = "user_defined_mask"
@@ -2320,6 +2327,9 @@ def _merge_masks(
                 merged_mask = reshape(
                     merged_mask, (batch_size * num_heads, seq_qlen, seq_klen)
                 )
+            if add_zero_attn or add_bias_kv:
+                merged_mask = pad(merged_mask, ((0, 0), (0, 0), (0, attn_add)))
+                
     return merged_mask, mask_type
 
 
@@ -2385,6 +2395,7 @@ def multi_head_attention(
         obias: indicates whether there is a out bias in io_weight_bias, this parameter is only valid when oproj_size > 0.
         bias_k, bias_v: the bias of the key and value sequences to be added at sequence dim. distinguished from kbias and vbias, bias_kv here is not kbias and vbias in the linear layer, and bias_kv here will be added to the K and V at sequence dimensions, where K and V are the matrices of key and value after projection, and K and V will be used to calculate the attention matrix.
             Note: Should be set to None, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        add_bias_kv: If specified, adds bias to the key and value sequences at sequence dim. Default: ``False``.
         add_zero_attn: if specified, adds a new batch of zeros to the key and value sequences at sequence dim. Default: ``False``.
             Note: should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         key_padding_mask: if specified, a mask of shape :math:`(N, S)` indicating which elements within ``key`` to ignore for the purpose of
@@ -2436,23 +2447,6 @@ def multi_head_attention(
         assert (
             oproj_size is not None and oproj_size > 0
         ), "when output projection bias is true, output projection weight must be given"
-    unsupport_reason = " The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation."
-    assert add_zero_attn is False, (
-        "add_zero_attn should be False, and configuration of this parameter is not supported now."
-        + unsupport_reason
-    )
-    assert bias_k is None, (
-        "bias_k should be None, and configuration of this parameter is not supported now."
-        + unsupport_reason
-    )
-    assert bias_v is None, (
-        "bias_v should be None, and configuration of this parameter is not supported now."
-        + unsupport_reason
-    )
-    assert reslink is False, (
-        "reslink should be False, and configuration of this parameter is not supported now."
-        + unsupport_reason
-    )
     head_dim = embed_dim if qproj_size == 0 else embed_dim // num_heads
     smScaler = head_dim ** -0.5
     k_size = key.shape[2]

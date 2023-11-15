@@ -52,6 +52,7 @@ struct MHABackwardProxyBase {
     std::unique_ptr<Dropout> m_dropout_opr;
     std::unique_ptr<DropoutBackward> m_dropoutbw_opr;
     std::unique_ptr<Relayout> m_relayout_opr;
+    std::unique_ptr<RepeatForward> m_repeat_opr;
 
     // metadata
     size_t m_sizeof_datatype;
@@ -60,7 +61,7 @@ struct MHABackwardProxyBase {
     size_t m_bq_off, m_bk_off, m_bv_off, m_bo_off;
     size_t m_head, m_embed_size, m_ksize, m_vsize, m_qproj_size, m_kproj_size,
             m_vproj_size, m_oproj_size;
-    bool m_qbias, m_kbias, m_vbias, m_obias;
+    bool m_qbias, m_kbias, m_vbias, m_obias, m_add_bias_kv, m_add_zero_attn;
 
     // out = dropout(out)
     TensorLayout m_mask2_layout;
@@ -96,6 +97,12 @@ struct MHABackwardProxyBase {
 
     // nq, nk, nv = q, k, v
     TensorLayout m_grad_q_layout, m_grad_k_layout, m_grad_v_layout;
+
+    // k, v = add_bias_kv(k, v)
+    // k, v = add_zero_attn(k, v)
+    TensorLayout m_dnbias_k_layout, m_dnbias_v_layout;
+    size_t m_attn_add;
+    size_t m_dbias_k_reduce_workspacesize, m_dbias_v_reduce_workspacesize;
 
     // q = qin @ wq + bq
     TensorLayout m_wq_layout, m_bq_layout;

@@ -1,4 +1,4 @@
-60a2122f34c8ef5178f7578ede525745  ../../dnn/scripts/opr_param_defs.py
+57d74471c0ec4595f1199e9892532c3e  ../../dnn/scripts/opr_param_defs.py
 0404080b46a781d6a6e934dd518a8739  ../../src/core/include/megbrain/ir/ops.td
 2892e254468b915d704c362ed7c70db5  generated/opdef.h.inl
 a8dd62a580e2e2a142108eb4d6ead658  generated/opdef.cpp.inl
