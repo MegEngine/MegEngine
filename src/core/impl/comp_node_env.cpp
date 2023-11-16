@@ -5,6 +5,9 @@
 #include "megbrain/version_symbol.h"
 
 #include "megdnn/version.h"
+#if MGB_CAMBRICON
+#include "megcore_cambricon.h"
+#endif
 #if MGB_CUDA
 #include "megcore_cuda.h"
 #if MGB_ENABLE_DEBUG_UTIL
@@ -67,6 +70,12 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
 #if MGB_CAMBRICON
     if (env.property().type == CompNode::DeviceType::CAMBRICON) {
         CompNodeEnv::CnrtEnv::init_status.init();
+        megcoreCreateDeviceHandle(
+                &m_dev_hdl, megcorePlatformCambricon, env.cnrt_env().device, 0);
+        megcore::createComputingHandleWithCambriconContext(
+                &m_comp_hdl, m_dev_hdl, 0,
+                {env.cnrt_env().queue, env.cnrt_env().cnnl_handle,
+                 env.cnrt_env().mem_mgr.get()});
         init = true;
     }
 #endif

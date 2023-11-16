@@ -216,6 +216,17 @@ if(MGE_WITH_ATLAS)
   list(APPEND LIBMEGDNN_DEF -DMEGDNN_WITH_ATLAS=1)
 endif()
 
+if(MGE_WITH_CAMBRICON)
+  file(GLOB_RECURSE SOURCES_ cambricon/*.cpp)
+  list(APPEND SOURCES ${SOURCES_})
+  file(GLOB_RECURSE BANG_SOURCES cambricon/*.mlu)
+  # FIXME: bang_include_directories doesn't work in neuware-1.13.0
+  bang_include_directories_v1(${PROJECT_SOURCE_DIR}/dnn/include
+                              ${PROJECT_SOURCE_DIR}/dnn ${PROJECT_BINARY_DIR}/genfiles)
+  bang_compile(BANG_OBJS "${BANG_SOURCES}")
+  list(APPEND SOURCES ${BANG_OBJS})
+endif()
+
 add_definitions(${LIBMEGDNN_DEF})
 add_library(megdnn EXCLUDE_FROM_ALL OBJECT ${SOURCES})
 
@@ -302,6 +313,10 @@ endif()
 
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_libraries(megdnn PRIVATE Threads::Threads)
+endif()
+
+if(MGE_WITH_CAMBRICON)
+  target_link_libraries(megdnn PRIVATE ${BANG_OBJS} ${MGE_CAMBRICON_LIBS})
 endif()
 
 install(TARGETS megdnn EXPORT ${MGE_EXPORT_TARGETS})

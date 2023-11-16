@@ -1,0 +1,43 @@
+#include "./param_pack.mlu.h"
+#include "bang.h"
+#include "bang_device_types.h"
+
+namespace megdnn {
+namespace cambricon {
+namespace param_pack {
+
+__mlu_entry__ void concat_proxy_kernel(
+        const void** srcs, void* dst, const int32_t* offsets, int64_t dtype_size,
+        int64_t num_src) {
+    int64_t step = (num_src + taskDim - 1) / taskDim;
+    int64_t start = step * taskId;
+    int64_t end = start + step;
+    if (end > num_src) {
+        end = num_src;
+    }
+
+    int64_t length = start < end ? end - start : 0;
+    for (int64_t j = 0; j < length; j += 1) {
+        int64_t src_index = start + j;
+        const void* cur_src_ptr = srcs[src_index];
+        int8_t* cur_dst_ptr =
+                static_cast<int8_t*>(dst) + offsets[src_index * 2] * dtype_size;
+        int64_t data_size =
+                (offsets[src_index * 2 + 1] - offsets[src_index * 2]) * dtype_size;
+        __memcpy_async(cur_dst_ptr, cur_src_ptr, data_size, GDRAM2GDRAM);
+    }
+}
+
+void concat_proxy(
+        const BangHandle& handle, const void** srcs, void* dst, const int32_t* offsets,
+        int64_t dtype_size, int64_t num_src) {
+    cnrtDim3_t dim = {handle.num_clusters * handle.num_cores_per_cluster, 1, 1};
+    cnrtFunctionType_t func_type = CNRT_FUNC_TYPE_UNION1;
+    concat_proxy_kernel<<<dim, func_type, handle.queue>>>(
+            srcs, dst, offsets, dtype_size, num_src);
+    after_kernel_launch();
+}
+
+}  // namespace param_pack
+}  // namespace cambricon
+}  // namespace megdnn

@@ -1039,10 +1039,15 @@ endif()
 if(MGE_WITH_CAMBRICON)
   include_directories("$ENV{NEUWARE_HOME}/include")
   link_directories("$ENV{NEUWARE_HOME}/lib64")
+  include(cmake/Cambricon/bang.cmake)
+  include(cmake/Cambricon/cnrt.cmake)
+  include(cmake/Cambricon/cndev.cmake)
+  include(cmake/Cambricon/cndrv.cmake)
+  list(APPEND MGE_CAMBRICON_LIBS libcnrt libcndev cnmlrt libcndrv)
   if(CNRT_VERSION_STRING VERSION_GREATER "5.0.0")
-    include(cmake/cnnl.cmake)
-    include(cmake/cnlight.cmake)
-    include(cmake/magicmind.cmake)
+    include(cmake/Cambricon/cnnl.cmake)
+    include(cmake/Cambricon/cnlight.cmake)
+    include(cmake/Cambricon/magicmind.cmake)
     list(
       APPEND
       MGE_CAMBRICON_LIBS
@@ -1213,6 +1218,7 @@ set(MEGDNN_WITH_ROCM ${MGE_WITH_ROCM})
 
 # CAMBRICON
 set(MGB_CAMBRICON ${MGE_WITH_CAMBRICON})
+set(MEGDNN_WITH_CAMBRICON ${MGE_WITH_CAMBRICON})
 # Debug info
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL
                                            "RelWithDebInfo")

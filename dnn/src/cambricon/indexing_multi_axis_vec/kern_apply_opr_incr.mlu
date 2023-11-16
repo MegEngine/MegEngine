@@ -1,0 +1,26 @@
+#include <bang.h>
+#include "kern.mlu.h"
+#include "mlu.h"
+
+template <typename ctype>
+__mlu_func__ void atomicAdd(ctype* address, ctype val) {}
+
+#define CTYPE_ATOMIC_ADD(ctype)                              \
+    template <>                                              \
+    __mlu_func__ void atomicAdd(ctype* address, ctype val) { \
+        __nram__ ctype address_nram[1];                      \
+        __bang_atomic_add(address_nram, address, val, 1);    \
+    }
+CTYPE_ATOMIC_ADD(float)
+CTYPE_ATOMIC_ADD(half)
+
+template <>
+__mlu_func__ void atomicAdd(bool* address, bool val) {
+    if (val) {
+        address[0] = true;
+    }
+}
+
+#define KERN_APPLY_OPR_OPR_INCR \
+    megdnn::cambricon::indexing_multi_axis_vec::OprIncrCommon
+#include "./kern_apply_opr_impl.mlu.inl"

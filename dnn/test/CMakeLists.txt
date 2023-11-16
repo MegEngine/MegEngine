@@ -29,6 +29,11 @@ if(MGE_WITH_MIDOUT_PROFILE)
   list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/third_party/midout/src/midout.cpp)
 endif()
 
+if(MGE_WITH_CAMBRICON)
+  file(GLOB_RECURSE SOURCES_ cambricon/*.cpp)
+  list(APPEND SOURCES ${SOURCES_})
+endif()
+
 if(MGE_WITH_ATLAS)
   file(GLOB_RECURSE SOURCES_ atlas/*.cpp)
   list(APPEND SOURCES ${SOURCES_})
