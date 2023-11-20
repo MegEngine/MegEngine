@@ -10,19 +10,17 @@
  */
 
 #include "checksum.mlu.h"
-#include "cnsccl.h"
 #include "mlu.h"
 
+// mtp_592 dose not support cnsccl
+#if __BANG_ARCH__ < 591
+#include "cnsccl.h"
 #define CLUSTER_DIM 4
 #define CORE_DIM    4
 #define STRIDE      1024
 
-#if CNRT_MAJOR_VERSION >= 5
 __mlu_global__ void checksum_kernel_union4(
         uint32_t* dst, const uint32_t* src, int nr_elems) {
-#else
-__mlu_entry__ void checksum_kernel_union4(uint32_t* dst, uint32_t* src, int nr_elems) {
-#endif
     __nram__ uint32_t sum = 0;
     __nram__ uint32_t val[STRIDE];
     __mlu_shared__ uint32_t partial_sum_send[CORE_DIM];
@@ -70,13 +68,21 @@ __mlu_entry__ void checksum_kernel_union4(uint32_t* dst, uint32_t* src, int nr_e
 #undef CORE_DIM
 #undef STRIDE
 
-#if CNRT_MAJOR_VERSION >= 5
+#else
+extern void checksum_kernel_union1_wrapper(
+        uint32_t* dst, const uint32_t* src, int num_elems, cnrtQueue_t queue);
+#endif
+
 void checksum_kernel_union4_wrapper(
         uint32_t* dst, const uint32_t* src, int num_elems, cnrtQueue_t queue) {
+#if __BANG_ARCH__ < 591
     cnrtDim3_t dim{16, 1, 1};
     cnrtFunctionType_t c = CNRT_FUNC_TYPE_UNION4;
     checksum_kernel_union4<<<dim, c, queue>>>(dst, src, num_elems);
-}
+#else
+    // fallback union1 kernel
+    checksum_kernel_union1_wrapper(dst, src, num_elems, queue);
 #endif
+}
 
 // vim: ft=cpp syntax=cpp.doxygen
