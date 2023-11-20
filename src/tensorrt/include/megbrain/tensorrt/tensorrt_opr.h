@@ -187,9 +187,9 @@ public:
 
 private:
     // note: gpu allocator must be released after other trt objects
+    std::shared_ptr<nvinfer1::IBuilder> m_builder;
     std::shared_ptr<GpuAllocator> m_gpu_allocator;
     std::shared_ptr<nvinfer1::INetworkDefinition> m_network;
-    std::shared_ptr<nvinfer1::IBuilder> m_builder;
     std::shared_ptr<nvinfer1::ICudaEngine> m_engine;
 #if NV_TENSOR_RT_VERSION >= 6001
     TensorRTUniquePtr<nvinfer1::IBuilderConfig> m_builder_config;

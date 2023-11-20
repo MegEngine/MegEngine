@@ -403,9 +403,9 @@ TensorRTOpr::TensorRTOpr(
         std::shared_ptr<GpuAllocator> gpu_allocator, const VarNodeArray& inputs,
         std::shared_ptr<nvinfer1::ICudaEngine> engine, const OperatorNodeConfig& config)
         : Super(inputs.at(0)->owner_graph(), config, "tensor_rt", {inputs.at(0)}),
+          m_builder{std::move(builder)},
           m_gpu_allocator{std::move(gpu_allocator)},
           m_network{std::move(network)},
-          m_builder{std::move(builder)},
           m_engine{std::move(engine)},
           m_feature_bits{feature_bits} {
     mgb_assert(

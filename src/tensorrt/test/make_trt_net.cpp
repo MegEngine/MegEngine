@@ -447,7 +447,11 @@ std::pair<nvinfer1::IBuilder*, INetworkDefinition*> intl::ReshapeConcatTensorRTN
     }
 #endif
     int axis = 1;
+#if NV_TENSOR_RT_VERSION >= 8500
+    int ignoreBatch = 0;
+#else
     bool ignoreBatch = false;
+#endif
     nvinfer1::PluginField fields[2] = {
             nvinfer1::PluginField{"axis", &axis, nvinfer1::PluginFieldType::kINT32, 1},
             nvinfer1::PluginField{
