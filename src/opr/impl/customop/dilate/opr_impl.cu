@@ -85,6 +85,11 @@ __device__ const T max(const T& lhs, const T& rhs) {
 }
 
 template <typename T>
+__device__ const T min(const T& lhs, const T& rhs) {
+    return lhs < rhs ? lhs : rhs;
+}
+
+template <typename T>
 __global__ void dilate(
         T* input, T* kernel, T* output, const int I_N, const int I_C, const int I_H,
         const int I_W, const int K_H, const int K_W, BorderMode border_type,
@@ -99,7 +104,7 @@ __global__ void dilate(
     if (w >= I_W || h >= I_H)
         return;
     const size_t stride_nc = blockDim.z * gridDim.z;
-    for (int nc_pos = 0; nc_pos < NC; nc_pos += stride_nc) {
+    for (int nc_pos = nc_iter; nc_pos < NC; nc_pos += stride_nc) {
         T val = min_ele;
         for (int kh = 0; kh < K_H; kh++) {
             int h_pos = border_interpolate(h + kh - HALF_KH, I_H, border_type);
@@ -108,10 +113,10 @@ __global__ void dilate(
                 T kernel_ele = kernel[kh * K_W + kw];
                 if (kernel_ele) {
                     if (w_pos != -1 && h_pos != -1) {
-                        T input_ele = input[nc_iter * (stride_c) + h_pos * I_W + w_pos];
+                        T input_ele = input[nc_pos * (stride_c) + h_pos * I_W + w_pos];
                         val = max(input_ele, val);
                     } else {
-                        if (nc_iter % I_C)
+                        if (nc_pos % I_C)
                             val = INFINITY;
                         else
                             val = max(static_cast<T>(border_value), val);
@@ -119,7 +124,7 @@ __global__ void dilate(
                 }
             }
         }
-        output[nc_iter * (stride_c) + h * I_W + w] = val;
+        output[nc_pos * (stride_c) + h * I_W + w] = val;
     }
 }
 

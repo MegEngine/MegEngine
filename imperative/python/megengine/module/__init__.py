@@ -47,6 +47,7 @@ from .vision import (
     Cutmix,
     Dilation,
     Emboss,
+    FillPoly,
     Flip,
     GaussianBlur,
     LinearContrast,

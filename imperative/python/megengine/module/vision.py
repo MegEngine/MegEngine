@@ -1,7 +1,7 @@
 import math
 import numbers
 from functools import lru_cache
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -12,6 +12,7 @@ from ..functional import (
     arange,
     broadcast_to,
     clip,
+    concat,
     flatten,
     full_like,
     gather,
@@ -1028,10 +1029,64 @@ class GaussianBlur(Module):
 
 
 class Dilation(Module):
+    r""" dilate a image by kernel.
+
+    Args:
+        iterations(int): number of times dilation is applied.
+        border_type(str): pixel extrapolation method.
+        border_value(float): border value in case of a constant border.
+
+    Note:
+        Input format must be nchw.
+
+    Examples:
+        >>> import numpy 
+        >>> from megengine.module import Dilation
+        >>> from megengine.tensor import Tensor
+        >>> from operator import mul
+        >>> from functools import reduce
+        >>> inp_shape = (1,3,9,9)
+        >>> inp_stop = reduce(mul, list(inp_shape))
+        >>> img = Tensor(numpy.arange(inp_stop).reshape(inp_shape).astype(numpy.float32))
+        >>> kernel_size = 3
+        >>> kernel = Tensor(numpy.ones((kernel_size, kernel_size)).astype(numpy.float32))
+        >>> dilation = Dilation() 
+        >>> mge_out = dilation(img, kernel,) # doctest: +SKIP
+        >>> mge_out.numpy() # doctest: +SKIP
+        array([[[[ 10.,  11.,  12.,  13.,  14.,  15.,  16.,  17.,  17.],
+            [ 19.,  20.,  21.,  22.,  23.,  24.,  25.,  26.,  26.],
+            [ 28.,  29.,  30.,  31.,  32.,  33.,  34.,  35.,  35.],
+            [ 37.,  38.,  39.,  40.,  41.,  42.,  43.,  44.,  44.],
+            [ 46.,  47.,  48.,  49.,  50.,  51.,  52.,  53.,  53.],
+            [ 55.,  56.,  57.,  58.,  59.,  60.,  61.,  62.,  62.],
+            [ 64.,  65.,  66.,  67.,  68.,  69.,  70.,  71.,  71.],
+            [ 73.,  74.,  75.,  76.,  77.,  78.,  79.,  80.,  80.],
+            [ 73.,  74.,  75.,  76.,  77.,  78.,  79.,  80.,  80.]],
+            [[ inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf],
+            [ inf, 101., 102., 103., 104., 105., 106., 107.,  inf],
+            [ inf, 110., 111., 112., 113., 114., 115., 116.,  inf],
+            [ inf, 119., 120., 121., 122., 123., 124., 125.,  inf],
+            [ inf, 128., 129., 130., 131., 132., 133., 134.,  inf],
+            [ inf, 137., 138., 139., 140., 141., 142., 143.,  inf],
+            [ inf, 146., 147., 148., 149., 150., 151., 152.,  inf],
+            [ inf, 155., 156., 157., 158., 159., 160., 161.,  inf],
+            [ inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf]],
+            [[ inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf],
+            [ inf, 182., 183., 184., 185., 186., 187., 188.,  inf],
+            [ inf, 191., 192., 193., 194., 195., 196., 197.,  inf],
+            [ inf, 200., 201., 202., 203., 204., 205., 206.,  inf],
+            [ inf, 209., 210., 211., 212., 213., 214., 215.,  inf],
+            [ inf, 218., 219., 220., 221., 222., 223., 224.,  inf],
+            [ inf, 227., 228., 229., 230., 231., 232., 233.,  inf],
+            [ inf, 236., 237., 238., 239., 240., 241., 242.,  inf],
+            [ inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf,  inf]]]],
+            dtype=float32)
+        
+    """
     BorderModes = [
-        "BORDER_REPLICATE ",
+        "BORDER_REPLICATE",
         "BORDER_REFLECT",
-        "BORDER_REFLECT_101 ",
+        "BORDER_REFLECT_101",
         "BORDER_WRAP",
         "BORDER_CONSTANT",
         "BORDER_TRANSPARENT",
@@ -1064,3 +1119,71 @@ class Dilation(Module):
         ), f"expected kernel.ndim ==2, but got kernel.ndim = {kernel.ndim}"
         out = apply(self.custom_func, inp, kernel)[0]
         return out
+
+
+class FillPoly(Module):
+    r""" Fills the areas, which are bounded by polygons.
+
+    Args:
+        img(Tensor): The img data.
+        pts(List[Tensor]): The list of polygons where each polygon is represented as an array of points.
+        color(Tensor): The Polygon color.
+
+    Note:
+        Input format must be nchw.
+
+    Examples:
+        >>> import numpy 
+        >>> from megengine.module import FillPoly
+        >>> from megengine.tensor import Tensor
+        >>> from megengine import is_cuda_available
+        >>> N, C = 1, 3
+        >>> img = Tensor(numpy.zeros((N, C, 9, 9),dtype=numpy.int32))
+        >>> areas = [Tensor(numpy.array([[0, 0], [5, 0], [5, 5],]))]
+        >>> fill_poly = FillPoly()
+        >>> color = Tensor([255, 255, 200])
+        >>> out = fill_poly(img, areas, color) # doctest: +SKIP
+        >>> out.numpy() # doctest: +SKIP
+        array([[[[255, 255, 255, 255, 255, 255,   0,   0,   0],
+            [  0, 255, 255, 255, 255, 255,   0,   0,   0],
+            [  0,   0, 255, 255, 255, 255,   0,   0,   0],
+            [  0,   0,   0, 255, 255, 255,   0,   0,   0],
+            [  0,   0,   0,   0, 255, 255,   0,   0,   0],
+            [  0,   0,   0,   0,   0, 255,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0]],
+            [[255, 255, 255, 255, 255, 255,   0,   0,   0],
+            [  0, 255, 255, 255, 255, 255,   0,   0,   0],
+            [  0,   0, 255, 255, 255, 255,   0,   0,   0],
+            [  0,   0,   0, 255, 255, 255,   0,   0,   0],
+            [  0,   0,   0,   0, 255, 255,   0,   0,   0],
+            [  0,   0,   0,   0,   0, 255,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0]],
+            [[200, 200, 200, 200, 200, 200,   0,   0,   0],
+            [  0, 200, 200, 200, 200, 200,   0,   0,   0],
+            [  0,   0, 200, 200, 200, 200,   0,   0,   0],
+            [  0,   0,   0, 200, 200, 200,   0,   0,   0],
+            [  0,   0,   0,   0, 200, 200,   0,   0,   0],
+            [  0,   0,   0,   0,   0, 200,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0],
+            [  0,   0,   0,   0,   0,   0,   0,   0,   0]]]], dtype=int32)
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, img: Tensor, pts: List[Tensor], color: Tensor):
+        assert img.ndim == 4, f"expected img.ndim==4, but img.ndim={img.ndim}"
+        N, C, H, W = img.shape
+        assert C == len(
+            color
+        ), f"expected C == color.shape[0], but len(color) = {color.shape[0]} "
+        custom_func = custom.fillpoly_forward()
+        flag_pts = concat(pts)
+        area_offset = Tensor([pt.shape[0] for pt in pts])
+        res = apply(custom_func, img, flag_pts, area_offset, color)[0]
+        return res
