@@ -9,11 +9,13 @@
  * "AS IS" BASIS, WITHOUT ARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+// cnModuleGetKenrel err: cant find checksum_kernel_union4 kernel on 590 
+// mtp_592 dose not support cnsccl
+#if 0
+
 #include "checksum.mlu.h"
 #include "mlu.h"
 
-// mtp_592 dose not support cnsccl
-#if __BANG_ARCH__ < 591
 #include "cnsccl.h"
 #define CLUSTER_DIM 4
 #define CORE_DIM    4
@@ -68,21 +70,12 @@ __mlu_global__ void checksum_kernel_union4(
 #undef CORE_DIM
 #undef STRIDE
 
-#else
-extern void checksum_kernel_union1_wrapper(
-        uint32_t* dst, const uint32_t* src, int num_elems, cnrtQueue_t queue);
-#endif
-
 void checksum_kernel_union4_wrapper(
         uint32_t* dst, const uint32_t* src, int num_elems, cnrtQueue_t queue) {
-#if __BANG_ARCH__ < 591
     cnrtDim3_t dim{16, 1, 1};
     cnrtFunctionType_t c = CNRT_FUNC_TYPE_UNION4;
     checksum_kernel_union4<<<dim, c, queue>>>(dst, src, num_elems);
-#else
-    // fallback union1 kernel
-    checksum_kernel_union1_wrapper(dst, src, num_elems, queue);
-#endif
 }
 
+#endif
 // vim: ft=cpp syntax=cpp.doxygen

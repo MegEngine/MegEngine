@@ -12,11 +12,12 @@ namespace {
 void bang_c_wrapper(
         uint32_t* dst, const uint32_t* src, int nr_elems, cnrtQueue_t queue,
         int core_version) {
-    if (core_version == 220) {
-        checksum_kernel_union1_wrapper(dst, src, nr_elems, queue);
-    } else {
-        checksum_kernel_union4_wrapper(dst, src, nr_elems, queue);
-    }
+    checksum_kernel_union1_wrapper(dst, src, nr_elems, queue);
+    // if (core_version == 220) {
+    //     checksum_kernel_union1_wrapper(dst, src, nr_elems, queue);
+    // } else {
+    //     checksum_kernel_union4_wrapper(dst, src, nr_elems, queue);
+    // }
     after_kernel_launch();
 }
 }  // namespace
