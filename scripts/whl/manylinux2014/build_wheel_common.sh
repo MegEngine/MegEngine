@@ -13,7 +13,7 @@ TensorRT_LIB_DIR="/opt/tensorrt/lib/"
 NEUWARE_LIB_DIR="/usr/local/neuware/lib64"
 
 SDK_NAME="unknown"
-x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118 neuware113"
+x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118 neuware113 neuware115"
 aarch64_support_version="cu102_JetsonNano cu111 cpu cu118"
 docker_tag="env_manylinux2014:latest"
 
@@ -298,7 +298,7 @@ else
     BUILD_WHL_WITH_CUDA="OFF"
 fi
 
-if [ $SDK_NAME == "neuware113" ];then
+if [ $SDK_NAME == "neuware113" ] || [ $SDK_NAME == "neuware115" ];then
     echo "use $SDK_NAME with cambricon support"
     BUILD_GCC8="ON"
     COPY_LIB_LIST="\
@@ -317,7 +317,7 @@ if [ $SDK_NAME == "neuware113" ];then
         ${NEUWARE_LIB_DIR}/libcnbin.so"
 
     BUILD_WHL_WITH_CAMBRICON="ON"
-    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CAMBRICON=ON -DMGE_MLU_ARCH=MLU370"
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_CAMBRICON=ON"
 else
     BUILD_WHL_WITH_CAMBRICON="OFF"
 fi
