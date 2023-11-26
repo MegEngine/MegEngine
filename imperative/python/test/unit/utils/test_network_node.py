@@ -19,6 +19,7 @@ from megengine.core.ops import builtin
 from megengine.device import (
     get_cuda_compute_capability,
     get_device_count,
+    get_tensorrt_version,
     is_cuda_available,
 )
 from megengine.functional.external import tensorrt_runtime_opr
