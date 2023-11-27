@@ -308,12 +308,11 @@ def resize_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
         len(ctx.vars_out) == 1
     ), f"Resize should have 1 output, get {len(ctx.vars_out)}"
 
-    inp, size = args[0], ctx.vars_in[1].bound_data
+    inp, size = args[0], ctx.vars_out[0].shape[2:]
     fmt, imode = ctx.op.format, ctx.op.imode
-    assert _shape_equal(size.shape, (2,)), f"illegal size {size}"
+    assert len(size) == 2, f"illegal size {size}"
 
     if fmt == mops.AdaptivePooling.Format.NCHW:
-        size = ctx.vars_out[0].shape[2:]
         if imode == mops.Remap.InterpolationMode.NEAREST:
             return resize_nearest(inp, size)
         elif imode == mops.Remap.InterpolationMode.LINEAR:

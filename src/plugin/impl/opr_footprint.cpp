@@ -11,6 +11,7 @@
 #include "megbrain/opr/dnn/layer_norm.h"
 #include "megbrain/opr/dnn/local.h"
 #include "megbrain/opr/dnn/lrn.h"
+#include "megbrain/opr/dnn/lsq.h"
 #include "megbrain/opr/dnn/pooling.h"
 #include "megbrain/opr/dnn/roi_align.h"
 #include "megbrain/opr/dnn/roi_pooling.h"
@@ -573,6 +574,7 @@ REGISTE_PARAM_JSON_FUNC(InstanceNormBackward)
 REGISTE_PARAM_JSON_FUNC(GroupNormBackward)
 REGISTE_PARAM_JSON_FUNC(FakeQuantBackward)
 REGISTE_PARAM_JSON_FUNC(TQTBackward)
+REGISTE_PARAM_JSON_FUNC(LSQBackward)
 REGISTE_PARAM_JSON_FUNC(ResizeBackward)
 
 std::shared_ptr<json::Value> dimshuffle_param2json(
@@ -877,6 +879,7 @@ void OprFootprint::init_all_footprints() {
     add_single_param_json<opr::GroupNormBackward>();
     add_single_param_json<opr::FakeQuantBackward>();
     add_single_param_json<opr::TQTBackward>();
+    add_single_param_json<opr::LSQBackward>();
     add_single_param_json<opr::ResizeBackward>();
 
 #endif

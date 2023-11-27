@@ -704,7 +704,8 @@ def pooling_backward_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
 
 def softmax(x: HLOTensor, axis: int = -1):
     assert isinstance(axis, int), f"axis should be int, but get {axis}({type(axis)})"
-    x_exp = exp(x)
+    x_max = x.max(axis=axis, keepdims=True)
+    x_exp = exp(x - x_max)
     x_exp_sum = x_exp.sum(axis=axis, keepdims=True)
     y = x_exp / x_exp_sum
     return y

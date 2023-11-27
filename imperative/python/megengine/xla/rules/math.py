@@ -8,7 +8,16 @@ from ..ir_utils import bool_attr, i64_attr
 from ..lib.mlir import ir
 from ..lib.mlir.dialects import chlo, hlo
 from ..utils import flatten_list
-from .elemwise import log, logical_and, logical_not, maximum, minimum, pow, round
+from .elemwise import (
+    log,
+    logical_and,
+    logical_not,
+    logical_or,
+    maximum,
+    minimum,
+    pow,
+    round,
+)
 from .hlotensor import HLOTensor
 from .tensor import concat, expand_dims, fill, iota, xla_scatter
 from .utils import _can_broadcast_to, _shape_equal, register_lower_rule
@@ -507,4 +516,44 @@ def tqt_grad_rule(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     )
     grad_clip = args[0] * mask_clip.astype(args[0].dtype) * rounded * t * log(2.0)
     grad_s = grad_quant + grad_clip
+    return [grad_x, grad_s]
+
+
+@register_lower_rule(mops.LSQ)
+def lsq_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 4 and len(ctx.vars_in) == 4
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    assert args[1].ndim == args[2].ndim, f"{args[1].shape}, {args[2].shape}"
+    qmax = np.array(ctx.param["qmax"], dtype=args[0].dtype)
+    qmin = np.array(ctx.param["qmin"], dtype=args[0].dtype)
+    inp, scale, zero_point, grad_s = args[:4]
+    res = inp / scale + zero_point
+    res = maximum(minimum(res, qmax), qmin)
+    res = round(res)
+    res = (res - zero_point) * scale
+    return res
+
+
+@register_lower_rule("LSQBackward")
+def lsq_grad_rule(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
+    assert (
+        len(args) == 5 and len(ctx.vars_in) == 5
+    ), f"{len(args)}, {len(ctx.vars_in)}, {len(ctx.vars_out)}"
+    assert args[0].ndim == args[1].ndim, f"{args[0].shape}, {args[1].shape}"
+
+    inp = args[1] / args[2] + args[3]
+    round_inp = round(inp)
+    qmax = np.array(ctx.param["qmax"], dtype=inp.dtype)
+    qmin = np.array(ctx.param["qmin"], dtype=inp.dtype)
+    ind_small = inp < qmin
+    ind_big = inp > qmax
+    ind_middle = logical_or(ind_small, ind_big)
+    ind_middle = logical_not(ind_middle)
+    ind_small = ind_small.astype(inp.dtype)
+    ind_big = ind_big.astype(inp.dtype)
+
+    grad_s = ind_small * qmin + ind_big * qmax + ind_middle * (-inp + round_inp)
+    grad_s = grad_s * args[-1] * args[0]
+    grad_x = ind_middle * args[0]
     return [grad_x, grad_s]

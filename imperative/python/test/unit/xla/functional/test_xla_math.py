@@ -13,6 +13,7 @@ from megengine.quantization.utils import (
     QuantMode,
     create_qparams,
     fake_quant_tensor,
+    lsq_forward,
     tqt_forward,
 )
 
@@ -263,3 +264,41 @@ def test_tqt():
     tester((1, 32, 32, 32), -126, 129, 4)
     tester((16, 32, 32, 32), -126, 129, 2)
     tester((4, 32, 32, 32), -128, 128, 3)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_lsq():
+    def tester(inp_shape, qmin, qmax, scale, zero_point, grad_s):
+
+        scale = tensor([scale], dtype=np.float32)
+        zero_point = tensor([zero_point], dtype=np.float32)
+        grad_s = tensor([grad_s], dtype=np.float32)
+        inp_data = np.random.uniform(low=-512.0, high=512.0, size=inp_shape)
+        inp = tensor(inp_data, dtype=np.float32)
+
+        oup = lsq_forward(qmin, qmax, inp, scale, zero_point, grad_s)
+        dout = tensor(0.1 * np.random.randn(*oup.shape), dtype=np.float32)
+
+        gm = GradManager()
+
+        @jit.xla_trace(without_host=True, capture_as_const=True)
+        def func(inp, scale, qmin, qmax, dout):
+            gm.attach([inp, scale])
+            with gm:
+                out = lsq_forward(qmin, qmax, inp, scale, zero_point, grad_s)
+                gm.backward(out, dout)
+            return [out, inp.grad, scale.grad]
+
+        mge_rsts = func(inp, scale, qmin, qmax, dout)
+        xla_rsts = func(inp, scale, qmin, qmax, dout)
+
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(
+                mge_rst.numpy(), xla_rst.numpy(), rtol=1e-5, atol=1e-5
+            )
+
+    tester((1, 32, 32, 32), -126, 129, 4.0, 0.0, 1.0)
+    tester((16, 32, 32, 32), -126, 129, 2.0, 1.0, 1.5)
+    tester((4, 32, 32, 32), -128, 128, 0.5, 1.0, 2.5)
