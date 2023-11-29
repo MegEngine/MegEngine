@@ -83,6 +83,10 @@ void NormalExecEnv::run_task_seq_impl(const TaskSeq& seq) {
     MGB_CATCH(MegBrainError & exc, {
         if (cur_opr && !exc.extra_info())
             OperatorNodeExcExtraInfo::record(cur_opr, exc);
+
+        mgb_log_error(
+                "error occurred when running operator %s: %s",
+                cur_opr ? cur_opr->cname() : "unknown", exc.what());
         throw;
     })
 }
