@@ -28,6 +28,17 @@ except ImportError as e:
 
 logger = get_logger(__name__)
 
+
+# TODO: a debug interface for developer to control the memory allocation
+# should be removed when the memory problem is fixed
+_xla_prealloc_offset_debug = 0
+
+
+def _set_xla_prealloc_offset_debug(val):
+    global _xla_prealloc_offset_debug
+    _xla_prealloc_offset_debug = val
+
+
 xla_client_compute_stream = None
 # to record how much memory imperative mode occupying
 _max_reserved_before_compile = None
@@ -232,7 +243,10 @@ class xla_trace(trace):
             left = _get_cuda_left_memory(get_rank())
             should_left = total - _max_reserved_before_compile
             if left > should_left:
-                _make_free_mem_block_device(get_default_device(), left - should_left)
+                _make_free_mem_block_device(
+                    get_default_device(),
+                    left - should_left + _xla_prealloc_offset_debug,
+                )
 
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
