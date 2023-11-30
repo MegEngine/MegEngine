@@ -778,6 +778,10 @@ PyObject* TensorWrapper::_is_external_value() {
     auto&& external_tsf =
             TransformationManager::get_instance()
                     .segments[TransformationManager::Segment::ExternalConvert];
+    if (external_tsf.size() == 0 || external_tsf[0] == nullptr) {
+        Py_RETURN_FALSE;
+    }
+
     auto* tsf = reinterpret_cast<ExternalConvertTransformation*>(external_tsf[0].get());
     mgb_assert(tsf->enabled());
     auto valueref = m_tensor->data();

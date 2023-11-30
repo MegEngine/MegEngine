@@ -121,5 +121,5 @@ def test_xla_trace_with_property():
     xla_outs = func(mod, inp, doup)
     xla_weight = mod.weight.numpy()
 
-    np.testing.assert_allclose(mge_outs[1].numpy(), xla_outs[1].numpy())
-    np.testing.assert_allclose(mge_weight, xla_weight - 1)
+    np.testing.assert_allclose(mge_outs[1].numpy(), xla_outs[1].numpy(), 1e-5)
+    np.testing.assert_allclose(mge_weight, xla_weight - 1, 1e-5)

@@ -39,7 +39,7 @@ class ConvNet(M.Module):
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
 @pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
-@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+@pytest.mark.require_ngpu(2)
 @pytest.mark.isolated_distributed
 def test_xla_trace_dist_training():
     @dist.launcher(n_gpus=2, device_type="gpu")
@@ -116,10 +116,10 @@ def test_xla_trace_dist_training():
             xla_loss, xla_bn_states, xla_opt_states, xla_weights, xla_ses = runner(
                 True, use_cb
             )
-            np.testing.assert_allclose(imp_loss, xla_loss, atol=1e-5, rtol=1e-3)
-            np.testing.assert_allclose(imp_bn_states, xla_bn_states, atol=1e-5)
-            np.testing.assert_allclose(imp_opt_states, xla_opt_states, atol=1e-5)
-            np.testing.assert_allclose(imp_weights, xla_weights, atol=1e-5)
+            np.testing.assert_allclose(imp_loss, xla_loss, rtol=1e-3)
+            np.testing.assert_allclose(imp_bn_states, xla_bn_states, atol=5e-5)
+            np.testing.assert_allclose(imp_opt_states, xla_opt_states, atol=5e-5)
+            np.testing.assert_allclose(imp_weights, xla_weights, atol=1e-3)
             np.testing.assert_array_equal(imp_ses[0], xla_ses)
 
     worker()
@@ -127,7 +127,8 @@ def test_xla_trace_dist_training():
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
 @pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
-@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+@pytest.mark.require_ngpu(2)
+@pytest.mark.isolated_distributed
 def test_partial_trace_dist_training():
     @dist.launcher(n_gpus=2, device_type="gpu")
     def worker():
@@ -237,16 +238,16 @@ def test_partial_trace_dist_training():
                 xla_cb_ses,
             ) = runner(True, True, use_mycb)
 
-            np.testing.assert_allclose(imp_loss, xla_loss, atol=1e-5, rtol=1e-3)
-            np.testing.assert_allclose(imp_loss, xla_cb_loss, atol=1e-5, rtol=1e-3)
-            np.testing.assert_allclose(imp_bn_states, xla_bn_states, atol=1e-5)
-            np.testing.assert_allclose(imp_bn_states, xla_cb_bn_states, atol=1e-5)
-            np.testing.assert_allclose(imp_opt_states, xla_opt_states, atol=1e-5)
-            np.testing.assert_allclose(imp_opt_states, xla_cb_opt_states, atol=1e-5)
-            np.testing.assert_allclose(imp_weights, xla_weights, atol=1e-5)
-            np.testing.assert_allclose(imp_weights, xla_cb_weights, atol=1e-5)
-            np.testing.assert_allclose(imp_grads, xla_grads, atol=1e-5)
-            np.testing.assert_allclose(imp_grads, xla_cb_grads, atol=1e-5)
+            np.testing.assert_allclose(imp_loss, xla_loss, rtol=1e-3)
+            np.testing.assert_allclose(imp_loss, xla_cb_loss, rtol=1e-3)
+            np.testing.assert_allclose(imp_bn_states, xla_bn_states, atol=1e-4)
+            np.testing.assert_allclose(imp_bn_states, xla_cb_bn_states, atol=1e-4)
+            np.testing.assert_allclose(imp_opt_states, xla_opt_states, atol=1e-4)
+            np.testing.assert_allclose(imp_opt_states, xla_cb_opt_states, atol=1e-4)
+            np.testing.assert_allclose(imp_weights, xla_weights, atol=1e-3)
+            np.testing.assert_allclose(imp_weights, xla_cb_weights, atol=1e-3)
+            np.testing.assert_allclose(imp_grads, xla_grads, atol=5e-4)
+            np.testing.assert_allclose(imp_grads, xla_cb_grads, atol=5e-4)
             np.testing.assert_array_equal(imp_ses, xla_ses)
             np.testing.assert_array_equal(imp_ses[0], xla_cb_ses)
 

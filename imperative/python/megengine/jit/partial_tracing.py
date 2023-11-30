@@ -96,7 +96,7 @@ def partial_trace(
     *,
     backend="default",
     without_host=True,
-    trace_gmcallback=False,
+    trace_gmcallback=True,
     **trace_options
 ):
 
@@ -181,7 +181,7 @@ def partial_trace(
         def wrapped_func(*args, **kwargs):
             from ..traced_module.pytree import tree_flatten
             from ..core.autodiff.grad import Grad
-            from ..autodiff.grad_manager import get_activating_grad_manager
+            from ..autodiff.grad_manager import get_backwarding_grad_manager
 
             nonlocal traced
             nonlocal custom_autodiff
@@ -212,6 +212,31 @@ def partial_trace(
                             get_handle_id(v.grad) if v is not None else -1
                         )
 
+                    # if we want to trace the gradmanager attach callback, we will replace
+                    # the original grad by the grad processed the gradmanger attach callback
+                    if trace_gmcallback:
+
+                        def cb_wrapper(cb):
+                            def wrapper(param, grad):
+                                return (
+                                    grad
+                                    if grad._is_external_value()
+                                    else cb(param, grad)
+                                )
+
+                            return wrapper
+
+                        current_gm = get_backwarding_grad_manager()
+                        for _attached_tensor_id, grad in current_gm._gradients.items():
+                            spec = current_gm._attach_specs.get(_attached_tensor_id)
+                            _attached_tensor = spec and spec.tensor()
+                            if _attached_tensor is None:
+                                continue
+                            inp_hid = get_handle_id(_attached_tensor)
+                            if inp_hid in inp_grad_maps:
+                                spec.callbacks = list(map(cb_wrapper, spec.callbacks))
+                                inp_grad_maps[inp_hid] = get_handle_id(grad)
+
                 insert_callback_as_grad_tape(exit_trace)
 
                 ret = trace_obj(*args)
@@ -227,28 +252,6 @@ def partial_trace(
                     backward_trace_obj._trace.enter()
 
                 insert_callback_as_grad_tape(enter_trace)
-
-                # if we want to trace the gradmanager attach callback, we will replace
-                # the original grad by the grad processed the gradmanger attach callback
-                if trace_gmcallback:
-                    current_gm = get_activating_grad_manager()
-
-                    def get_inp_grad_map():
-                        for _attached_tensor_id, grad in current_gm._gradients.items():
-                            spec = current_gm._attach_specs.get(_attached_tensor_id)
-                            # remove the gradmanager callback
-                            spec.callbacks.clear()
-                            # update the handle id
-                            _attached_tensor = spec and spec.tensor()
-                            if _attached_tensor is None:
-                                continue
-                            inp_grad_maps[
-                                get_handle_id(_attached_tensor)
-                            ] = get_handle_id(grad)
-
-                    if current_gm is not None:
-                        current_gm._register_after_backward_callback(get_inp_grad_map)
-
                 return ret
             else:
                 if custom_autodiff is None:

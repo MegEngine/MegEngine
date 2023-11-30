@@ -261,8 +261,7 @@ class AllreduceCallback:
         self._packing_size[dtype] = 0
 
     def __call__(self, param, grad):
-        if use_xla_backend() or getattr(self, "_used_xla", False):
-            self._used_xla = True
+        if use_xla_backend() or grad._is_external_value():
             grad = all_reduce_sum(grad, self._group)
             if self._reduce_method == "mean":
                 grad /= self._group.size
