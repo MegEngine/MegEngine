@@ -1,7 +1,9 @@
 from collections import OrderedDict
 from typing import Sequence
 
-from ..core._imperative_rt.core2 import add_backward_callback as _add_backward_callback
+from ..core._imperative_rt.core2 import (
+    add_backward_callback as insert_callback_as_grad_tape,
+)
 from ..core._imperative_rt.core2 import get_grad_slot, get_handle_id
 from ..logger import get_logger
 from ..tensor import Tensor
@@ -89,7 +91,14 @@ def _process_fwd_bwd_trace_result(fwd, bwd, inp_grad_map, out_grad_map):
 JIT_BACKEND = {"default": trace, "xla": xla_trace}
 
 
-def partial_trace(func=None, *, backend="default", without_host=True, **trace_options):
+def partial_trace(
+    func=None,
+    *,
+    backend="default",
+    without_host=True,
+    trace_gmcallback=False,
+    **trace_options
+):
 
     assert backend in JIT_BACKEND
     assert without_host, "partial_trace only support without_host mode currently!"
@@ -171,52 +180,75 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
 
         def wrapped_func(*args, **kwargs):
             from ..traced_module.pytree import tree_flatten
-            from ..module import Module
+            from ..core.autodiff.grad import Grad
+            from ..autodiff.grad_manager import get_activating_grad_manager
 
             nonlocal traced
             nonlocal custom_autodiff
             nonlocal outdef
             nonlocal shape_hash
             nonlocal unexpected_shape_hash
+            nonlocal inp_grad_maps, out_grad_maps
             trace_obj.convert_optimizer_state_to_tensor(*args, **kwargs)
             if not traced:
                 traced = True
                 fargs = trace_obj.flatten_inputs(*args, **kwargs)
-                if check_shape:
-                    shape_hash = get_shape_hash(*fargs)
-                for t in fargs:
-                    inp_grad_maps[t] = get_grad_slot(t)
+                shape_hash = get_shape_hash(*fargs) if check_shape else None
+                # we want to construct map like {inp_hid: inp_grad_hid, ...}. but the
+                # backward() is not called now and the grad is unknown. so we record the
+                # grad_slot here and then use grad_slot to get the grad hid when exiting
+                # trace
+                # **The grad grad_slot returned is the orginal grad, that means it is
+                # not been processed by gradmanager attach callback, eg., the grad
+                # before allreduce when distributed training**
+                inp_grad_maps = {get_handle_id(t): get_grad_slot(t) for t in fargs}
                 del fargs
 
                 def exit_trace():
                     backward_trace_obj._trace.exit()
                     backward_trace_obj.unset_env()
-                    new_dict = {}
                     for k, v in inp_grad_maps.items():
-                        if v is not None:
-                            new_dict[get_handle_id(k)] = get_handle_id(v.grad)
-                        else:
-                            new_dict[get_handle_id(k)] = -1
-                    inp_grad_maps.clear()
-                    inp_grad_maps.update(new_dict)
+                        inp_grad_maps[k] = (
+                            get_handle_id(v.grad) if v is not None else -1
+                        )
 
-                _add_backward_callback(exit_trace)
+                insert_callback_as_grad_tape(exit_trace)
+
                 ret = trace_obj(*args)
                 rlist, outdef = tree_flatten(ret)
-                for t in rlist:
-                    out_grad_maps[t] = get_grad_slot(t)
+                out_grad_maps = {get_handle_id(t): get_grad_slot(t) for t in rlist}
 
                 def enter_trace():
-                    new_dict = {}
                     for k, v in out_grad_maps.items():
-                        if v is not None:
-                            new_dict[get_handle_id(k)] = get_handle_id(v.grad)
-                    out_grad_maps.clear()
-                    out_grad_maps.update(new_dict)
+                        out_grad_maps[k] = (
+                            get_handle_id(v.grad) if v is not None else -1
+                        )
                     backward_trace_obj.setup_env()
                     backward_trace_obj._trace.enter()
 
-                _add_backward_callback(enter_trace)
+                insert_callback_as_grad_tape(enter_trace)
+
+                # if we want to trace the gradmanager attach callback, we will replace
+                # the original grad by the grad processed the gradmanger attach callback
+                if trace_gmcallback:
+                    current_gm = get_activating_grad_manager()
+
+                    def get_inp_grad_map():
+                        for _attached_tensor_id, grad in current_gm._gradients.items():
+                            spec = current_gm._attach_specs.get(_attached_tensor_id)
+                            # remove the gradmanager callback
+                            spec.callbacks.clear()
+                            # update the handle id
+                            _attached_tensor = spec and spec.tensor()
+                            if _attached_tensor is None:
+                                continue
+                            inp_grad_maps[
+                                get_handle_id(_attached_tensor)
+                            ] = get_handle_id(grad)
+
+                    if current_gm is not None:
+                        current_gm._register_after_backward_callback(get_inp_grad_map)
+
                 return ret
             else:
                 if custom_autodiff is None:
@@ -224,6 +256,12 @@ def partial_trace(func=None, *, backend="default", without_host=True, **trace_op
                         trace_obj, backward_trace_obj, inp_grad_maps, out_grad_maps
                     )
                     if len(backward_trace_obj._trace.ops) > 0:
+                        assert (
+                            len(Grad.key2grad) == 1
+                        ), "derivatives of higher order not supported in partial trace"
+                        assert (
+                            Grad.grouping is False
+                        ), "group gradmanager is not supported"
                         custom_autodiff = CustomAutodiff(trace_obj, backward_trace_obj)
                     else:
                         # we always construct two xla_trace obj in partial_trace,

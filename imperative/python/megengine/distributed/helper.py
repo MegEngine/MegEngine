@@ -261,14 +261,11 @@ class AllreduceCallback:
         self._packing_size[dtype] = 0
 
     def __call__(self, param, grad):
-        if use_xla_backend():
+        if use_xla_backend() or getattr(self, "_used_xla", False):
             self._used_xla = True
             grad = all_reduce_sum(grad, self._group)
             if self._reduce_method == "mean":
                 grad /= self._group.size
-            return grad
-        # TODO: Integrate the allreduce process of XLA with the allreduce process of imperative into one.
-        if getattr(self, "_used_xla", False) and grad._is_external_value():
             return grad
         gm = get_backwarding_grad_manager()
         assert isinstance(gm, GradManager)

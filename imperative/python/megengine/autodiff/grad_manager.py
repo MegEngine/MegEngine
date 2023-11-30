@@ -17,10 +17,15 @@ from ..utils.future import Future
 logger = get_logger(__name__)
 
 backwarding_grad_manager = None
+activating_grad_manager = None
 
 
 def get_backwarding_grad_manager():
     return backwarding_grad_manager
+
+
+def get_activating_grad_manager():
+    return activating_grad_manager
 
 
 class AttachSpec:
@@ -346,10 +351,16 @@ class GradManager:
         self._gradients = dict()
 
     def __enter__(self):
+        global activating_grad_manager
+        self._activating_gm_cache = activating_grad_manager
+        activating_grad_manager = self
         self.record()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        global activating_grad_manager
+        activating_grad_manager = self._activating_gm_cache
+        self._activating_gm_cache = None
         self.release()
 
     def __or__(self, other):

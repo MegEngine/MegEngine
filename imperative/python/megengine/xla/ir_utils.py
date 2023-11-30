@@ -1,5 +1,6 @@
 import io
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from functools import partial
 from typing import Any, Callable, Dict, Sequence, Tuple
 
@@ -185,6 +186,12 @@ class TraceResult:
         if isinstance(var, int):
             var = self.vars[var]
         return var.data_required
+
+    def hid2vid(self):
+        ret = defaultdict(list)
+        for v in self.traced.vars:
+            ret[v.handle_id].append(v.id)
+        return ret
 
     def _str_var(self, var):
         def _str_shape(shp):
