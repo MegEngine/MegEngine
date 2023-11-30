@@ -558,8 +558,14 @@ class trace:
 
             def get_attr_hook(obj, attr):
                 rst = object.__getattribute__(obj, attr)
+                # code like `@property def _weight(self): return self.weight`, we should ignore `_weight`
+                typ = object.__getattribute__(obj, "__class__")
+                if hasattr(typ, attr) and isinstance(getattr(typ, attr), property):
+                    return rst
                 if isinstance(rst, RawTensor):
-                    assert rst in self.tensor_to_attr
+                    assert (
+                        rst in self.tensor_to_attr
+                    ), "tensor not found, may be you have changed tensors of module non-inplaced when forwarding such as `self.weight = self.weight + 1`, you should use `self.weight[...] = self.weight + 1`"
                     # according to the tensor wrapper to find the (module, attr) tuple
                     attr = self.tensor_to_attr[rst]
                     if attr not in self.attr_to_key:
@@ -630,6 +636,7 @@ class trace:
                     t[...] = mark_param
                     self.input_num += 1
             args, kwargs = self.argdef.unflatten(arg_list)
+            module_org_getattr = Module.__getattribute__
             Module.__getattribute__ = get_attr_hook
             Tensor._reset = tensor_wrapper_resethook
             symbolic_shape = set_symbolic_shape(self._symbolic_shape)
@@ -640,7 +647,7 @@ class trace:
             del args
             del kwargs
 
-            Module.__getattribute__ = object.__getattribute__
+            Module.__getattribute__ = module_org_getattr
             Tensor._reset = origin_reset
 
             # TODO: may be deleted

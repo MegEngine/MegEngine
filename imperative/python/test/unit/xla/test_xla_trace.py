@@ -1,12 +1,17 @@
 import platform
+from functools import partial
 
 import numpy as np
 import pytest
 
 import megengine
 import megengine.functional as F
-from megengine import is_cuda_available, tensor
+from megengine import Parameter, is_cuda_available
+from megengine import module as M
+from megengine import tensor
+from megengine.autodiff import GradManager
 from megengine.jit import partial_trace, xla_trace
+from megengine.optimizer import SGD
 
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
@@ -78,3 +83,43 @@ def test_xla_trace_random_seed_update():
     for _1st_rst, _2nd_rst, _3rd_rst in zip(_1st_rsts, _2nd_rsts, _3rd_rsts):
         assert np.all(_1st_rst.numpy() == _2nd_rst.numpy())
         assert not np.all(_1st_rst.numpy() == _3rd_rst.numpy())
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_xla_trace_with_property():
+    class MyModule(M.Module):
+        def __init__(self, in_channels, out_channels):
+            super().__init__()
+            self.weight = Parameter(np.random.randn(in_channels, out_channels))
+
+        @property
+        def _weight(self):
+            return self.weight + 1
+
+        def forward(self, x):
+            self.weight[...] = self._weight
+            return F.matmul(x, self._weight)
+
+    n, ic, oc = 2, 3, 4
+    mod = MyModule(ic, oc)
+    inp = tensor(np.random.randn(n, ic).astype(np.float32))
+    doup = tensor(np.random.randn(n, oc).astype(np.float32))
+
+    gm = GradManager().attach(mod.parameters())
+
+    @xla_trace(without_host=True)
+    def func(mod, inp, doup):
+        with gm:
+            out = mod(inp)
+            gm.backward(out, doup)
+        return out, mod.weight.grad
+
+    mge_outs = func(mod, inp, doup)
+    mge_weight = mod.weight.numpy()
+    xla_outs = func(mod, inp, doup)
+    xla_weight = mod.weight.numpy()
+
+    np.testing.assert_allclose(mge_outs[1].numpy(), xla_outs[1].numpy())
+    np.testing.assert_allclose(mge_weight, xla_weight - 1)
