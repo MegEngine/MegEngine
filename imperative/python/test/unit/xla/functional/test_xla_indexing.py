@@ -14,7 +14,7 @@ from megengine.autodiff.grad_manager import GradManager
 @pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
 @pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
 def test_subtensor():
-    def tester(ishape, index, dtype=None):
+    def test_xla_trace(ishape, index, dtype=None):
         dtype = dtype or np.float32
         inp = tensor(np.random.randn(*ishape), dtype=dtype)
         oshape = inp[index].shape
@@ -36,28 +36,65 @@ def test_subtensor():
         for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
             np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
 
-    tester(
-        (16, 32, 64, 128), (10, slice(3, 13, 1), slice(-12, -3, 2), slice(None, 13, 3),)
-    )
-    tester(
-        (16, 32, 64, 128),
-        (slice(3, None, 1), slice(5, None, 3), slice(None, 13, 1), slice(None, 18, 4),),
-    )
-    tester(
-        (16, 32, 64, 128),
-        (slice(None, None, 1), None, slice(None, None, 5), slice(-12, -3, 1),),
-    )
-    tester(
-        (16, 32, 1, 128),
-        (slice(-12, -3, 2), slice(-13, None, 1), 0, slice(-12, None, 3),),
-    )
-    tester(
-        (16, 32, 64, 128),
-        (slice(None, -4, 1), 18, slice(None, -3, 4), slice(None, -3, 1),),
-    )
-    tester((16, 32, 64, 128), 10)
-    tester((16, 32, 64, 128), None)
-    tester((16, 32, 64, 128), (slice(3, None, 1), None, slice(-12, -3, 2),))
+    def test_partial_trace(ishape, index, dtype=None):
+        dtype = dtype or np.float32
+        inp = tensor(np.random.randn(*ishape), dtype=dtype)
+        oshape = inp[index].shape
+        dout = tensor(np.random.randn(*oshape), dtype=dtype)
+
+        gm = GradManager()
+
+        @jit.partial_trace(without_host=True, capture_as_const=True, backend="xla")
+        def fwd(inp):
+            return inp[index]
+
+        def func(inp, dout):
+            gm.attach([inp])
+            with gm:
+                out = fwd(inp)
+                gm.backward(out, dout)
+            ret = (out.numpy(), inp.grad.numpy())
+            inp.grad = None
+            return ret
+
+        mge_rsts = func(inp, dout)
+        xla_rsts = func(inp, dout)
+
+        for mge_rst, xla_rst in zip(mge_rsts, xla_rsts):
+            np.testing.assert_allclose(mge_rst, xla_rst, atol=1e-5)
+
+    for test_func in [test_xla_trace, test_partial_trace]:
+        test_func(
+            (16, 32, 64, 128),
+            (10, slice(3, 13, 1), slice(-12, -3, 2), slice(None, 13, 3),),
+        )
+        test_func(
+            (16, 32, 64, 128),
+            (
+                slice(3, None, 1),
+                slice(5, None, 3),
+                slice(2, 13, None),
+                slice(None, 18, 4),
+            ),
+        )
+        test_func(
+            (16, 32, 64, 128),
+            (slice(None, None, 1), None, slice(None, 5, None), slice(-12, -3, 1),),
+        )
+        test_func(
+            (16, 32, 1, 128),
+            (slice(-12, -3, 2), slice(-13, None, 1), 0, slice(-12, None, 3),),
+        )
+        test_func(
+            (16, 32, 64, 128),
+            (slice(None, -4, 1), 18, slice(None, -3, 4), slice(None, -3, 1),),
+        )
+        test_func((16, 32, 64, 128), 10)
+        test_func((16, 32, 64, 128), None)
+        test_func(
+            (16, 32, 64, 128),
+            (slice(3, None, 1), None, slice(None, None, None), slice(-12, -3, 2),),
+        )
 
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
@@ -149,6 +186,29 @@ def test_indexing_one_hot():
     tester((4, 8, 16), -1, False)
     tester((4, 1, 16), -2, True)
     tester((4, 1, 16), -2, False)
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_one_hot():
+    def tester(ishape, nr_class):
+        x = tensor(np.random.randint(0, nr_class, size=ishape))
+
+        @jit.xla_trace(without_host=True, capture_as_const=True)
+        def func(x, nr_class):
+            return F.one_hot(x, nr_class)
+
+        mge_rst = func(x, nr_class)
+        xla_rst = func(x, nr_class)
+
+        np.testing.assert_allclose(mge_rst.numpy(), xla_rst.numpy(), atol=1e-5)
+
+    tester((1,), 2)
+    tester((2, 4, 1), 6)
+    tester((0,), 2)
+    tester((64, 128), 512)
+    tester((1, 1), 6)
 
 
 @pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")

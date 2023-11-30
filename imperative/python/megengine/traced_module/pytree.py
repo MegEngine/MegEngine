@@ -153,7 +153,9 @@ _register_supported_type(
     dict, partial(_dict_flatten, False), partial(_dict_unflatten, dict)
 )
 _register_supported_type(
-    defaultdict, partial(_dict_flatten, False), partial(_dict_unflatten, defaultdict)
+    defaultdict,
+    partial(_dict_flatten, False),
+    partial(_dict_unflatten, partial(defaultdict, None)),
 )
 _register_supported_type(
     OrderedDict, partial(_dict_flatten, True), partial(_dict_unflatten, OrderedDict)

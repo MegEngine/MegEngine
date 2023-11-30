@@ -671,7 +671,9 @@ class trace:
                 # process the returned value of traced function
                 outlist, self.outdef = tree_flatten(outputs)
                 for i, out in enumerate(outlist):
-                    assert isinstance(out, RawTensor), f"get out of type {type(out)}"
+                    assert isinstance(
+                        out, RawTensor
+                    ), f"return value of traced function must be tensor, get {type(out)}"
                     outlist[i] = get_marked_output_tensor(self.output_num, out)
                     del out
                     self.out_list.append(self.output_num)

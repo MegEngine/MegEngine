@@ -107,67 +107,80 @@ def index_with_slices(inp, slices):
         return HLOTensor(_hslice_with_any_step(inp.tensor, slices))
 
 
-class IndexType(IntEnum):
-    DEFAULT = (0,)
-    INT = (1,)
-    SLICE = (2,)
-    NONE = (3,)
-    ELLIPSIS = (4,)
+def _parse_subtensor_items(items, dst_shape, idx_vars, idx_hlotensors):
+    def parse_idx_var(var, hlotensor) -> Union[int, HLOTensor]:
+        if isinstance(var.bound_data, int):
+            return var.bound_data
+        if isinstance(var.bound_data, np.ndarray):
+            assert var.bound_data.shape == (1,)
+            return int(var.bound_data[0])
+        if var.bound_data is None:
+            return hlotensor
+        else:
+            assert False, var.bound_data
 
+    SliceMeta = namedtuple("SliceMeta", "start stop step isidx")
 
-def _parse_subtensor_items_as_slices(srcitems, inp_shape, idx_vars):
-    inp_ndim = len(inp_shape)
-
-    Item = namedtuple("Item", "axis axis_len slice_or_idx")
-    items = []
+    raw_slices = [SliceMeta(0, dst_shape[i], 1, False) for i in range(len(dst_shape))]
     inp_offset = 0
-    for item in srcitems:
-        #  items for: axis, start, step, end, is_index
-        axis, has_start, has_stop, has_step, is_idx = item
-        axis_len = inp_shape[axis]
+    for (axis, has_start, has_stop, has_step, is_idx) in items:
+        axis_len = dst_shape[axis]
         is_slice = has_start or has_stop or has_step
+        # slice like x[1:3], idx like x[1]
         assert is_slice ^ is_idx, f"cannot specify index idx and slice simultaneously"
 
+        start, stop, step = 0, axis_len, 1
         if is_slice:
-            start, stop, step = 0, axis_len, 1
             if has_start:
-                start = _parse_var_as_value(idx_vars[inp_offset])
+                start = parse_idx_var(idx_vars[inp_offset], idx_hlotensors[inp_offset])
                 inp_offset += 1
             if has_stop:
-                stop = _parse_var_as_value(idx_vars[inp_offset])
+                stop = parse_idx_var(idx_vars[inp_offset], idx_hlotensors[inp_offset])
                 inp_offset += 1
             if has_step:
-                step = _parse_var_as_value(idx_vars[inp_offset])
+                step = parse_idx_var(idx_vars[inp_offset], idx_hlotensors[inp_offset])
                 inp_offset += 1
-            sl = _canonicalize_slice_with_axis_len(slice(start, stop, step), axis_len)
-            items.append(Item(axis, axis_len, sl))
+
         elif is_idx:
-            idx = _parse_var_as_value(idx_vars[inp_offset])
+            idx = parse_idx_var(idx_vars[inp_offset], idx_hlotensors[inp_offset])
             inp_offset += 1
-            if idx < 0:
-                idx = idx + axis_len
-            assert (
-                0 <= idx and idx < axis_len
-            ), f"idx {idx} out of range, shape {inp_shape}, axis {axis}"
-            items.append(Item(axis, axis_len, idx))
+            start, stop = idx, idx + 1
+
         else:
             assert False
 
-    slices = [None,] * inp_ndim
-    indices_type = [IndexType.DEFAULT,] * inp_ndim
-    for item in items:
-        # if item.slice_or_idx is int, that means it is a index, not a slice, so we need to reshape the result
-        if isinstance(item.slice_or_idx, int):
-            slices[item.axis] = slice(item.slice_or_idx, item.slice_or_idx + 1, 1)
-            indices_type[item.axis] = IndexType.INT
-        else:
-            slices[item.axis] = item.slice_or_idx
-            indices_type[item.axis] = IndexType.SLICE
-    return (
-        slices,
-        indices_type,
-        any([isinstance(item.slice_or_idx, int) for item in items]),
-    )
+        raw_slices[axis] = SliceMeta(start, stop, step, is_idx)
+
+    # canonicalize slice
+    for i, (start, stop, step, is_idx) in enumerate(raw_slices):
+        assert all(
+            [isinstance(x, (int, HLOTensor)) for x in [start, stop, step]]
+        ), f"must be int/tensor, get {start}, {stop}, {step}"
+
+        if isinstance(step, int):
+            assert step >= 0, f"xla not support slice with step < 0, get {step}"
+
+        from .tensor import where
+
+        start = (
+            slice(start, None, None).indices(dst_shape[i])[0]
+            if isinstance(start, int)
+            else where(start < 0, start + dst_shape[i], start)
+        )
+        stop = (
+            slice(None, stop, None).indices(dst_shape[i])[1]
+            if isinstance(stop, int)
+            else where(stop < 0, stop + dst_shape[i], stop)
+        )
+        step = (
+            slice(None, None, step).indices(dst_shape[i])[2]
+            if isinstance(step, int)
+            else step
+        )
+
+        raw_slices[i] = SliceMeta(start, stop, step, is_idx)
+
+    return raw_slices
 
 
 @register_lower_rule(mops.Subtensor)
@@ -176,9 +189,11 @@ def subtensor_lower(
 ):
     assert len(ctx.op.slice_items) == 0 and len(ctx.vars_out) == 1
     opr, inp, inp_shape = ctx.op, args[0], ctx.vars_in[0].shape
-    slices, _, any_axis_is_index = _parse_subtensor_items_as_slices(
-        opr.items, inp_shape, ctx.vars_in[1:]
-    )
+    raw_slices = _parse_subtensor_items(opr.items, inp_shape, ctx.vars_in[1:], args[1:])
+    slices = [slice(start, stop, step) for start, stop, step, _ in raw_slices]
+    any_axis_is_index = any([isidx for _, _, _, isidx in raw_slices])
+    assert len(slices) == inp.ndim, f"{len(slices)}, {inp.ndim}"
+
     oup = index_with_slices(inp, slices)
 
     if any_axis_is_index:
@@ -187,235 +202,182 @@ def subtensor_lower(
         return oup
 
 
-class GatherDimensionNumbers(NamedTuple):
-    offset_dims: Tuple[int, ...]
-    collapsed_slice_dims: Tuple[int, ...]
-    start_index_map: Tuple[int, ...]
+# to understand the following code, you should read the docstring of xla_scatter/xla_gather
+def _get_scatter_configs_and_indices(
+    dst_shape, src_shape, raw_slices, index_dtype=np.int32
+):
+    # the src.ndim cannot match dst.ndim, some axis of src maybe collapsed
+    # the dst_axis/src_axis is the current analyzed axis of dst/src before collpased
+    # collapsed_src_axis is the current axis of src after collapsed
+    dst_axis, src_axis, collapsed_src_axis = 0, 0, 0
 
-
-class _Indexer(NamedTuple):
-    # The expected shape of the slice output.
-    slice_shape: Sequence[int]
-    # The slice shape to pass to lax.gather().
-    gather_slice_shape: Sequence[int]
-    # The gather indices to use.
-    gather_indices: Any
-    # A GatherDimensionNumbers object describing the gather to perform.
-    dnums: GatherDimensionNumbers
-
-    # Are the gather_indices known to be non-overlapping and/or sorted?
-    # (In practice, these translate to "there no advanced indices", because
-    # only advanced indices could lead to index repetition.)
-    unique_indices: bool
-    indices_are_sorted: bool
-
-    # Slice dimensions that have negative strides, and so must be reversed after
-    # the gather.
-    reversed_y_dims: Sequence[int]
-
-    # Keep track of any axes created by `newaxis`. These must be inserted for
-    # gathers and eliminated for scatters.
-    newaxis_dims: Sequence[int]
-
-
-class ScatterDimensionNumbers(NamedTuple):
-    update_window_dims: Sequence[int]
-    inserted_window_dims: Sequence[int]
-    scatter_dims_to_operand_dims: Sequence[int]
-
-
-def _static_idx(idx: slice, size):
-    if isinstance(size, int):
-        start, stop, step = idx.indices(size)
-    else:
-        raise TypeError(size)
-
-    if (step < 0 and stop >= start) or (step > 0 and start >= stop):
-        return 0, 0, 1, False  # sliced to size zero
-
-    if step > 0:
-        return start, stop, step, False
-    else:
-        k = (start - stop - 1) % (-step)
-        return stop + k + 1, start + 1, -step, True
-
-
-def _index_to_gather(
-    x_shape, indices, indices_type, normalize_indices: bool = True
-) -> _Indexer:
-    assert len(indices) == len(indices_type), f"{len(indices)}, {len(indices_type)}"
-    assert len(indices) == len(x_shape), f"{len(indices)}, {len(x_shape)}   "
-
-    advanced_indexes: Optional[Sequence[Union[Sequence, np.ndarray]]] = None
-    x_axis = 0  # Current axis in x.
-    y_axis = 0  # Current axis in y, before collapsing. See below.
-    collapsed_y_axis = 0  # Current axis in y, after collapsing.
-
-    # Scatter dimension numbers.
+    # you should read the docstring of xla_scatter/xla_gather to understand these
+    # meaning of these variables
     offset_dims: Sequence[int] = []
     collapsed_slice_dims: Sequence[int] = []
     start_index_map: Sequence[int] = []
-    index_dtype = np.int32
 
-    # Gather indices.
     # Pairs of (array, start_dim) values. These will be broadcast into
     # gather_indices_shape, with the array dimensions aligned to start_dim, and
     # then concatenated.
     gather_indices: List[Tuple[Sequence, int]] = []
     gather_indices_shape: List[int] = []
-
-    # We perform three transformations to y before the scatter op, in order:
-    # First, y is broadcast to slice_shape. In general `y` only need broadcast to
-    # the right shape.
+    # the basic unit of xla scatter is a slice, slice_shape describe the shape of slice
     slice_shape: Sequence[int] = []
-
-    # Next, y is squeezed to remove newaxis_dims. This removes np.newaxis/`None`
-    # indices, which the scatter cannot remove itself.
-    newaxis_dims: Sequence[int] = []
-
-    # Finally, we reverse reversed_y_dims to handle slices with negative strides.
-    reversed_y_dims: Sequence[int] = []
-
     gather_slice_shape: Sequence[int] = []
 
-    for i, (idx, idx_type) in enumerate(zip(indices, indices_type)):
-        if idx is None:
-            assert idx_type == IndexType.DEFAULT
-            indices_type[i] = IndexType.SLICE
-            indices[i] = slice(None, None, None)
-
-    for idx, idx_type in zip(indices, indices_type):
-        # Handle basic int indexes.
-        if idx_type == IndexType.INT:
-            gather_indices.append(
-                (np.array(idx.start, index_dtype), len(gather_indices_shape))
+    for start, stop, step, isidx in raw_slices:
+        # process index
+        if isidx:
+            start_arr = (
+                np.array(start, index_dtype) if isinstance(start, int) else start
             )
-            collapsed_slice_dims.append(x_axis)
+            gather_indices.append((start_arr, len(gather_indices_shape)))
+            collapsed_slice_dims.append(dst_axis)
             gather_slice_shape.append(1)
-            start_index_map.append(x_axis)
-            x_axis += 1
-        # # Handle np.newaxis (None)
-        # elif idx_type == IndexType.NONE:
-        #     slice_shape.append(1)
-        #     newaxis_dims.append(y_axis)
-        #     y_axis += 1
-        elif idx_type == IndexType.SLICE:
-            # Normalize the slice to use None when possible
-            start, stop, step = idx.start, idx.stop, idx.step
-            # Handle slice(None) and slice(None, None, -1)
-            if (
-                start is None
-                and stop is None
-                and (step is None or isinstance(step, int) and step == -1)
-            ):
-                if step == -1:
-                    reversed_y_dims.append(collapsed_y_axis)
-                slice_shape.append(x_shape[x_axis])
-                gather_slice_shape.append(x_shape[x_axis])
-                offset_dims.append(collapsed_y_axis)
-                collapsed_y_axis += 1
-                y_axis += 1
-                x_axis += 1
-            # Handle slice index (only static, otherwise an error is raised)
+            start_index_map.append(dst_axis)
+            dst_axis += 1
+            continue
+
+        # slice like slice(None, None, None)
+        if start is None and stop is None and step is None:
+            slice_shape.append(dst_shape[dst_axis])
+            gather_slice_shape.append(dst_shape[dst_axis])
+            offset_dims.append(collapsed_src_axis)
+            collapsed_src_axis += 1
+            src_axis += 1
+            dst_axis += 1
+            continue
+
+        # slice like slice(any, any, 1)
+        if isinstance(step, int) and step == 1:
+            start_arr = (
+                np.array(start, index_dtype) if isinstance(start, int) else start
+            )
+            gather_indices.append((start_arr, len(gather_indices_shape)))
+            if isinstance(stop, int) and isinstance(start, int):
+                slice_shape.append(stop - start)
+                gather_slice_shape.append(stop - start)
             else:
-                start, limit, stride, needs_rev = _static_idx(
-                    slice(start, stop, step), x_shape[x_axis]
-                )
-                if needs_rev:
-                    reversed_y_dims.append(collapsed_y_axis)
-                if stride == 1:
-                    idx = np.array(start, index_dtype)
-                    gather_indices.append((idx, len(gather_indices_shape)))
-                    slice_shape.append(limit - start)
-                    gather_slice_shape.append(limit - start)
-                    offset_dims.append(collapsed_y_axis)
-                    start_index_map.append(x_axis)
-                else:
-                    idx = np.arange(start, limit, stride, dtype=index_dtype)
-                    size = idx.shape[0]
-                    slice_shape.append(size)
-                    gather_slice_shape.append(1)
-                    gather_indices.append((idx, len(gather_indices_shape)))
-                    gather_indices_shape.append(size)
+                slice_shape.append(src_shape[src_axis])
+                gather_slice_shape.append(src_shape[src_axis])
+            offset_dims.append(collapsed_src_axis)
+            start_index_map.append(dst_axis)
+            collapsed_src_axis += 1
+            src_axis += 1
+            dst_axis += 1
+            continue
 
-                    start_index_map.append(x_axis)
-                    collapsed_slice_dims.append(x_axis)
-
-                collapsed_y_axis += 1
-                y_axis += 1
-                x_axis += 1
+        # general case
+        if all([isinstance(x, int) for x in [start, stop, step]]):
+            indices = np.arange(start, stop, step, dtype=index_dtype)
         else:
-            msg = "Indexing mode not yet supported. Open a feature request!\n{}"
-            raise IndexError(msg.format(indices))
+            from .tensor import arange
+
+            indices = arange(
+                start, stop, step, num=src_shape[src_axis], dtype=index_dtype,
+            )
+
+        size = indices.shape[0]
+        slice_shape.append(size)
+        gather_slice_shape.append(1)
+        gather_indices.append((indices, len(gather_indices_shape)))
+        gather_indices_shape.append(size)
+
+        start_index_map.append(dst_axis)
+        collapsed_slice_dims.append(dst_axis)
+        collapsed_src_axis += 1
+        src_axis += 1
+        dst_axis += 1
 
     if len(gather_indices) == 0:
         gather_indices_array = np.zeros((0,), dtype=index_dtype)
     elif len(gather_indices) == 1:
         g, _ = gather_indices[0]
-        gather_indices_array = np.expand_dims(g, (g.ndim,))
+        if isinstance(g, np.ndarray):
+            gather_indices_array = np.expand_dims(g, (g.ndim,))
+        else:
+            from .tensor import expand_dims
+
+            gather_indices_array = expand_dims(g, g.ndim)
     else:
         last_dim = len(gather_indices_shape)
         gather_indices_shape.append(1)
 
         def _broadcast_to(src, tgt_shape, axises):
-            src_shape = src.shape
-            expanded_src_shape = [1,] * len(tgt_shape)
-            for i, ax in enumerate(axises):
-                expanded_src_shape[ax] = src_shape[i]
-            src = np.reshape(src, expanded_src_shape)
-            return np.broadcast_to(src, tgt_shape)
+            if isinstance(src, np.ndarray):
+                src_shape = src.shape
+                expanded_src_shape = [1,] * len(tgt_shape)
+                for i, ax in enumerate(axises):
+                    expanded_src_shape[ax] = src_shape[i]
+                src = np.reshape(src, expanded_src_shape)
+                return np.broadcast_to(src, tgt_shape)
+            else:
+                from .tensor import broadcast_to
 
-        gather_indices_array = np.concatenate(
-            [
-                _broadcast_to(g, gather_indices_shape, tuple(range(i, i + g.ndim)))
-                for g, i in gather_indices
-            ],
-            last_dim,
-        )
+                return broadcast_to(src, tgt_shape, axises)
 
-    dnums = GatherDimensionNumbers(
-        offset_dims=tuple(offset_dims),
-        collapsed_slice_dims=tuple(sorted(collapsed_slice_dims)),
-        start_index_map=tuple(start_index_map),
-    )
-    return _Indexer(
-        slice_shape=slice_shape,
-        newaxis_dims=tuple(newaxis_dims),
-        gather_slice_shape=gather_slice_shape,
-        reversed_y_dims=reversed_y_dims,
-        dnums=dnums,
-        gather_indices=gather_indices_array,
-        unique_indices=advanced_indexes is None,
-        indices_are_sorted=advanced_indexes is None,
+        if all([isinstance(g, np.ndarray) for g, _ in gather_indices]):
+            gather_indices_array = HLOTensor(
+                np.concatenate(
+                    [
+                        _broadcast_to(
+                            g, gather_indices_shape, tuple(range(i, i + g.ndim))
+                        )
+                        for g, i in gather_indices
+                    ],
+                    last_dim,
+                )
+            )
+        else:
+            from .tensor import concat
+
+            gather_indices = [
+                (g, i) if isinstance(g, HLOTensor) else (HLOTensor(g), i)
+                for (g, i) in gather_indices
+            ]
+            gather_indices_array = concat(
+                [
+                    _broadcast_to(g, gather_indices_shape, tuple(range(i, i + g.ndim)))
+                    for g, i in gather_indices
+                ],
+                last_dim,
+            )
+    return (
+        offset_dims,
+        collapsed_slice_dims,
+        start_index_map,
+        gather_indices_array,
+        slice_shape,
     )
 
 
 @register_lower_rule(mops.SetSubtensor)
 def setsubtensor_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]):
     assert len(ctx.vars_out) == 1
-    opr, x, y = ctx.op, args[0], args[1]
+    opr, dst, src = ctx.op, args[0], args[1]  # dst[indices] = src
 
-    slices, indices_type, _ = _parse_subtensor_items_as_slices(
-        opr.items, x.shape, ctx.vars_in[2:]
-    )
+    raw_slices = _parse_subtensor_items(opr.items, dst.shape, ctx.vars_in[2:], args[2:])
+    (
+        update_window_dims,
+        inserted_window_dims,
+        scattered_dims_to_operand_dims,
+        indices,
+        slice_shape,
+    ) = _get_scatter_configs_and_indices(dst.shape, src.shape, raw_slices)
 
-    indexer = _index_to_gather(x.shape, slices, indices_type)
-    if len(indexer.slice_shape) == 0 or np.prod(indexer.slice_shape) == 0:
-        return [x]
+    if len(slice_shape) == 0 or np.prod(slice_shape) == 0:
+        return [dst]
 
-    y = y.broadcast_to(indexer.slice_shape)
-    if len(indexer.newaxis_dims) != 0:
-        assert False, "not support"
-    if len(indexer.reversed_y_dims) != 0:
-        assert False, "not support"
+    src = src.broadcast_to(slice_shape)
 
     out = xla_scatter(
-        x,
-        HLOTensor(indexer.gather_indices),
-        y,
-        update_window_dims=indexer.dnums.offset_dims,
-        inserted_window_dims=indexer.dnums.collapsed_slice_dims,
-        scattered_dims_to_operand_dims=indexer.dnums.start_index_map,
+        dst,
+        indices,
+        src,
+        update_window_dims=update_window_dims,
+        inserted_window_dims=inserted_window_dims,
+        scattered_dims_to_operand_dims=scattered_dims_to_operand_dims,
         reduce_mode=None,
     )
 
@@ -508,8 +470,6 @@ def indexing_set_one_hot_lower(ctx, *args: Union[HLOTensor, Sequence[HLOTensor]]
     assert (
         len(ctx.vars_out) == 1 and len(ctx.vars_in) == 3 and len(args) == 3
     ), f"{len(ctx.vars_out)}, {len(ctx.vars_in)}, {len(args)}"
-
-    assert ctx.op.ndim == args[0].ndim, f"{ctx.op.ndim}, {args[0].shape}"
     return indexing_set_with_tensor_index(args[0], args[2], args[1], ctx.op.axis)
 
 

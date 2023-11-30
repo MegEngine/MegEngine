@@ -232,8 +232,8 @@ void StreamMemAllocImpl::print_memory_state() {
             get_name().c_str(), m_allocated_blocks.size(), total_used_size / 1024,
             mem_info_to_str(used_info).c_str());
     mgb_log("%s: free %zu block, total size %zu KB, list free block as below\n%s\n",
-            get_name().c_str(), m_allocated_blocks.size(), total_used_size / 1024,
-            mem_info_to_str(used_info).c_str());
+            get_name().c_str(), m_free_blk_size.size(), total_free_size / 1024,
+            mem_info_to_str(free_info).c_str());
 }
 
 void* StreamMemAllocImpl::alloc(size_t size) {

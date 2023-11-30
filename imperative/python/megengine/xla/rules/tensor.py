@@ -294,16 +294,26 @@ def linspace(
 
 
 def arange(
-    start: Union[int, float] = 0,
-    stop: Union[int, float] = None,
-    step: Union[int, float] = 1,
+    start: Union[int, float, HLOTensor] = 0,
+    stop: Union[int, float, HLOTensor] = None,
+    step: Union[int, float, HLOTensor] = 1,
+    num: int = None,
     dtype="float32",
 ):
     if stop is None:
-        stop = start
-        start = 0
-    assert step != 0, "step should not be zero"
-    num = int(np.ceil((stop - start) / step))
+        start, stop = 0, start
+
+    if isinstance(step, int):
+        assert step != 0, "step should not be zero"
+
+    if all([isinstance(x, (int, float)) for x in [start, stop, step]]):
+        assert num is None, "cannot specify num when all args are int or float"
+        num = int(np.ceil((stop - start) / step))
+        stop = start + step * (num - 1)
+    else:
+        assert num is not None, "must specify num when hlotensor exists in args"
+        stop = start + step * (num - 1)
+
     return linspace(start, stop, num, dtype=dtype)
 
 
