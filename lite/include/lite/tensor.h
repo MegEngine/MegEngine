@@ -21,9 +21,9 @@ struct LITE_API Layout {
     LiteDataType data_type = LiteDataType::LITE_FLOAT;  ///< date type
 
     /**
-     * @brief get number of elements of this Layout
+     * @brief get the size of byte of an element of this layout
      *
-     * @return number of elements
+     * @return size of byte of an element
      */
     size_t get_elem_size() const;
 
