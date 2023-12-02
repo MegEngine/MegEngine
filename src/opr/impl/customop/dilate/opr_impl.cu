@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <cfloat>
+#include <limits>
 
 #include "../utils.cuh"
 #include "../utils.h"
