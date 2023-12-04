@@ -18,7 +18,7 @@
 #   endif
 #endif
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__OHOS__)
 #pragma message("force disable USE_STL_THREAD_LOCAL for thread_local mem leak at dlopen/dlclose")
 #undef USE_STL_THREAD_LOCAL
 #define USE_STL_THREAD_LOCAL 0
@@ -75,7 +75,7 @@ class ThreadLocalPtr {
             return static_cast<ThreadData*>(d)->data;
         }
         ThreadData* t_data = new ThreadData();
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__OHOS__)
         get_thread_local_force_free_instance().push((void*)t_data);
 #endif
 
@@ -89,7 +89,7 @@ class ThreadLocalPtr {
         ThreadData* td = static_cast<ThreadData*>(d);
         if (td && td->self->m_destructor)
             td->self->m_destructor(td->data);
-#if !defined(__ANDROID__)
+#if !defined(__ANDROID__) && !defined(__OHOS__)
         delete td;
 #endif
     }

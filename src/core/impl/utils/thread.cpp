@@ -258,7 +258,7 @@ void SyncableCounter::wait_zero() {
 }
 
 /* =============== ThreadLocalForceFree ===============  */
-#if defined(__ANDROID__) && !USE_STL_THREAD_LOCAL
+#if (defined(__ANDROID__) || defined(__OHOS__)) && !USE_STL_THREAD_LOCAL
 void ThreadLocalForceFree::push(void* d) {
     MGB_LOCK_GUARD(m_mutex);
     td.push_back(d);
