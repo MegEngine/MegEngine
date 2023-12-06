@@ -29,6 +29,7 @@
 // Platform macro's
 #cmakedefine01 MEGDNN_WITH_CUDA
 
+#cmakedefine01 MEGDNN_WITH_CAMBRICON
 #cmakedefine01 MEGDNN_WITH_ROCM
 #cmakedefine01 MEGDNN_ARMV7
 #cmakedefine01 MEGDNN_AARCH64
