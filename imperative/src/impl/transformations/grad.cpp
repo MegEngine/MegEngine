@@ -208,6 +208,8 @@ void GradKey::backward() {
     auto& tape = m_frozen_tape;
     for (std::ptrdiff_t k = tape.size() - 1; k >= 0; --k) {
         auto& [grad_fn, op] = tape[k];
+        std::string scope_name = op ? op->make_name() + ".Backward" : "CustomBackward";
+        Transformation::push_scope(scope_name);
         auto grad_receiver = [&, grad_fn = grad_fn](size_t i, ValueRef grad) {
             auto& dest = grad_fn->m_dests[i];
             if (dest) {
@@ -233,13 +235,12 @@ void GradKey::backward() {
                 for (auto&& slot : grad_fn->m_slots) {
                     *iter++ = slot.m_grad;
                 }
-                std::string name = op ? op->name() + "Backward" : "CustomBackward";
                 if (Profiler::is_profiling()) {
-                imperative::apply(PushScope(name, ScopeType::BACKWARD), Span<ValueRef>(nullptr, nullptr));
+                imperative::apply(PushScope(scope_name, ScopeType::BACKWARD), Span<ValueRef>(nullptr, nullptr));
                 }
                 backward(grads, grad_receiver);
                 if (Profiler::is_profiling()) {
-                imperative::apply(PopScope(name, ScopeType::BACKWARD), Span<ValueRef>(nullptr, nullptr));
+                imperative::apply(PopScope(scope_name, ScopeType::BACKWARD), Span<ValueRef>(nullptr, nullptr));
                 }
             }
         }, grad_fn->m_backward);
@@ -256,6 +257,7 @@ void GradKey::backward() {
             }
         }
         grad_fn->clear();
+        Transformation::pop_scope(scope_name);
     }
     tape.clear();
 }

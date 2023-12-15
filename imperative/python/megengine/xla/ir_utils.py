@@ -229,11 +229,11 @@ class TraceResult:
     def _str_eqn(self, eqn):
         inps = ", ".join(map(self._str_var, eqn.inputs))
         oups = ", ".join(map(self._str_var, eqn.outputs))
-        str_op = str(eqn.op)
+        str_op = str(eqn.type)
         if isinstance(eqn.op, mops.Reduce):
             assert str(eqn.op.mode).startswith("Reduce.Mode.")
             str_op = str_op + str(eqn.op.mode)[len("Reduce.Mode.") :]
-        ret = f"{oups} = {str_op}({inps})"
+        ret = f"{oups} = {str_op}({inps})    scope: {eqn.scope}"
         return ret
 
     def __str__(self) -> str:

@@ -1650,6 +1650,14 @@ void init_tensor(py::module m) {
                             return py::cast(opkind2str.find(self.kind)->second);
                     })
             .def_property_readonly(
+                    "scope",
+                    [](SeqItem& self) -> py::object {
+                        if (self.op && !self.op->scope().empty()) {
+                            return py::cast(self.op->scope());
+                        }
+                        return py::none();
+                    })
+            .def_property_readonly(
                     "kind",
                     [opkind2str](SeqItem& self) {
                         return opkind2str.find(self.kind)->second;
