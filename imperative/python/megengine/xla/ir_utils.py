@@ -1,4 +1,5 @@
 import io
+import textwrap
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import partial
@@ -247,6 +248,18 @@ class TraceResult:
         output_num = len(self.outputs)
         ret += f"\n    return {output_num} {func_oups_str}"
         ret += "\n}"
+
+        backtrace_info = "\n\n\nBacktraceInfo {\n"
+        for eqn in self.eqns:
+            if not eqn.traceback:
+                continue
+            backtrace_info = backtrace_info + "{op_info}\n{traceback}\n\n".format(
+                op_info=self._str_eqn(eqn),
+                traceback=textwrap.indent(eqn.traceback, " " * 4),
+            )
+        backtrace_info = backtrace_info + "}"
+
+        ret = ret + backtrace_info
         return ret
 
     def __hash__(self):

@@ -57,8 +57,9 @@ std::string FrameInfo::traceback() {
         if (f->scope != "")
             logs += "scope: <" + f->scope + ">\n";
         py::object filename = py::getattr(code, "co_filename");
+        logs += "File \"";
         logs += py::str(filename);
-        logs += " , line ";
+        logs += "\", line ";
         logs += std::to_string(lineno);
         logs += ", in ";
         logs += py::str(py::getattr(code, "co_name"));
@@ -189,18 +190,19 @@ FrameInfoPtr get_frameinfo_from_pyframe(PyFrameObject* frame) {
     return rst;
 }
 
-bool set_python_backtrace_enabled(bool enabled) {
+bool set_python_backtrace(bool enabled) {
     std::swap(enable_py_bt, enabled);
     return enabled;
 }
 
-bool set_transformation_backtrace_enabled(bool enabled) {
+bool set_transformation_backtrace(bool enabled) {
     std::swap(enable_trans_bt, enabled);
     return enabled;
 }
 
 void record_py_backtrace() {
     auto& context = Transformation::get_context();
+    context.py_traceback.clear();
     FrameInfoPtr info;
     if (enable_py_bt) {
         auto frame = PyEval_GetFrame();
@@ -209,6 +211,9 @@ void record_py_backtrace() {
     context.bt = std::make_shared<BackTraceInfo>(std::move(info));
     context.record_bt_trans_id = context.next_transformation;
     context.record_trans_bt = enable_trans_bt;
+    if (enable_py_bt) {
+        context.py_traceback = context.bt->py_traceback();
+    }
 }
 
 void record_scope(PyFrameObject* frame, std::string scope) {

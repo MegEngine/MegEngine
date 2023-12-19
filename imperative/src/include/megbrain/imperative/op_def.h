@@ -20,6 +20,7 @@ class OpDef : public Hashable,
               public std::enable_shared_from_this<OpDef> {
     mutable const OpTrait* m_trait = nullptr;
     std::string m_scope;
+    std::string m_py_traceback;
 
 public:
     using allocator_t =
@@ -82,7 +83,10 @@ public:
 
     virtual const std::string type_name() const;
 
+    const std::string py_traceback() const;
+
     void set_scope(const std::string& scope);
+    void set_py_traceback(const std::string& traceback);
 
     virtual size_t hash() const;
 

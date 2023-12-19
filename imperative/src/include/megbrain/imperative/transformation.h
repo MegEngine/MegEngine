@@ -39,6 +39,7 @@ struct TransformationContext {
     size_t record_bt_trans_id;
     bool record_trans_bt = false;
     BackTraceInfoPtr bt;
+    std::string py_traceback;
 };
 
 /**
@@ -116,6 +117,12 @@ public:
         mgb_assert(top == scope);
     }
     static std::vector<std::string> scopes() { return get_context().scopes; }
+
+    static void set_py_traceback(const std::string& traceback) {
+        get_context().py_traceback = traceback;
+    }
+
+    static auto get_py_traceback() { return get_context().py_traceback; }
 
     /**
      * \brief position at transformation stack

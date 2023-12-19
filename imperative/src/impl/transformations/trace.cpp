@@ -184,6 +184,9 @@ ValueRefList TracingTransformation::apply_transformation(
             scopes_join.append(scope);
         }
         const_cast<OpDef&>(op_value->op()).set_scope(scopes_join);
+        const_cast<OpDef&>(op_value->op())
+                .set_py_traceback(Transformation::get_py_traceback());
+
         auto unwrapped_outputs = imperative::apply(op, unwrapped_inputs);
         ValueRefList wrapped_outputs(unwrapped_outputs.size());
         SmallVector<size_t> output_ids;

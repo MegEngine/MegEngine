@@ -210,6 +210,10 @@ void GradKey::backward() {
         auto& [grad_fn, op] = tape[k];
         std::string scope_name = op ? op->make_name() + ".Backward" : "CustomBackward";
         Transformation::push_scope(scope_name);
+        if (op) {
+            Transformation::set_py_traceback("Backward Phase " + op->py_traceback());
+        }
+
         auto grad_receiver = [&, grad_fn = grad_fn](size_t i, ValueRef grad) {
             auto& dest = grad_fn->m_dests[i];
             if (dest) {

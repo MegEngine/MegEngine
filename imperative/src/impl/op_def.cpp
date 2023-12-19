@@ -146,6 +146,14 @@ const std::string OpDef::type_name() const {
     return trait()->name;
 }
 
+const std::string OpDef::py_traceback() const {
+    return m_py_traceback;
+}
+
+void OpDef::set_py_traceback(const std::string& traceback) {
+    m_py_traceback = traceback;
+}
+
 static thread_local OpDef::allocator_t local_allocator;
 
 void OpDef::set_allocator(allocator_t allocator) {

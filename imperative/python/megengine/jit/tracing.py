@@ -32,6 +32,7 @@ from ..core._imperative_rt.core2 import (
     get_marked_tensor,
     marked_input_tensor,
     name_tensor,
+    set_python_backtrace,
 )
 from ..core._imperative_rt.graph import _set_priority_to_id
 from ..core._imperative_rt.ops import (
@@ -146,6 +147,8 @@ class trace:
         self._kwarg_bindings = None
         self._output_bindings = None
         self._symbolic_shape = symbolic_shape
+        # todo: add the switch for the with_backtrace flag in the XLA opr checker's MR
+        self._with_backtrace = False
         self._graph_options = {
             "no_force_inplace": True,
             "graph_opt_level": opt_level,
@@ -354,6 +357,7 @@ class trace:
     def trace_normal(self, *args, **kwargs):
         global active_trace
         symbolic_shape = None
+        enable_backtrace = None
         outputs = None
         try:
             active_trace = self
@@ -361,10 +365,14 @@ class trace:
             if self._capture_as_const:
                 self._process_inputs(*args, **kwargs)
             symbolic_shape = set_symbolic_shape(self._symbolic_shape)
+            enable_backtrace = set_python_backtrace(self._with_backtrace)
             outputs = self.__wrapped__(*args, **kwargs)
         finally:
             handling_exc = sys.exc_info() != (None,) * 3
             active_trace = None
+            if enable_backtrace is not None:
+                enable_backtrace = set_python_backtrace(enable_backtrace)
+                assert enable_backtrace == self._with_backtrace
             if symbolic_shape is not None:
                 symbolic_shape = set_symbolic_shape(symbolic_shape)
                 assert symbolic_shape == self._symbolic_shape
@@ -388,6 +396,7 @@ class trace:
         assert self.without_host and not self.overall
         global active_trace
         symbolic_shape = None
+        enable_backtrace = None
         outputs = None
         if self.traced and self.third_party_backend:
             return self.compile_and_exec(*args, **kwargs)
@@ -444,6 +453,7 @@ class trace:
                 origin_reset(obj, other)
 
             symbolic_shape = set_symbolic_shape(self._symbolic_shape)
+            enable_backtrace = set_python_backtrace(self._with_backtrace)
             Tensor._reset = tensor_reset_hook
             if self.third_party_backend:
                 self.setup_env()
@@ -454,6 +464,9 @@ class trace:
         finally:
             handling_exc = sys.exc_info() != (None,) * 3
             active_trace = None
+            if enable_backtrace is not None:
+                enable_backtrace = set_python_backtrace(enable_backtrace)
+                assert enable_backtrace == self._with_backtrace
             if symbolic_shape is not None:
                 symbolic_shape = set_symbolic_shape(symbolic_shape)
                 assert symbolic_shape == self._symbolic_shape
@@ -499,6 +512,7 @@ class trace:
         assert self.without_host
         global active_trace
         symbolic_shape = None
+        enable_backtrace = None
         outputs = None
 
         if Optimizer not in SUPPORTED_LEAF_CLS:
@@ -675,6 +689,7 @@ class trace:
             module_org_getattr = Module.__getattribute__
             Module.__getattribute__ = get_attr_hook
             Tensor._reset = tensor_wrapper_resethook
+            enable_backtrace = set_python_backtrace(self._with_backtrace)
             symbolic_shape = set_symbolic_shape(self._symbolic_shape)
             if self.third_party_backend:
                 self.setup_env()
@@ -694,6 +709,9 @@ class trace:
         finally:
             handling_exc = sys.exc_info() != (None,) * 3
             active_trace = None
+            if enable_backtrace is not None:
+                enable_backtrace = set_python_backtrace(enable_backtrace)
+                assert enable_backtrace == self._with_backtrace
             if symbolic_shape is not None:
                 symbolic_shape = set_symbolic_shape(symbolic_shape)
                 assert symbolic_shape == self._symbolic_shape

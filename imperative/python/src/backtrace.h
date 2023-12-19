@@ -90,8 +90,8 @@ void record_py_backtrace();
 void record_scope(PyFrameObject*, std::string);
 std::string get_py_backtrace();
 
-bool set_python_backtrace_enabled(bool);
-bool set_transformation_backtrace_enabled(bool);
+bool set_python_backtrace(bool);
+bool set_transformation_backtrace(bool);
 void init_backtrace_tss_key();
 
 }  // namespace mgb::imperative::python

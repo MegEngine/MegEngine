@@ -18,7 +18,7 @@ from ..core._imperative_rt.core2 import (
     pop_scope_with_type,
     push_scope,
     push_scope_with_type,
-    set_python_backtrace_enabled,
+    set_python_backtrace,
     start_profile,
     stop_profile,
     stop_step,
@@ -181,7 +181,7 @@ class Profiler(ContextDecorator):
         _running_profiler = self
         self._pid = os.getpid()
         start_profile(self._options)
-        self._origin_enable_bt = set_python_backtrace_enabled(self.with_backtrace)
+        self._origin_enable_bt = set_python_backtrace(self.with_backtrace)
         return self
 
     def stop(self):
@@ -193,7 +193,7 @@ class Profiler(ContextDecorator):
         self._dump_callback = stop_profile()
         self._pid = os.getpid()
         _living_profilers.add(self)
-        set_python_backtrace_enabled(self._origin_enable_bt)
+        set_python_backtrace(self._origin_enable_bt)
 
     def step(self):
         global _running_profiler

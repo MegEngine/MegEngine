@@ -1659,6 +1659,14 @@ void init_tensor(py::module m) {
                         return py::none();
                     })
             .def_property_readonly(
+                    "traceback",
+                    [](SeqItem& self) -> py::object {
+                        if (self.op && !self.op->py_traceback().empty()) {
+                            return py::cast(self.op->py_traceback());
+                        }
+                        return py::none();
+                    })
+            .def_property_readonly(
                     "kind",
                     [opkind2str](SeqItem& self) {
                         return opkind2str.find(self.kind)->second;
@@ -1841,9 +1849,8 @@ void init_tensor(py::module m) {
     m.def("unset_external_convert", [=] { get_external_convert()->disable(); });
 
     m.def("is_external_convert", [=] { return get_external_convert()->enabled(); });
-    m.def("set_python_backtrace_enabled", &set_python_backtrace_enabled);
-    m.def("set_transformation_backtrace_enabled",
-          &set_transformation_backtrace_enabled);
+    m.def("set_python_backtrace", &set_python_backtrace);
+    m.def("set_transformation_backtrace", &set_transformation_backtrace);
     m.def("_mge_backtrace", &get_py_backtrace);
     m.def("_get_frame_cache_id",
           []() { return (size_t)FrameInfoCache::get_instance(); });
