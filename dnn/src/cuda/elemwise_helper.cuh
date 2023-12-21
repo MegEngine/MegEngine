@@ -435,6 +435,44 @@ INST_PARAM_VECT_VISITOR;
 #define _brdcast_mask BCAST_101
 INST_PARAM_VECT_VISITOR;
 #undef _brdcast_mask
+#define INST_PARAM_VECT_VISITOR_BOOL                                               \
+    template <int ndim>                                                            \
+    class ParamVectVisitor<ndim, dt_bool, _brdcast_mask>                           \
+            : public ParamVisitorBase<ndim, dt_bool, _brdcast_mask> {              \
+    public:                                                                        \
+        using Super = ParamVisitorBase<ndim, dt_bool, _brdcast_mask>;              \
+        using rwtype = typename VectTypeTrait<dt_bool>::vect_type;                 \
+        static const int packed_size = sizeof(rwtype) / sizeof(dt_bool);           \
+        void host_init(const TensorND& rv, int grid_size, int block_size) {        \
+            ParamVisitorBase<ndim, dt_bool, _brdcast_mask>::host_init(             \
+                    rv, grid_size, block_size, packed_size);                       \
+        }                                                                          \
+        DEVICE_WRAPPER(rwtype vect_value; devfunc rwtype & at(uint32_t idx) {      \
+            if (reinterpret_cast<size_t>(&Super::m_ptr[Super::offset(idx)]) % 4 != \
+                0) {                                                               \
+                vect_value = VectTypeTrait<dt_bool>::make_vector(                  \
+                        Super::m_ptr[Super::offset(idx)],                          \
+                        Super::m_ptr[Super::offset(idx + 1)],                      \
+                        Super::m_ptr[Super::offset(idx + 2)],                      \
+                        Super::m_ptr[Super::offset(idx + 3)]);                     \
+                return vect_value;                                                 \
+            }                                                                      \
+            return *(rwtype*)(&Super::m_ptr[Super::offset(idx)]);                  \
+        })                                                                         \
+    };
+#define _brdcast_mask BCAST_OTHER
+INST_PARAM_VECT_VISITOR_BOOL;
+#undef _brdcast_mask
+#define _brdcast_mask BCAST_01
+INST_PARAM_VECT_VISITOR_BOOL;
+#undef _brdcast_mask
+#define _brdcast_mask BCAST_10
+INST_PARAM_VECT_VISITOR_BOOL;
+#undef _brdcast_mask
+#define _brdcast_mask BCAST_101
+INST_PARAM_VECT_VISITOR_BOOL;
+#undef _brdcast_mask
+#undef INST_PARAM_VECT_VISITOR_BOOL
 #define INST_DT_IBYTE(ctype)                                                         \
     template <int ndim>                                                              \
     class ParamVectVisitor<ndim, ctype, BCAST_FULL>                                  \

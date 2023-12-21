@@ -204,6 +204,15 @@ def test_logical_oprs():
     np.testing.assert_equal(x | y, F.logical_or(xx, yy).numpy())
     np.testing.assert_equal(x ^ y, F.logical_xor(xx, yy).numpy())
 
+    x = np.random.randint(0, 2, (1, 32), dtype="bool")
+    y = np.random.randint(0, 2, (1, 31), dtype="bool")
+    u = x[:, 1:]
+    xx = tensor(x)
+    yy = tensor(y)
+    uu = xx[:, 1:]
+    np.testing.assert_equal(u ^ y, F.logical_xor(uu, yy).numpy())
+    np.testing.assert_equal(y ^ u, F.logical_xor(yy, uu).numpy())
+
 
 def test_logaddexp():
     x = np.random.randn(2, 100)
