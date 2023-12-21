@@ -27,6 +27,7 @@ __all__ = [
     "cosh",
     "div",
     "equal",
+    "erf",
     "exp",
     "expm1",
     "floor",
@@ -652,6 +653,27 @@ def expm1(x):
     
     """
     return _elwise(x, mode=Elemwise.Mode.EXPM1)
+
+
+def erf(x):
+    r"""Element-wise :math:`\frac{2}{\sqrt{\pi}} \int_{0}^{x}e^{- \eta^{2}}d\eta` function.
+
+    Calculates the error function for each element :math:`x_i` of the input tensor :math:`x`.
+
+    Args:
+        x: input tensor. Should have a floating-point data type.
+
+    Returns:
+        a tensor containing the evaluated erf result for each element in :math:`x`.
+        The returned tensor must have a floating-point data type.
+
+    Examples:
+        >>> x = Tensor([1., -2., -3., 4.])
+        >>> F.erf(x)
+        Tensor([ 0.8427 -0.9953 -1.      1.    ], device=xpux:0)
+    
+    """
+    return _elwise(x, mode=Elemwise.Mode.ERF)
 
 
 def log(x):

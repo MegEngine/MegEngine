@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import math
+
 import numpy as np
 import pytest
 
@@ -98,6 +100,20 @@ def test_clamp():
     np.testing.assert_allclose(
         F.clip(tensor(x) - 3, -6, 0).numpy(), np.clip(x - 3, -6, 0)
     )
+
+
+def test_erf():
+    def numpy_erf(x):
+        shape = x.shape
+        flatten_x = x.flatten()
+        erf_arr = np.vectorize(math.erf)
+        result = erf_arr(flatten_x).reshape(shape)
+        return result
+
+    x = np.array([-1.5, 0.0, 1.0, 1.5]).astype("float32")
+    y_np = numpy_erf(x)
+    y_mge = F.erf(tensor(x)).numpy()
+    np.testing.assert_allclose(y_np, y_mge, rtol=1e-5)
 
 
 def test_isnan():
@@ -221,6 +237,8 @@ def test_int32_input():
         nargs = op.__code__.co_argcount
         if op_name == "clip":
             inp = (x, 0, 1)
+        elif op_name == "erf":
+            continue
         elif op_name.endswith("_shift"):
             inp = (x, 1)
         elif op_name.startswith("logical_"):
