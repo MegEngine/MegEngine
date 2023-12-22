@@ -104,7 +104,7 @@ void print_host_val(
         MEGDNN_FOREACH_COMPUTING_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_DTYPE(cb)
         MEGDNN_FOREACH_QUANTIZED_LOWBIT_DTYPE(cb)
-        cb(dtype::Bool) cb(::megdnn::dtype::QuantizedS1)
+        cb(dtype::Bool) cb(::megdnn::dtype::QuantizedS1) cb(dtype::Uint16)
 #undef cb
                 default : mgb_throw(
                                   MegBrainError,

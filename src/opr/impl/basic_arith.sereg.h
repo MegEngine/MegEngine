@@ -296,7 +296,7 @@ struct OprLoadDumpImplV2<opr::Elemwise, 0> {
             auto tmp =
                     opr::Elemwise::make({inputs[0], inputs[1]}, PersisParam::Mode::MAX)
                             .node();
-            return opr::Elemwise::make({tmp, inputs[1]}, PersisParam::Mode::MIN)
+            return opr::Elemwise::make({tmp, inputs[2]}, PersisParam::Mode::MIN)
                     .node()
                     ->owner_opr();
         } else if (PersisParam::Mode::SIGN == mode) {
