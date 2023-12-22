@@ -198,6 +198,7 @@ ACL_RAII_DECLARE(AclScalar, aclScalar, aclCreateScalar, aclDestroyScalar, aclnn_
     }
         switch (acl_dtype) {
             FOR_ACL_C_DTYPE_MAP(cb)
+            DNN_INC_FLOAT16(cb(ACL_FLOAT16, dt_float16))
             default:
                 megdnn_throw("unsupported dtype");
         }

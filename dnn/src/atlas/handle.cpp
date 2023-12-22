@@ -2,6 +2,7 @@
 #include "megcore_atlas.h"
 #include "src/atlas/checksum/opr_impl.h"
 #include "src/atlas/elemwise/opr_impl.h"
+#include "src/atlas/fill/opr_impl.h"
 #include "src/atlas/utils.h"
 #include "src/common/handle_impl.h"
 
@@ -78,6 +79,7 @@ size_t HandleImpl::alignment_requirement() const {
 
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ChecksumForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ElemwiseForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(Fill);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
