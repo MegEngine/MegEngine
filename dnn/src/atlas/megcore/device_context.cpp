@@ -41,13 +41,20 @@ void AtlasDeviceContext::deactivate() {
 }
 
 void* AtlasDeviceContext::malloc(size_t size_in_bytes) {
+    // TODO: aclrtMalloc require size_in_bytes != 0
+    if (size_in_bytes == 0) {
+        return nullptr;
+    }
     void* ptr;
     acl_check(aclrtMalloc(&ptr, size_in_bytes, ACL_MEM_MALLOC_HUGE_FIRST));
     return ptr;
 }
 
 void AtlasDeviceContext::free(void* ptr) {
-    acl_check(aclrtFree(ptr));
+    // TODO: aclrtMalloc require size_in_bytes != 0
+    if (ptr != nullptr) {
+        acl_check(aclrtFree(ptr));
+    }
 }
 
 AtlasDeviceContext::InitStatus AtlasDeviceContext::init_status;

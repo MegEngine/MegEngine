@@ -1,6 +1,7 @@
 #include "src/atlas/handle.h"
 #include "megcore_atlas.h"
 #include "src/atlas/checksum/opr_impl.h"
+#include "src/atlas/conv_bias/opr_impl.h"
 #include "src/atlas/elemwise/opr_impl.h"
 #include "src/atlas/fill/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
@@ -82,6 +83,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(ChecksumForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ElemwiseForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(Fill);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(TypeCvt);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvBiasForward);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
