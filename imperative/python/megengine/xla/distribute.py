@@ -33,8 +33,6 @@ class State:
         else:
             local_device_ids = list(local_device_ids)
 
-        assert local_device_ids == [process_id], f"{local_device_ids} .vs {process_id}"
-
         self.ip = ip
         self.port = port
         self.visible_devices = ",".join(str(x) for x in local_device_ids)

@@ -8,6 +8,7 @@ from .group import (
     Group,
     get_backend,
     get_client,
+    get_local_device_id,
     get_mm_server_addr,
     get_py_server_addr,
     get_rank,

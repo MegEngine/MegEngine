@@ -1,6 +1,6 @@
 import os
 
-from ..distributed import get_rank, get_world_size, is_distributed
+from ..distributed import get_local_device_id, get_rank, get_world_size, is_distributed
 from .compile import MeshComputation, PmapComputation
 from .device import get_xla_backend_and_device
 from .distribute import initialize
@@ -45,7 +45,7 @@ def build_xla(
 
     # init for xla distributed and setup device
     if is_distributed():
-        initialize(ip, port, get_world_size(), get_rank(), [get_rank()])
+        initialize(ip, port, get_world_size(), get_rank(), [get_local_device_id()])
     backend, device_assignment, platform = get_xla_backend_and_device(device)
 
     module, keepalive, host_callbacks = lower(

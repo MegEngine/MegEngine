@@ -203,6 +203,11 @@ def get_rank() -> int:
     return _sd.proc_rank if _sd is not None else 0
 
 
+def get_local_device_id() -> int:
+    r"""Get the hardware ID of the current process."""
+    return _sd.device if _sd is not None else 0
+
+
 def get_world_size() -> int:
     r"""Get the total number of processes participating in the job."""
     return _sd.world_size if _sd is not None else 1

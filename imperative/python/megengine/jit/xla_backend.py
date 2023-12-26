@@ -134,14 +134,24 @@ class xla_trace(trace):
     def convert_params_to_xla(self):
         from ..utils.module_utils import get_expand_structure
         from ..tensor import Tensor
+        from ..distributed import is_distributed
 
         backend = self.xla_exec.backend
         devices = backend.local_devices()
         default_cn = CompNode(get_default_device())
         _, device_id, _ = default_cn.physical_locator
-        device_index = (
-            0 if len(devices) == 0 else [d.id for d in devices].index(device_id)
-        )
+
+        # todo: Add local_hardware_id property to PjRtDevice
+        if is_distributed():
+            assert (
+                len(devices) == 1
+            ), f"does't support the size of devices greater than 1, got {len(devices)}"
+            device_index = 0
+        else:
+            device_index = (
+                0 if len(devices) == 0 else [d.id for d in devices].index(device_id)
+            )
+
         device = devices[device_index]
         # TODO: device -> host -> device
         for attr, _ in self.attr_to_key.items():
@@ -168,7 +178,11 @@ class xla_trace(trace):
     def compile(self):
         from ..xla import build_xla
         from ..tensor import Tensor
-        from ..distributed import get_mm_server_addr, is_distributed, get_rank
+        from ..distributed import (
+            get_mm_server_addr,
+            is_distributed,
+            get_local_device_id,
+        )
         from ..device import (
             coalesce_free_memory,
             get_max_reserved_memory,
@@ -206,7 +220,8 @@ class xla_trace(trace):
         coalesce_free_memory()
         _full_sync()
         _make_free_mem_block_device(
-            get_default_device(), int(_get_cuda_left_memory(get_rank()) * 0.9)
+            get_default_device(),
+            int(_get_cuda_left_memory(get_local_device_id()) * 0.9),
         )
         _full_sync()
 
@@ -239,8 +254,8 @@ class xla_trace(trace):
             # imperative version, so we prealloc a block of size (mem_occup_of_imperative - cur_mem_use).
             # however, in megengine getting the current memory usage accurately is hard,
             # so we prealloc according to the system left memory. the result is similar
-            total = get_cuda_device_property(get_rank()).total_memory
-            left = _get_cuda_left_memory(get_rank())
+            total = get_cuda_device_property(get_local_device_id()).total_memory
+            left = _get_cuda_left_memory(get_local_device_id())
             should_left = total - _max_reserved_before_compile
             if left > should_left:
                 _make_free_mem_block_device(
