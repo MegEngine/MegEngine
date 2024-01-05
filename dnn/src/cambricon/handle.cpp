@@ -80,7 +80,6 @@ void HandleImpl::free(void* ptr) {
     if (mem_mgr) {
         return mem_mgr->free(ptr);
     } else {
-        void* ptr = nullptr;
         cnrt_check(cnrtSetDevice(device_id()));
         cnrt_check(cnrtQueueSync(queue()));
         cnrt_check(cnrtFree(ptr));
