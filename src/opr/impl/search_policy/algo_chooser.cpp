@@ -76,6 +76,7 @@ size_t AlgoChooser<Opr>::setup_algo(
 
     std::string ret;
     ret.append(mgb_opr->dyn_typeinfo()->name);
+    ret.append("(" + mgb_opr->name() + ")");
     ret.append(": tensor layouts");
     ret += Base::format_fixlayouts(layouts);
     Algorithm* palgo = megdnn_opr->get_algorithm_from_desc(policy.algo);
