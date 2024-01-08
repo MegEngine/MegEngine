@@ -221,6 +221,8 @@ if(NOT MGE_WITH_MIDOUT_PROFILE AND NOT WIN32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include ${BIN_REDUCE}")
 endif()
 
+check_cxx_compiler_flag(-fuse-ld=gold CXX_SUPPORT_GOLD)
+
 if(NOT APPLE)
   # check CXX_FUNCTION_DATA_GC_SECTIONS_SUPPORT on APPLE will leak cmake crash
   check_cxx_compiler_flag("-ffunction-sections -fdata-sections  -Wl,--gc-sections"
@@ -235,12 +237,24 @@ if(NOT APPLE)
     # ANDROID
     check_cxx_compiler_flag("-Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld"
                             LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL)
+    check_cxx_compiler_flag("-Wl,-z,nocopyreloc -Wl,--icf=safe"
+                            LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_SAFE_NO_LLD)
     if(LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_ALL AND (ANDROID OR OHOS))
       message(STATUS "icf is supported in this compiler")
       set(CMAKE_EXE_LINKER_FLAGS
           "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld")
       set(CMAKE_SHARED_LINKER_FLAGS
           "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=all -fuse-ld=lld")
+    elseif(LINKER_SUPPORT_Z_NOCOPYRELOC_ICF_SAFE_NO_LLD)
+      message(STATUS "icf=safe is supported in this compiler without lld")
+      set(CMAKE_EXE_LINKER_FLAGS
+          "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=safe")
+      set(CMAKE_SHARED_LINKER_FLAGS
+          "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nocopyreloc -Wl,--icf=safe")
+      if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+        add_compile_options($<$<COMPILE_LANGUAGE:C>:-fPIC>)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fPIC>)
+      endif()
     endif()
 
   endif()
@@ -561,7 +575,6 @@ if(MGE_WITH_CUDA)
     set(MGE_WITH_LARGE_ARCHIVE ON)
   endif()
 endif()
-check_cxx_compiler_flag(-fuse-ld=gold CXX_SUPPORT_GOLD)
 if(MGE_WITH_LARGE_ARCHIVE)
   message(STATUS "Set -mcmodel=large and disable -fuse-ld=gold")
   set(MGE_COMMON_LINKER_FLAGS "-mcmodel=large")

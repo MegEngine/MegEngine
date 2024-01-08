@@ -18,7 +18,7 @@ RUN cd /tmp ; wget https://cmake.org/files/v3.15/cmake-3.15.2.tar.gz;tar -xzvf c
 
 # install base python3
 RUN apt-get install -y python3
-RUN apt-get install -y python3-dev python3-pip python3-numpy python3-setuptools
+RUN apt-get update -y && apt-get install --fix-missing && apt-get install -y python3-dev python3-pip python3-numpy python3-setuptools
 
 # install pyenv
 RUN curl https://pyenv.run | bash
