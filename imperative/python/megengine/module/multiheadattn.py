@@ -52,6 +52,8 @@ class MultiHeadAttention(Module):
         add_zero_attn: If specified, adds a new batch of zeros to the key and value sequences.
             Default: ``False``.
             Note: Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
+        reslink: add input query to final output.
+            Note: It is only valid if the input query is the same as the shape of the output. Should be set to False, and configuration of this parameter is not supported now. The reason is that there is only cudnn implementation now, and we may try to loosen this option after submitting the commit that adds MHA proxy implementation.
         kdim: Total number of features for keys. Default: ``None`` (uses ``kdim=embed_dim``).
         vdim: Total number of features for values. Default: ``None`` (uses ``vdim=embed_dim``).
 
@@ -77,6 +79,7 @@ class MultiHeadAttention(Module):
         bias=True,
         add_bias_kv=False,
         add_zero_attn=False,
+        reslink=False,
         kdim=None,
         vdim=None,
         **kwargs
@@ -87,6 +90,7 @@ class MultiHeadAttention(Module):
         self.vdim = vdim if vdim is not None else embed_dim
         self.add_bias_kv = add_bias_kv
         self.add_zero_attn = add_zero_attn
+        self.reslink = reslink
 
         self.num_heads = num_heads
         self.attn_dropout = attn_dropout
@@ -96,14 +100,6 @@ class MultiHeadAttention(Module):
         assert (
             self.head_dim * num_heads == self.embed_dim
         ), "embed_dim must be divisible by num_heads"
-        assert add_bias_kv == False, (
-            "add_bias_kv should be set to False, and configuration of this parameter is not supported now."
-            + self.unsupport_reason
-        )
-        assert add_zero_attn == False, (
-            "add_zero_attn should be set to False, and configuration of this parameter is not supported now."
-            + self.unsupport_reason
-        )
 
         self.bias = bias
         self.weight_bias_len = (
@@ -114,12 +110,12 @@ class MultiHeadAttention(Module):
             np.empty((1, self.weight_bias_len), dtype="float32")
         )
         self.bias_k = (
-            Parameter(np.empty((1, 1, embed_dim), dtype="float32"))
+            Parameter(np.empty((1, 1, self.kdim), dtype="float32"))
             if self.add_bias_kv
             else None
         )
         self.bias_v = (
-            Parameter(np.empty((1, 1, embed_dim), dtype="float32"))
+            Parameter(np.empty((1, 1, self.vdim), dtype="float32"))
             if self.add_bias_kv
             else None
         )
@@ -186,7 +182,6 @@ class MultiHeadAttention(Module):
               :math:`(N, L, S)`, where :math:`N` is the batch size, :math:`L` is the target sequence length, and
               :math:`S` is the source sequence length. If ``average_attn_weights=False``, returns attention weights per head of shape :math:`(\text{num\_heads}, L, S)` when input is unbatched or :math:`(N * \text{num\_heads}, L, S)`.
         """
-
         return multi_head_attention(
             query,
             key,
@@ -207,6 +202,7 @@ class MultiHeadAttention(Module):
             bias_k=self.bias_k,
             bias_v=self.bias_v,
             add_zero_attn=self.add_zero_attn,
+            reslink=self.reslink,
             training=self.training,
             key_padding_mask=key_padding_mask,
             need_weights=need_weights,

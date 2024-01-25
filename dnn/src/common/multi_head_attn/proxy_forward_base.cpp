@@ -22,12 +22,14 @@ bool MHAForwardProxyBase::layout_ismatch(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     MEGDNN_MARK_USED_VAR(othr_reservespace);
     if (m_matmul_opr == nullptr or m_bmatmul_opr == nullptr or m_add_opr == nullptr or
         m_elem_opr == nullptr or m_softmax_opr == nullptr or m_dropout_opr == nullptr or
-        m_relayout_opr == nullptr or m_repeat_opr == nullptr) {
+        m_relayout_opr == nullptr or m_repeat_opr == nullptr or
+        m_concat_opr == nullptr or m_fill_opr == nullptr) {
         megdnn_assert(
                 m_matmul_opr == nullptr and m_bmatmul_opr == nullptr and
                         m_add_opr == nullptr and m_elem_opr == nullptr and
                         m_softmax_opr == nullptr and m_dropout_opr == nullptr and
-                        m_relayout_opr == nullptr and m_repeat_opr == nullptr,
+                        m_relayout_opr == nullptr and m_repeat_opr == nullptr and
+                        m_concat_opr == nullptr and m_fill_opr == nullptr,
                 "All the sub-opr are either not constructed or all constructed, but "
                 "now only a part is constructed.");
         m_matmul_opr = handle->create_operator<MatrixMulForward>();
@@ -38,6 +40,8 @@ bool MHAForwardProxyBase::layout_ismatch(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
         m_dropout_opr = handle->create_operator<Dropout>();
         m_relayout_opr = handle->create_operator<Relayout>();
         m_repeat_opr = handle->create_operator<RepeatForward>();
+        m_concat_opr = handle->create_operator<ConcatForward>();
+        m_fill_opr = handle->create_operator<Fill>();
     }
 
     auto matmul_layout = [](const TensorLayout& A, const TensorLayout& B,
@@ -84,7 +88,11 @@ bool MHAForwardProxyBase::layout_ismatch(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
                m_qproj_size == param.qproj_size && m_kproj_size == param.kproj_size &&
                m_vproj_size == param.vproj_size && m_oproj_size == param.oproj_size &&
                m_qbias == param.qbias && m_kbias == param.kbias &&
-               m_vbias == param.vbias && m_obias == param.obias;
+               m_vbias == param.vbias && m_obias == param.obias &&
+               m_add_bias_kv ==
+                       (param.tensor_combination_type == InputType::ALL or
+                        param.tensor_combination_type == InputType::ONLY_BIASKV) &&
+               m_add_zero_attn == param.add_zero_attn && m_reslink == param.reslink;
     };
 
     return equal_metadata(param) && ndim_valid(param) &&
@@ -97,8 +105,6 @@ bool MHAForwardProxyBase::layout_ismatch(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
 void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     MEGDNN_MARK_USED_VAR(handle);
     MEGDNN_MARK_USED_VAR(attn_mask);
-    MEGDNN_MARK_USED_VAR(bias_k);
-    MEGDNN_MARK_USED_VAR(bias_v);
     MEGDNN_MARK_USED_VAR(out);
     MEGDNN_MARK_USED_VAR(attn_weight);
     MEGDNN_MARK_USED_VAR(mask_reservespace);
@@ -116,10 +122,23 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     m_kbias = param.kbias;
     m_vbias = param.vbias;
     m_obias = param.obias;
+    if (param.tensor_combination_type == InputType::ALL or
+        param.tensor_combination_type == InputType::ONLY_BIASKV)
+        m_add_bias_kv = true;
+    else
+        m_add_bias_kv = false;
+    m_add_zero_attn = param.add_zero_attn;
+    m_reslink = param.reslink;
     auto cal_type = qkvo_weight_bias.dtype;
     TensorLayout placeholder_layout;
 
     auto reflash_dtype = [&](DType dtype) {
+        m_nbias_k_layout.dtype = dtype;
+        m_nbias_v_layout.dtype = dtype;
+        m_zero_k_layout.dtype = dtype;
+        m_zero_v_layout.dtype = dtype;
+        m_added_bias_zero_k_layout.dtype = dtype;
+        m_added_bias_zero_v_layout.dtype = dtype;
         m_q_layout.dtype = dtype;
         m_k_layout.dtype = dtype;
         m_v_layout.dtype = dtype;
@@ -201,6 +220,8 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
         end += m_bo_layout.total_nr_elems();
     }
 
+    size_t attn_add = (m_add_bias_kv ? 1 : 0) + (param.add_zero_attn ? 1 : 0);
+
     // q/k/v, nq/nk/nv
     auto head_repeat = [&](TensorLayout& m_q_layout, TensorLayout& m_nq_layout) {
         m_repeat_opr->param().times =
@@ -215,8 +236,7 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     if (param.qproj_size) {
         matmul_deduce_layout(m_matmul_opr, queries, m_wq_layout, m_q_layout);
         m_nq_layout = TensorLayout{
-                {m_q_layout.shape[0] * m_heads, m_q_layout.shape[1],
-                 m_q_layout.shape[2] / m_heads},
+                {m_q_layout[0] * m_heads, m_q_layout[1], m_q_layout[2] / m_heads},
                 m_q_layout.dtype};
         m_q_head_repeat_workspacesize = 0;
     } else {
@@ -229,34 +249,86 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
     if (param.kproj_size) {
         matmul_deduce_layout(m_matmul_opr, keys, m_wk_layout, m_k_layout);
         m_nk_layout = TensorLayout{
-                {m_k_layout.shape[0] * m_heads, m_k_layout.shape[1],
-                 m_k_layout.shape[2] / m_heads},
+                {m_k_layout[0] * m_heads, m_k_layout[1] + attn_add,
+                 m_k_layout[2] / m_heads},
                 m_k_layout.dtype};
         m_k_head_repeat_workspacesize = 0;
     } else {
         m_k_layout = keys;
         m_nk_layout = TensorLayout{
-                {m_k_layout[0] * m_heads, m_k_layout[1], m_k_layout[2]},
+                {m_k_layout[0] * m_heads, m_k_layout[1] + attn_add, m_k_layout[2]},
                 m_k_layout.dtype};
         m_k_head_repeat_workspacesize = head_repeat(m_k_layout, m_nk_layout);
     }
     if (param.vproj_size) {
         matmul_deduce_layout(m_matmul_opr, values, m_wv_layout, m_v_layout);
         m_nv_layout = TensorLayout{
-                {m_v_layout.shape[0] * m_heads, m_v_layout.shape[1],
-                 m_v_layout.shape[2] / m_heads},
+                {m_v_layout[0] * m_heads, m_v_layout[1] + attn_add,
+                 m_v_layout[2] / m_heads},
                 m_v_layout.dtype};
         m_v_head_repeat_workspacesize = 0;
     } else {
         m_v_layout = values;
         m_nv_layout = TensorLayout{
-                {m_v_layout[0] * m_heads, m_v_layout[1], m_v_layout[2]},
+                {m_v_layout[0] * m_heads, m_v_layout[1] + attn_add, m_v_layout[2]},
                 m_v_layout.dtype};
         m_v_head_repeat_workspacesize = head_repeat(m_v_layout, m_nv_layout);
     }
     m_q_workspacesize = 0;
     m_k_workspacesize = 0;
     m_v_workspacesize = 0;
+
+    // add bias_kv
+    if (m_add_bias_kv) {
+        TensorLayout bias_k_layout{{1, 1, bias_k.shape[2]}, cal_type};
+        m_repeat_opr->param().times = TensorLayout({m_k_layout[0], 1, 1}, cal_type);
+        m_repeat_opr->deduce_layout(bias_k_layout, m_nbias_k_layout);
+        m_bias_k_repeat_workspacesize =
+                m_repeat_opr->get_workspace_in_bytes(bias_k_layout, m_nbias_k_layout);
+        TensorLayout bias_v_layout{{1, 1, bias_v.shape[2]}, cal_type};
+        m_repeat_opr->param().times = TensorLayout({m_v_layout[0], 1, 1}, cal_type);
+        m_repeat_opr->deduce_layout(bias_v_layout, m_nbias_v_layout);
+        m_bias_v_repeat_workspacesize =
+                m_repeat_opr->get_workspace_in_bytes(bias_v_layout, m_nbias_v_layout);
+    }
+    // add zero attn
+    if (param.add_zero_attn) {
+        m_zero_k_layout = TensorLayout{{m_k_layout[0], 1, m_k_layout[2]}, cal_type};
+        m_zero_v_layout = TensorLayout{{m_v_layout[0], 1, m_v_layout[2]}, cal_type};
+    }
+    m_concat_opr->param().axis = 1;
+    if (m_add_bias_kv and param.add_zero_attn) {
+        m_concat_opr->deduce_layout(
+                {m_k_layout, m_nbias_k_layout, m_zero_k_layout},
+                m_added_bias_zero_k_layout);
+        m_concat_opr->deduce_layout(
+                {m_v_layout, m_nbias_v_layout, m_zero_v_layout},
+                m_added_bias_zero_v_layout);
+        m_added_bias_zero_k_workspacesize = m_concat_opr->get_workspace_in_bytes(
+                {m_k_layout, m_nbias_k_layout, m_zero_k_layout},
+                m_added_bias_zero_k_layout);
+        m_added_bias_zero_v_workspacesize = m_concat_opr->get_workspace_in_bytes(
+                {m_v_layout, m_nbias_v_layout, m_zero_v_layout},
+                m_added_bias_zero_v_layout);
+    } else if (m_add_bias_kv) {
+        m_concat_opr->deduce_layout(
+                {m_k_layout, m_nbias_k_layout}, m_added_bias_zero_k_layout);
+        m_concat_opr->deduce_layout(
+                {m_v_layout, m_nbias_v_layout}, m_added_bias_zero_v_layout);
+        m_added_bias_zero_k_workspacesize = m_concat_opr->get_workspace_in_bytes(
+                {m_k_layout, m_nbias_k_layout}, m_added_bias_zero_k_layout);
+        m_added_bias_zero_v_workspacesize = m_concat_opr->get_workspace_in_bytes(
+                {m_v_layout, m_nbias_v_layout}, m_added_bias_zero_v_layout);
+    } else if (param.add_zero_attn) {
+        m_concat_opr->deduce_layout(
+                {m_k_layout, m_zero_k_layout}, m_added_bias_zero_k_layout);
+        m_concat_opr->deduce_layout(
+                {m_v_layout, m_zero_v_layout}, m_added_bias_zero_v_layout);
+        m_added_bias_zero_k_workspacesize = m_concat_opr->get_workspace_in_bytes(
+                {m_k_layout, m_zero_k_layout}, m_added_bias_zero_k_layout);
+        m_added_bias_zero_v_workspacesize = m_concat_opr->get_workspace_in_bytes(
+                {m_v_layout, m_zero_v_layout}, m_added_bias_zero_v_layout);
+    }
 
     // nx
     m_bmatmul_opr->param().transposeA = false;
@@ -279,8 +351,7 @@ void MHAForwardProxyBase::layout_refill(MHA_PROXY_FORWARD_LAYOUT_CONST_PARAM) {
 
     // z
     m_z_layout = TensorLayout{
-            {m_nz_layout.shape[0] / m_heads, m_nz_layout.shape[1],
-             m_nz_layout.shape[2] * m_heads},
+            {m_nz_layout[0] / m_heads, m_nz_layout[1], m_nz_layout[2] * m_heads},
             m_nz_layout.dtype};
 
     // out
@@ -317,10 +388,16 @@ WorkspaceBundle MHAForwardProxyBase::get_othr_reservespace_bundle(
             ptr,
             {param.num_heads > 1 or param.qproj_size ? m_nq_layout.span().dist_byte()
                                                      : 0,
-             param.num_heads > 1 or param.kproj_size ? m_nk_layout.span().dist_byte()
-                                                     : 0,
-             param.num_heads > 1 or param.vproj_size ? m_nv_layout.span().dist_byte()
-                                                     : 0,
+             param.num_heads > 1 or param.kproj_size or
+                             (param.num_heads == 1 and
+                              (m_add_bias_kv or param.add_zero_attn))
+                     ? m_nk_layout.span().dist_byte()
+                     : 0,
+             param.num_heads > 1 or param.vproj_size or
+                             (param.num_heads == 1 and
+                              (m_add_bias_kv or param.add_zero_attn))
+                     ? m_nv_layout.span().dist_byte()
+                     : 0,
              param.training ? m_nx_layout.span().dist_byte() : 0,
              param.training or param.oproj_size ? m_z_layout.span().dist_byte() : 0},
             queries.dtype.size());
@@ -333,29 +410,52 @@ WorkspaceBundle MHAForwardProxyBase::get_workspace_bundle(
     }
     return WorkspaceBundle(
             ptr,
-            {param.num_heads > 1 and param.qproj_size ? m_q_layout.span().dist_byte()
-                                                      : 0,
-             param.num_heads > 1 and param.qproj_size ? m_q_workspacesize : 0,
-             param.num_heads > 1 and param.kproj_size ? m_k_layout.span().dist_byte()
-                                                      : 0,
-             param.num_heads > 1 and param.kproj_size ? m_k_workspacesize : 0,
-             param.num_heads > 1 and param.vproj_size ? m_v_layout.span().dist_byte()
-                                                      : 0,
-             param.num_heads > 1 and param.vproj_size ? m_v_workspacesize : 0,
-             param.num_heads > 1 and !param.qproj_size ? m_q_head_repeat_workspacesize
-                                                       : 0,
-             param.num_heads > 1 and !param.kproj_size ? m_k_head_repeat_workspacesize
-                                                       : 0,
-             param.num_heads > 1 and !param.vproj_size ? m_v_head_repeat_workspacesize
-                                                       : 0,
-             m_nx_layout.span().dist_byte(), m_nx_workspacesize, m_sizeof_datatype,
-             m_softmax_workspacesize, param.training ? m_dropout1_workspacesize : 0,
+            {(param.num_heads > 1 and param.qproj_size) ? m_q_layout.span().dist_byte()
+                                                        : 0,
+             (param.num_heads > 1 and param.qproj_size) ? m_q_workspacesize : 0,
+             (param.kproj_size and
+              (param.num_heads > 1 or param.add_zero_attn or m_add_bias_kv))
+                     ? m_k_layout.span().dist_byte()
+                     : 0,
+             (param.num_heads > 1 and param.kproj_size) ? m_k_workspacesize : 0,
+             (param.vproj_size and
+              (param.num_heads > 1 or param.add_zero_attn or m_add_bias_kv))
+                     ? m_v_layout.span().dist_byte()
+                     : 0,
+             (param.num_heads > 1 and param.vproj_size) ? m_v_workspacesize : 0,
+             (param.num_heads > 1 and !param.qproj_size) ? m_q_head_repeat_workspacesize
+                                                         : 0,
+             (param.num_heads > 1 and !param.kproj_size) ? m_k_head_repeat_workspacesize
+                                                         : 0,
+             (param.num_heads > 1 and !param.vproj_size) ? m_v_head_repeat_workspacesize
+                                                         : 0,
+             m_nx_layout.span().dist_byte(),
+             m_nx_workspacesize,
+             m_sizeof_datatype,
+             m_softmax_workspacesize,
+             param.training ? m_dropout1_workspacesize : 0,
              param.num_heads > 1 ? m_nz_layout.span().dist_byte() : 0,
              m_nz_workspacesize,
              (param.oproj_size and param.training) ? m_out_layout.span().dist_byte()
                                                    : 0,
              param.oproj_size ? m_out_workspacesize : 0,
-             param.training ? m_dropout2_workspacesize : 0});
+             param.training ? m_dropout2_workspacesize : 0,
+             m_add_bias_kv ? m_nbias_k_layout.span().dist_byte() : 0,
+             m_add_bias_kv ? m_nbias_v_layout.span().dist_byte() : 0,
+             m_add_bias_kv ? m_bias_k_repeat_workspacesize : 0,
+             m_add_bias_kv ? m_bias_v_repeat_workspacesize : 0,
+             param.add_zero_attn ? m_zero_k_layout.span().dist_byte() : 0,
+             param.add_zero_attn ? m_zero_v_layout.span().dist_byte() : 0,
+             ((m_add_bias_kv or param.add_zero_attn) and param.num_heads > 1)
+                     ? m_added_bias_zero_k_layout.span().dist_byte()
+                     : 0,
+             ((m_add_bias_kv or param.add_zero_attn) and param.num_heads > 1)
+                     ? m_added_bias_zero_v_layout.span().dist_byte()
+                     : 0,
+             (m_add_bias_kv or param.add_zero_attn) ? m_added_bias_zero_k_workspacesize
+                                                    : 0,
+             (m_add_bias_kv or param.add_zero_attn) ? m_added_bias_zero_v_workspacesize
+                                                    : 0});
 }
 
 size_t MHAForwardProxyBase::get_mask_reservespace_in_bytes(
@@ -422,10 +522,10 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
             m_add_opr->exec(q, {qkvo_weight_bias.ptr<T>() + m_bq_off, m_bq_layout});
         }
     } else {
-        q = TensorND{queries.raw_ptr(), queries.layout};
+        q = queries;
     }
     if (param.kproj_size) {
-        if (param.num_heads == 1) {
+        if (param.num_heads == 1 and !param.add_zero_attn and !m_add_bias_kv) {
             k = TensorND{othr_bundle.get_workspace(1).raw_ptr, m_k_layout};
         } else {
             k = TensorND{wksp_bundle.get_workspace(2).raw_ptr, m_k_layout};
@@ -436,10 +536,10 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
             m_add_opr->exec(k, {qkvo_weight_bias.ptr<T>() + m_bk_off, m_bk_layout});
         }
     } else {
-        k = TensorND{keys.raw_ptr(), keys.layout};
+        k = keys;
     }
     if (param.vproj_size) {
-        if (param.num_heads == 1) {
+        if (param.num_heads == 1 and !param.add_zero_attn and !m_add_bias_kv) {
             v = TensorND{othr_bundle.get_workspace(2).raw_ptr, m_v_layout};
         } else {
             v = TensorND{wksp_bundle.get_workspace(4).raw_ptr, m_v_layout};
@@ -450,7 +550,61 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
             m_add_opr->exec(v, {qkvo_weight_bias.ptr<T>() + m_bv_off, m_bv_layout});
         }
     } else {
-        v = TensorND{values.raw_ptr(), values.layout};
+        v = values;
+    }
+
+    if (m_add_bias_kv or param.add_zero_attn) {
+        TensorND nbias_k{wksp_bundle.get_workspace(19).raw_ptr, m_nbias_k_layout};
+        TensorND nbias_v{wksp_bundle.get_workspace(20).raw_ptr, m_nbias_v_layout};
+        TensorND zero_k{wksp_bundle.get_workspace(23).raw_ptr, m_zero_k_layout};
+        TensorND zero_v{wksp_bundle.get_workspace(24).raw_ptr, m_zero_v_layout};
+        if (m_add_bias_kv) {
+            m_repeat_opr->param().times =
+                    TensorLayout({k.layout[0], 1, 1}, bias_k.layout.dtype);
+            m_repeat_opr->exec(bias_k, nbias_k, wksp_bundle.get_workspace(21));
+            m_repeat_opr->param().times =
+                    TensorLayout({v.layout[0], 1, 1}, bias_v.layout.dtype);
+            m_repeat_opr->exec(bias_v, nbias_v, wksp_bundle.get_workspace(22));
+        }
+        if (param.add_zero_attn) {
+            m_fill_opr->param().value = 0;
+            m_fill_opr->exec(zero_k, {});
+            m_fill_opr->exec(zero_v, {});
+        }
+        TensorND added_bias_zero_k, added_bias_zero_v;
+        if (param.num_heads == 1) {
+            added_bias_zero_k = TensorND{
+                    othr_bundle.get_workspace(1).raw_ptr, m_added_bias_zero_k_layout};
+            added_bias_zero_v = TensorND{
+                    othr_bundle.get_workspace(2).raw_ptr, m_added_bias_zero_v_layout};
+        } else {
+            added_bias_zero_k = TensorND{
+                    wksp_bundle.get_workspace(25).raw_ptr, m_added_bias_zero_k_layout};
+            added_bias_zero_v = TensorND{
+                    wksp_bundle.get_workspace(26).raw_ptr, m_added_bias_zero_v_layout};
+        }
+
+        m_concat_opr->param().axis = 1;
+        if (m_add_bias_kv and param.add_zero_attn) {
+            m_concat_opr->exec(
+                    {k, nbias_k, zero_k}, added_bias_zero_k,
+                    wksp_bundle.get_workspace(27));
+            m_concat_opr->exec(
+                    {v, nbias_v, zero_v}, added_bias_zero_v,
+                    wksp_bundle.get_workspace(28));
+        } else if (m_add_bias_kv) {
+            m_concat_opr->exec(
+                    {k, nbias_k}, added_bias_zero_k, wksp_bundle.get_workspace(27));
+            m_concat_opr->exec(
+                    {v, nbias_v}, added_bias_zero_v, wksp_bundle.get_workspace(28));
+        } else if (param.add_zero_attn) {
+            m_concat_opr->exec(
+                    {k, zero_k}, added_bias_zero_k, wksp_bundle.get_workspace(27));
+            m_concat_opr->exec(
+                    {v, zero_v}, added_bias_zero_v, wksp_bundle.get_workspace(28));
+        }
+        k = added_bias_zero_k;
+        v = added_bias_zero_v;
     }
 
     // nq/nk/nv: norm to multihead
@@ -463,14 +617,14 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
         nlayout = nlayout.dimshuffle({0, 2, 1, 3});
         m_relayout_opr->exec({q.raw_ptr(), nlayout}, nq);
     };
-    auto repeat_to_multihead = [&](TensorND& q, TensorND& nq, size_t idx) {
+    auto repeat_to_multihead = [&](TensorND& q, TensorND& nq, size_t wksp_idx) {
         q.layout = TensorLayout(
                 {q.layout[0], 1, q.layout[1], q.layout[2]}, q.layout.dtype);
         nq.layout = TensorLayout(
                 {nq.layout[0] / m_heads, m_heads, nq.layout[1], nq.layout[2]},
                 nq.layout.dtype);
         m_repeat_opr->param().times = TensorLayout({1, m_heads, 1, 1}, q.layout.dtype);
-        m_repeat_opr->exec(q, nq, wksp_bundle.get_workspace(idx));
+        m_repeat_opr->exec(q, nq, wksp_bundle.get_workspace(wksp_idx));
         nq.layout = TensorLayout(
                 {nq.layout[0] * nq.layout[1], nq.layout[2], nq.layout[3]},
                 nq.layout.dtype);
@@ -483,16 +637,12 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
         } else {
             repeat_to_multihead(q, nq, 6);
         }
-    }
-    if (param.num_heads > 1) {
         nk = TensorND{othr_bundle.get_workspace(1).raw_ptr, m_nk_layout};
         if (param.kproj_size) {
             relayout_to_multihead(k, nk);
         } else {
             repeat_to_multihead(k, nk, 7);
         }
-    }
-    if (param.num_heads > 1) {
         nv = TensorND{othr_bundle.get_workspace(2).raw_ptr, m_nv_layout};
         if (param.vproj_size) {
             relayout_to_multihead(v, nv);
@@ -574,11 +724,15 @@ void MHAForwardProxyBase::exec_internal(MHA_PROXY_FORWARD_EXEC_PARAM) {
             m_add_opr->exec(o, {qkvo_weight_bias.ptr<T>() + m_bo_off, m_bo_layout});
         }
     } else {
-        o = TensorND{z.raw_ptr(), m_z_layout};
+        o = z;
     }
     if (param.training) {
         m_dropout_opr->param().drop_prob = param.out_prob;
         m_dropout_opr->exec(o, out, mask2, wksp_bundle.get_workspace(18));
+    }
+
+    if (param.reslink) {
+        m_add_opr->exec(out, queries);
     }
 }
 }  // namespace multi_head_attn

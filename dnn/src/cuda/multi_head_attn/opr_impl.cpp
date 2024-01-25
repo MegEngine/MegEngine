@@ -47,6 +47,16 @@ bool can_use_mha_cudnn(const Param& param) {
                 "sure that cuda is available, and check you parameter or do not use "
                 "cudnn style mask.");
     }
+    if (param.add_zero_attn) {
+        flag = false;
+    }
+    if (param.tensor_combination_type == InputType::ALL or
+        param.tensor_combination_type == InputType::ONLY_BIASKV) {
+        flag = false;
+    }
+    if (param.reslink) {
+        flag = false;
+    }
     return flag;
 #endif
 }

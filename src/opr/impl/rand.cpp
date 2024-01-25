@@ -831,13 +831,16 @@ MGB_IMPL_OPR_GRAD(MultiHeadAttnForward) {
     uint32_t nr_ret = 7;
     if (input_type == InputType::NONE)
         nr_ret = 4;
-    if (input_type == InputType::ONLY_MASK)
+    else if (input_type == InputType::ONLY_MASK)
         nr_ret = 5;
-    if (input_type == InputType::ONLY_BIASKV)
+    else if (input_type == InputType::ONLY_BIASKV)
         nr_ret = 6;
-    for (uint32_t i = 0; i < nr_ret; ++i) {
-        ret.push_back(grad[i].node());
-    }
+    if (nr_ret == 7)
+        ret = {grad[0].node(), grad[1].node(), grad[2].node(), grad[3].node(),
+               grad[6].node(), grad[4].node(), grad[5].node()};
+    else
+        for (uint32_t i = 0; i < nr_ret; ++i)
+            ret.push_back(grad[i].node());
     return ret;
 }
 #endif
@@ -936,8 +939,16 @@ void MultiHeadAttnBackward::init_output_static_infer_desc() {
     mgr.register_shape_infer(output(3), ShapeInferDesc::make_identity(input(4)));
     auto input_type = param().tensor_combination_type;
     if (input_type == InputType::ALL or input_type == InputType::ONLY_BIASKV) {
-        mgr.register_shape_infer(output(4), ShapeInferDesc::make_identity(input(4)));
-        mgr.register_shape_infer(output(5), ShapeInferDesc::make_identity(input(4)));
+        mgr.register_shape_infer(
+                output(4),
+                ShapeInferDesc::make_const(
+                        {1, 1,
+                         param().kproj_size ? param().kproj_size : param().k_size}));
+        mgr.register_shape_infer(
+                output(5),
+                ShapeInferDesc::make_const(
+                        {1, 1,
+                         param().vproj_size ? param().vproj_size : param().v_size}));
     } else {
         TensorShape empty{0};
         mgr.register_shape_infer(output(4), ShapeInferDesc::make_const(empty));
