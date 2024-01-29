@@ -128,6 +128,7 @@ elif [ $SDK_NAME == "cu111" ];then
         ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
         ${CUDNN_LIB_DIR}/libcudnn.so.8"
+    
 
     if [ ${IN_CI} = "true" ] && [ ${machine} == "aarch64" ]; then
         EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON -DMGE_CUDA_GENCODE=\"-gencode arch=compute_75,code=sm_75\" "
@@ -388,6 +389,10 @@ fi
 
 echo "mount args: ${mount_args}"
 
+if [ -z "${PYTHON_EXTRA_REQUIRES}" ]; then
+    PYTHON_EXTRA_REQUIRES=""
+fi
+
 docker run --rm ${docker_args} $TMPFS_ARGS \
     -e UID=${USERID} \
     -e PUBLIC_VERSION_POSTFIX=${PUBLIC_VERSION_POSTFIX} \
@@ -404,6 +409,7 @@ docker run --rm ${docker_args} $TMPFS_ARGS \
     -e CUDNN_ROOT_DIR="/opt/cudnn" \
     -e TRT_ROOT_DIR="/opt/tensorrt" \
     -e NEUWARE_HOME="/usr/local/neuware" \
+    -e PYTHON_EXTRA_REQUIRES="$PYTHON_EXTRA_REQUIRES" \
     ${mount_args} \
     -v ${BASEDIR}:/home/code \
     -v ${OUTPUTDIR}:/home/output:rw \
