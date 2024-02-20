@@ -74,7 +74,7 @@ HandleImpl::HandleImpl(megcoreComputingHandle_t comp_handle)
     cublas_check(cublasSetPointerMode(m_cublas_handle, CUBLAS_POINTER_MODE_DEVICE));
 
     // init const scalars
-    cuda_check(cudaMalloc(&m_const_scalars, sizeof(ConstScalars)));
+    cuda_check(cudaMalloc((void**)&m_const_scalars, sizeof(ConstScalars)));
     ConstScalars const_scalars_val;
     const_scalars_val.init();
     cuda_check(cudaMemcpyAsync(
