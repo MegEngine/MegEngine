@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 
 from ..distributed import get_local_device_id, get_rank, get_world_size, is_distributed
 from .compile import MeshComputation, PmapComputation
@@ -15,6 +16,7 @@ xe = xla_extention
 Backend = xe.Client
 
 
+@lru_cache(maxsize=None)
 def build_xla(
     mge_traced,
     func_name=None,

@@ -217,17 +217,8 @@ class trace:
         self._trace.without_host = without_host
         self.check_external = True
         self.traced = False
-        self.input_num = 0
-        self.output_num = 0
-        self.arg_list = []
-        self.out_list = []
-
         self.overall = True
-
-        # forward keeped activation
-        self.keeped_activation = []
-
-        self.third_party_backend_compiled = False
+        self.reset_third_party_variable()
 
     @property
     def check_external(self):
@@ -284,6 +275,17 @@ class trace:
 
     def unset_env(self):
         pass
+
+    def reset_third_party_variable(self):
+        self.input_num = 0
+        self.output_num = 0
+        self.arg_list = []
+        self.out_list = []
+
+        # forward keeped activation
+        self.keeped_activation = []
+
+        self.third_party_backend_compiled = False
 
     def compile_and_exec(self, *args, **kwargs):
         if not self.third_party_backend_compiled:
@@ -498,12 +500,45 @@ class trace:
         global active_trace
         symbolic_shape = None
         outputs = None
+
+        if Optimizer not in SUPPORTED_LEAF_CLS:
+            SUPPORTED_LEAF_CLS.append(Optimizer)
+
+        def get_shape_hash(*args, **kwargs):
+            tuple_shape = []
+            fargs, _ = tree_flatten((args, kwargs))
+
+            def map_scalar_to_tuple(ishape):
+                return (1,) if ishape == tuple() else ishape
+
+            for a in fargs:
+                if isinstance(a, RawTensor):
+                    tuple_shape.append(map_scalar_to_tuple(a._tuple_shape))
+
+            return hash(tuple(tuple_shape))
+
+        shape_hash = get_shape_hash(*args, **kwargs)
+        if (
+            self.third_party_backend
+            and self.hash_shape_set
+            and shape_hash not in self.hash_shape_set
+        ):
+            from .xla_backend import apply_external_convert_hook
+
+            logger.warning("Trace XLA shape mismatch, graph will be retraced!!!")
+            self.traced = False
+            self.reset_third_party_variable()
+            self._trace.reset_trace_result()
+
+            tensor_res = self.flatten_inputs(*args, **kwargs)
+            for t in tensor_res:
+                if t._is_external_value():
+                    t._reset(apply_external_convert_hook(t._external_obj(), t.device))
+
         if self.traced and self.third_party_backend:
             return self.compile_and_exec(*args, **kwargs)
         try:
             active_trace = self
-            if Optimizer not in SUPPORTED_LEAF_CLS:
-                SUPPORTED_LEAF_CLS.append(Optimizer)
             if not self.traced:
                 self.convert_optimizer_state_to_tensor(*args, **kwargs)
             self._trace.enter()
@@ -692,6 +727,8 @@ class trace:
                 else:
                     self._trace.set_execption(str(e))
                     raise
+            if self.third_party_backend:
+                self.hash_shape_set.add(shape_hash)
             self.traced = True
         return outputs
 

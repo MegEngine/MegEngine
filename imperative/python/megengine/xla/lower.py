@@ -1,4 +1,5 @@
 import dataclasses
+from functools import lru_cache
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -218,6 +219,7 @@ def make_xla_graph(
     return func_op
 
 
+@lru_cache(maxsize=None)
 def lower(
     trace_result: TraceResult,
     backend,

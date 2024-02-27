@@ -164,3 +164,28 @@ def test_xla_grad_scaler():
         np.testing.assert_equal(mge_rsts[0].numpy(), 2)
 
     tester((4, 32, 32, 32))
+
+
+@pytest.mark.skipif(int(platform.python_version_tuple()[1]) < 8, reason="need py38")
+@pytest.mark.skipif(platform.system() != "Linux", reason="only support linux now")
+@pytest.mark.skipif(not is_cuda_available(), reason="only support cuda now")
+def test_xla_inp_shape_mismatch():
+    @xla_trace(without_host=True)
+    def func(x, y):
+        return x + y
+
+    a = np.random.randn(1, 3, 3, 3)
+    b = np.random.randn(1, 3, 3, 3)
+    c = np.random.randn(3, 3, 3, 3)
+    d = np.random.randn(3, 3, 3, 3)
+
+    rst0 = func(tensor(a), tensor(b))
+    rst1 = func(tensor(a), tensor(b))
+    rst2 = func(tensor(c), tensor(d))
+    rst3 = func(tensor(c), tensor(d))
+
+    assert not rst0._is_external_value() and not rst2._is_external_value()
+    assert rst1._is_external_value() and rst3._is_external_value()
+
+    assert rst1.shape == (1, 3, 3, 3)
+    assert rst3.shape == (3, 3, 3, 3)

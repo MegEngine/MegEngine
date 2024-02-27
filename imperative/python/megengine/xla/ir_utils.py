@@ -249,6 +249,10 @@ class TraceResult:
         ret += "\n}"
         return ret
 
+    def __hash__(self):
+        hash_value = hash((tuple(self.eqns), tuple(self.inputs), tuple(self.outputs)))
+        return hash_value
+
 
 _dtype_to_ir_type: Dict[np.dtype, Callable[[], ir.Type]] = {
     np.dtype(np.bool_): partial(ir.IntegerType.get_signless, 1),

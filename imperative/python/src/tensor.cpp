@@ -1551,7 +1551,8 @@ void init_tensor(py::module m) {
                  })
             .def("mark_output", &Trace::mark_output)
             .def("mark_input", &Trace::mark_input)
-            .def("remove_output_mark", &Trace::remove_output_mark);
+            .def("remove_output_mark", &Trace::remove_output_mark)
+            .def("reset_trace_result", [](Trace& self) { self.trace_result.reset(); });
     using VarInfo = TraceResult::VarInfo;
     using OpKind = TraceResult::SeqItem::OpKind;
     std::unordered_map<VarInfo::Kind, std::string> kind2str = {

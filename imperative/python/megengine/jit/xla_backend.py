@@ -111,6 +111,7 @@ class xla_trace(trace):
 
         set_py_external_type(ArrayImpl)
         set_external_convert()
+        self.hash_shape_set = set()
 
         # everytime we construct a xla_trace object, which means a compilation will
         # happen soon, so we increase `_expect_xlacompile_cnt` by one.
@@ -422,3 +423,6 @@ class xla_trace(trace):
             return rst, keeped_features
         else:
             return rst
+
+    def __hash__(self):
+        return hash(frozenset(self.hash_shape_set))
