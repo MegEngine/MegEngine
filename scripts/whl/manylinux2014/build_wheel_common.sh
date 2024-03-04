@@ -276,7 +276,8 @@ elif [ $SDK_NAME == "cu118" ];then
         -gencode arch=compute_80,code=sm_80 \
         -gencode arch=compute_86,code=sm_86 \
         -gencode arch=compute_89,code=sm_89 \
-        -gencode arch=compute_89,code=compute_89\" "
+        -gencode arch=compute_90,code=sm_90 \
+        -gencode arch=compute_90,code=compute_90\" "
     if [ ${machine} == "aarch64" ];then
         if [ ${IN_CI} = "true" ]; then
             # ci taishan is use SM_75 card
@@ -291,7 +292,8 @@ elif [ $SDK_NAME == "cu118" ];then
                 -gencode arch=compute_86,code=sm_86 \
                 -gencode arch=compute_87,code=sm_87 \
                 -gencode arch=compute_89,code=sm_89 \
-                -gencode arch=compute_89,code=compute_89\" "
+                -gencode arch=compute_90,code=sm_90 \
+                -gencode arch=compute_90,code=compute_90\" "
         fi
     fi
     BUILD_WHL_WITH_CUDA="ON"
