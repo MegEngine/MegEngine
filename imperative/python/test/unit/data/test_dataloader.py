@@ -606,7 +606,7 @@ def test_cuda_predataloader_parallel_worker_exception():
 def test_cuda_dataloader_parallel_worker_with_cvaug():
     def test_init_dataset():
         sample_num = 100
-        rand_data = np.random.randint(0, 255, size=(sample_num, 2, 160, 160)).astype(
+        rand_data = np.random.randint(0, 255, size=(sample_num, 3, 160, 160)).astype(
             np.float32
         )
         label = np.random.randint(0, 10, size=(sample_num,), dtype=int)
@@ -617,7 +617,7 @@ def test_cuda_dataloader_parallel_worker_with_cvaug():
         def __init__(self):
             self.linear_aug = LinearContrast(0.6)
             self.sharpen_aug = Sharpen(alpha=(0.6, 0.8), lightness=(0.6, 0.8))
-            self.flip_aug = RandomHorizontalFlip(prob=0.3)
+            self.flip_aug = RandomHorizontalFlip(prob=1)
 
         def apply(self, input):
             data, label = input
@@ -625,7 +625,9 @@ def test_cuda_dataloader_parallel_worker_with_cvaug():
             data_input = mge.tensor(data)
             linared_inp = self.linear_aug(data_input)
             sharpened_inp = self.sharpen_aug(linared_inp)
-            fliped_inp = self.flip_aug(sharpened_inp)
+            transposed_sharpened_inp = np.transpose(sharpened_inp, (0, 2, 3, 1))
+            transposed_fliped_inp = self.flip_aug(transposed_sharpened_inp)
+            fliped_inp = np.transpose(transposed_fliped_inp, (0, 3, 1, 2))
             return (fliped_inp, label)
 
     dataset = test_init_dataset()
@@ -640,6 +642,6 @@ def test_cuda_dataloader_parallel_worker_with_cvaug():
     data_iter = iter(dataloader)
     for _ in range(3):
         batch_data, batch_label = next(data_iter)
-        assert batch_data.shape == (6, 2, 160, 160)
+        assert batch_data.shape == (6, 3, 160, 160)
         assert batch_data.device.physical_name == "gpu0:0"
         assert batch_label.device.physical_name == "gpu0:0"
