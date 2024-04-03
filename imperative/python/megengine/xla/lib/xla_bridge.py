@@ -67,6 +67,7 @@ def get_compile_options(
     use_auto_spmd_partitioning: bool = False,
     auto_spmd_partitioning_mesh_shape=[],
     auto_spmd_partitioning_mesh_ids=[],
+    multiheap_size_constraint_per_heap=-1,
 ) -> xla_client.CompileOptions:
     """Returns the compile options to use, as derived from flag values.
 
@@ -85,6 +86,10 @@ def get_compile_options(
         auto_spmd_partitioning search space.
         auto_spmd_partitioning_mesh_ids: device ids used to create
         auto_spmd_partitioning search space.
+        multiheap_size_constraint_per_heap: Generates multiple heaps (i.e., temp buffers) with a size
+        constraint on each heap to avoid Out-of-Memory due to memory fragmentation. The constraint is
+        soft, so it works with tensors larger than the given constraint size. -1 corresponds to no
+        constraints.
     """
     compile_options = xla_client.CompileOptions()
     compile_options.num_replicas = num_replicas
@@ -130,6 +135,12 @@ def get_compile_options(
     debug_options = compile_options.executable_build_options.debug_options
     if cuda_path is not None:
         debug_options.xla_gpu_cuda_data_dir = cuda_path
+
+    if multiheap_size_constraint_per_heap > 0:
+        if hasattr(debug_options, "xla_multiheap_size_constraint_per_heap"):
+            debug_options.xla_multiheap_size_constraint_per_heap = (
+                multiheap_size_constraint_per_heap
+            )
 
     if FLAGS.xla_disable_most_optimizations:
         debug_options.xla_backend_optimization_level = 0

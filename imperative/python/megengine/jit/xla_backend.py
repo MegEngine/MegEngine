@@ -243,27 +243,6 @@ class xla_trace(trace):
         coalesce_free_memory()
         _full_sync()
 
-        # some huge memory blocks will be used when xla executing in general, which can
-        # easily lead to memory fragmentation, so we prealloc a block to avoid this
-        # problem. we do the preallocation after all compilation have been completed.
-        # we set `_all_compilation_completed` to true when the `_actual_xlacompile_cnt`
-        # equal to the `_expect_xlacompile_cnt`. you can read the notes of
-        if _actual_xlacompile_cnt == _expect_xlacompile_cnt:
-            _all_compilation_completed = True
-
-            # because we hope the memory occupancy of xla version <= the memory occupancy of
-            # imperative version, so we prealloc a block of size (mem_occup_of_imperative - cur_mem_use).
-            # however, in megengine getting the current memory usage accurately is hard,
-            # so we prealloc according to the system left memory. the result is similar
-            total = get_cuda_device_property(get_local_device_id()).total_memory
-            left = _get_cuda_left_memory(get_local_device_id())
-            should_left = total - _max_reserved_before_compile
-            if left > should_left:
-                _make_free_mem_block_device(
-                    get_default_device(),
-                    left - should_left + _xla_prealloc_offset_debug,
-                )
-
         id2inpidx = defaultdict(list)
         id2outidx = defaultdict(list)
         # map inp id to the 0, 1, 2, 3, ...

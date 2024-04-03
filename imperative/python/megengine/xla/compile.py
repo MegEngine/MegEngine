@@ -27,6 +27,13 @@ xla_extension = xc._xla
 xe = xla_extension
 
 
+def _get_xla_temp_buffer_size_constraint() -> int:
+    MB = 1024 ** 2
+    constraint = int(os.getenv("MEGENGINE_XLA_TEMP_BUFFER_SIZE_CONSTRAINT", 256))
+    xla_temp_buffer_size_constraint = constraint * MB
+    return xla_temp_buffer_size_constraint
+
+
 def compile_impl(backend, computation: ir.Module, compile_options, host_callbacks):
     sym_name = computation.operation.attributes["sym_name"]
     module_name = ir.StringAttr(sym_name).value
@@ -427,6 +434,7 @@ class UnloadedMeshExecutable:
             device_assignment=xla_device_assignment,
             use_spmd_partitioning=spmd_lowering,
             use_auto_spmd_partitioning=auto_spmd_lowering,
+            multiheap_size_constraint_per_heap=_get_xla_temp_buffer_size_constraint(),
         )
         if auto_spmd_lowering:
             assert False
@@ -737,6 +745,7 @@ class UnloadedPmapExecutable:
             num_partitions=1,
             device_assignment=device_assignment,
             use_spmd_partitioning=use_spmd_partitioning,
+            multiheap_size_constraint_per_heap=_get_xla_temp_buffer_size_constraint(),
         )
         compile_options.parameter_is_tupled_arguments = tuple_args
         compiled = compile_impl(backend, computation, compile_options, host_callbacks)
