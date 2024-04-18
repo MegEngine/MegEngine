@@ -128,6 +128,18 @@ tagRtGroupInfo* on_init_failed(int func_idx) {
     log_failed_load(func_idx);
     return nullptr;
 }
+#if (ACL_MAJOR_VERSION == 1 && ACL_MINOR_VERSION == 8 && ACL_PATCH_VERSION == 0)
+template<>
+aclrtStreamConfigHandle* on_init_failed(int func_idx) {
+    log_failed_load(func_idx);
+    return nullptr;
+}
+template<>
+aclmdlExecConfigHandle* on_init_failed(int func_idx) {
+    log_failed_load(func_idx);
+    return nullptr;
+}
+#endif
 }  // namespace
 
 //! atlas310
@@ -136,6 +148,9 @@ tagRtGroupInfo* on_init_failed(int func_idx) {
 //! atlas710
 #elif (ACL_MAJOR_VERSION == 1 && ACL_MINOR_VERSION == 1 && ACL_PATCH_VERSION == 0)
 #include "./libatlas-wrap_1.1.0.h"
+//! ascend910b
+#elif (ACL_MAJOR_VERSION == 1 && ACL_MINOR_VERSION == 8 && ACL_PATCH_VERSION == 0)
+#include "./libatlas-wrap_1.8.0.h"
 #endif
 
 static const char* default_so_paths[] = {

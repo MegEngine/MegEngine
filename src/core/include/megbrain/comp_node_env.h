@@ -379,6 +379,7 @@ public:
         int device = -1;
         aclrtStream stream = 0;
 
+        std::shared_ptr<megcore::AtlasMemoryManager> mem_mgr = nullptr;
         struct InitStatus {
             bool initialized;
             Spinlock mtx;

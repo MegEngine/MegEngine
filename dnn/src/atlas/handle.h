@@ -33,6 +33,9 @@ public:
 
     aclrtStream stream() const { return megcore_context().stream; }
 
+    void* alloc(size_t size, aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_NORMAL_ONLY);
+    void free(void* ptr);
+
     //! global matmul opr
     Checksum* checksum_opr() override final {
         return get_helper_opr<Checksum, 0>(this);

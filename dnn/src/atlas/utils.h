@@ -13,6 +13,14 @@
         }                                                    \
     } while (0)
 
+#define aclnn_check(_x)                                      \
+    do {                                                     \
+        aclnnStatus _ret = (_x);                             \
+        if (_ret != OK) {                                    \
+            ::megdnn::atlas::__throw_acl_error__(_ret, #_x); \
+        }                                                    \
+    } while (0)
+
 namespace megdnn {
 namespace atlas {
 

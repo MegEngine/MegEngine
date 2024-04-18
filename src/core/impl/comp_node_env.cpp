@@ -86,7 +86,8 @@ MegDNNHandle::MegDNNHandle(const CompNodeEnv& env) {
         megcore::createAtlasDeviceHandleWithGlobalInitStatus(
                 &m_dev_hdl, env.atlas_env().device, 0, true);
         megcore::createComputingHandleWithAtlasContext(
-                &m_comp_hdl, m_dev_hdl, 0, {env.atlas_env().stream});
+                &m_comp_hdl, m_dev_hdl, 0,
+                {env.atlas_env().stream, env.atlas_env().mem_mgr.get()});
 
         init = true;
     }
@@ -232,6 +233,20 @@ void mgb::_on_atlas_error(
             megcore::atlas::get_error_str(err), expr, file, func, line);
 }
 
+namespace {
+
+struct AtlasMemoryManagerImpl : public megcore::AtlasMemoryManager {
+    AtlasMemoryManagerImpl(CompNode comp_node) : comp_node(comp_node) {}
+
+    virtual void* alloc(size_t size) final { return comp_node.alloc_device(size); }
+    virtual void free(void* ptr) final { return comp_node.free_device(ptr); }
+
+private:
+    CompNode comp_node;
+};
+
+}  // namespace
+
 CompNodeEnv::AtlasEnv::InitStatus CompNodeEnv::AtlasEnv::init_status;
 void CompNodeEnv::init_atlas(CompNode comp_node, const AtlasEnv& env) {
     m_comp_node = comp_node;
@@ -242,6 +257,7 @@ void CompNodeEnv::init_atlas(CompNode comp_node, const AtlasEnv& env) {
     m_atlas_env.activate();
     MGB_ATLAS_CHECK(aclrtCreateStream(&m_atlas_env.stream));
     m_user_data_container = std::make_unique<UserDataContainer>();
+    m_atlas_env.mem_mgr = std::make_shared<AtlasMemoryManagerImpl>(comp_node);
     mgb_assert(
             m_property.mem_alignment ==
             MegDNNHandle::get(*this).handle()->alignment_requirement());
