@@ -867,21 +867,21 @@ void img2col(
         const int FW, const int cur_index, const int block_size) {
     MEGDNN_MARK_USED_VAR(OC);
     MEGDNN_MARK_USED_VAR(OH);
-    int start_h = cur_index / OW;
-    int cur_remain_w = cur_index % OW;
-    int end_h = (cur_index + block_size) / OW;
-    int end_remain_w = (cur_index + block_size) % OW;
+    int64_t start_h = cur_index / OW;
+    int64_t cur_remain_w = cur_index % OW;
+    int64_t end_h = (cur_index + block_size) / OW;
+    int64_t end_remain_w = (cur_index + block_size) % OW;
 
     bool same_line = false;
     if (start_h == end_h) {
         same_line = true;
     }
-    int i = 0;
+    int64_t i = 0;
     if (same_line) {
         rep(ic, IC) {
             rep(fh, FH) {
                 rep(fw, FW) {
-                    int fh2, fw2;
+                    int64_t fh2, fw2;
                     if (is_xcorr) {
                         fh2 = fh;
                         fw2 = fw;
@@ -889,7 +889,7 @@ void img2col(
                         fh2 = FH - fh - 1;
                         fw2 = FW - fw - 1;
                     }
-                    for (int w = cur_remain_w; w < end_remain_w; w++) {
+                    for (int64_t w = cur_remain_w; w < end_remain_w; w++) {
                         dst[i++] = src[ic * IH * IW + (start_h + fh2) * IW + (w + fw2)];
                     }
                 }
@@ -899,7 +899,7 @@ void img2col(
         rep(ic, IC) {
             rep(fh, FH) {
                 rep(fw, FW) {
-                    int fh2, fw2;
+                    int64_t fh2, fw2;
                     if (is_xcorr) {
                         fh2 = fh;
                         fw2 = fw;
@@ -907,17 +907,17 @@ void img2col(
                         fh2 = FH - fh - 1;
                         fw2 = FW - fw - 1;
                     }
-                    for (int w = cur_remain_w; w < OW; w++) {
+                    for (int64_t w = cur_remain_w; w < OW; w++) {
                         dst[i++] = src[ic * IH * IW + (start_h + fh2) * IW + (w + fw2)];
                     }
 
-                    for (int h = start_h + 1; h < end_h; h++) {
+                    for (int64_t h = start_h + 1; h < end_h; h++) {
                         rep(ow, OW) {
                             dst[i++] = src[ic * IH * IW + (h + fh2) * IW + (ow + fw2)];
                         }
                     }
 
-                    for (int w = 0; w < end_remain_w; w++) {
+                    for (int64_t w = 0; w < end_remain_w; w++) {
                         dst[i++] = src[ic * IH * IW + (end_h + fh2) * IW + (w + fw2)];
                     }
                 }
