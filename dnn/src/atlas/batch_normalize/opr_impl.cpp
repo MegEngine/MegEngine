@@ -48,7 +48,7 @@ void BNForwardImpl::exec(
         _megdnn_tensor_out mean, _megdnn_tensor_out variance,
         _megdnn_tensor_out batch_mean, _megdnn_tensor_out batch_inv_variance,
         _megdnn_tensor_out, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
-    megdnn_assert(m_param.param_dim != param::BN::ParamDim::DIM_11HW);
+    megdnn_assert(m_param.param_dim == param::BN::ParamDim::DIM_1C11);
     auto handle = concrete_handle(this->handle());
     AclTensor acl_input(src, ACL_FORMAT_NCHW),
             acl_weight(this->reshape_tensor_to_C(bn_scale)),
@@ -83,7 +83,7 @@ void BNBackwardImpl::exec(
         _megdnn_tensor_in saved_batch_inv_variance, _megdnn_tensor_in bn_scale,
         _megdnn_tensor_in, _megdnn_tensor_out d_bn_scale, _megdnn_tensor_out d_bn_bias,
         _megdnn_tensor_out dx, _megdnn_workspace workspace) {
-    megdnn_assert(m_param.param_dim != param::BN::ParamDim::DIM_11HW);
+    megdnn_assert(m_param.param_dim == param::BN::ParamDim::DIM_1C11);
     auto handle = concrete_handle(this->handle());
     AclTensor acl_input(x, ACL_FORMAT_NCHW), acl_gradOut(dy, ACL_FORMAT_NCHW),
             acl_saveMean(this->reshape_tensor_to_C(saved_batch_mean)),
@@ -108,11 +108,6 @@ void BNBackwardImpl::exec(
     AclMem ws_2(ws_size, handle);
     aclnn_check(aclnnInplaceRsqrt(ws_2.ptr(), ws_size, executor, handle->stream()));
 
-    aclnn_check(aclnnBatchNormBackwardGetWorkspaceSize(
-            acl_gradOut.get(), acl_input.get(), acl_weight.get(), nullptr, nullptr,
-            acl_saveMean.get(), acl_saveInvstd.get(), training, eps, output_mask.get(),
-            acl_gradInput.get(), acl_gradWeight.get(), acl_gradBias.get(), &ws_size,
-            &executor));
 
     float exponent_value = 4.0f;
     AclScalar exponent(exponent_value);
@@ -121,6 +116,12 @@ void BNBackwardImpl::exec(
     AclMem ws_3(ws_size, handle);
     aclnn_check(aclnnInplacePowTensorScalar(
             ws_3.ptr(), ws_size, executor, handle->stream()));
+
+    aclnn_check(aclnnBatchNormBackwardGetWorkspaceSize(
+            acl_gradOut.get(), acl_input.get(), acl_weight.get(), nullptr, nullptr,
+            acl_saveMean.get(), acl_saveInvstd.get(), training, eps, output_mask.get(),
+            acl_gradInput.get(), acl_gradWeight.get(), acl_gradBias.get(), &ws_size,
+            &executor));
 
     AclMem ws(ws_size, handle);
     aclnn_check(aclnnBatchNormBackward(ws.ptr(), ws_size, executor, handle->stream()));
