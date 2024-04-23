@@ -1206,7 +1206,7 @@ public:
     virtual size_t get_reserve_in_bytes(const TensorLayout& src) = 0;
 
 protected:
-    void check_exec(
+    virtual void check_exec(
             const TensorLayout& x, const TensorLayout& dy,
             const TensorLayout& saved_batch_mean,
             const TensorLayout& saved_batch_variance, const TensorLayout& bn_scale,

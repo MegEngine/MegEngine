@@ -4,7 +4,7 @@
 using namespace megdnn;
 using namespace test;
 
-void test::run_powc_test(Handle* handle, DType dtype) {
+void test::run_powc_test(Handle* handle, DType dtype, bool test_non_continuity) {
     Checker<PowC> checker{handle};
     checker.set_dtype(0, dtype);
 
@@ -56,13 +56,15 @@ void test::run_powc_test(Handle* handle, DType dtype) {
         }
 
         // non contig
-        TensorLayout layout{{4, 9}, dtype};
-        layout.stride[0] *= 3;
-        layout.stride[1] *= 2;
-        checker.execl({layout, {}});
-        if (::testing::Test::HasFailure()) {
-            printf("failed for %g noncontig\n", -exp);
-            return;
+        if (test_non_continuity) {
+            TensorLayout layout{{4, 9}, dtype};
+            layout.stride[0] *= 3;
+            layout.stride[1] *= 2;
+            checker.execl({layout, {}});
+            if (::testing::Test::HasFailure()) {
+                printf("failed for %g noncontig\n", -exp);
+                return;
+            }
         }
     }
 }

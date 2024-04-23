@@ -1,16 +1,20 @@
 #include "src/atlas/handle.h"
 #include "megcore_atlas.h"
 #include "src/atlas/adaptive_pooling/opr_impl.h"
+#include "src/atlas/batch_normalize/opr_impl.h"
 #include "src/atlas/checksum/opr_impl.h"
 #include "src/atlas/conv_bias/opr_impl.h"
 #include "src/atlas/convolution/opr_impl.h"
 #include "src/atlas/elemwise/opr_impl.h"
 #include "src/atlas/fill/opr_impl.h"
+#include "src/atlas/indexing_one_hot/opr_impl.h"
 #include "src/atlas/matrix_mul/opr_impl.h"
 #include "src/atlas/param_pack/opr_impl.h"
 #include "src/atlas/pooling/opr_impl.h"
+#include "src/atlas/powc/opr_impl.h"
 #include "src/atlas/reduce/opr_impl.h"
 #include "src/atlas/relayout/opr_impl.h"
+#include "src/atlas/rng/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
 #include "src/atlas/utils.h"
 #include "src/common/handle_impl.h"
@@ -102,6 +106,13 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(AdaptivePoolingBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MatrixMulForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ReduceForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ParamPackConcat);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingOneHotForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingSetOneHotForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(PowC);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(GaussianRNG);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(UniformRNG);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNBackward);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"

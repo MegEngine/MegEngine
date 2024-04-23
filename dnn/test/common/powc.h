@@ -8,7 +8,7 @@
 namespace megdnn {
 namespace test {
 
-void run_powc_test(Handle* handle, DType dtype);
+void run_powc_test(Handle* handle, DType dtype, bool test_non_continuity = true);
 
 }  // namespace test
 }  // namespace megdnn
