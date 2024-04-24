@@ -141,9 +141,10 @@ void fill_multinomial_without_replacement(
     }
 
     for (size_t i = 0; i < num_groups; ++i) {
-        std::sort(index[i].begin(), index[i].end(), [&](size_t idx1, size_t idx2) {
-            return data[i][idx1] > data[i][idx2];
-        });
+        std::sort(
+                index[i].begin(), index[i].end(), [i, &data](size_t idx1, size_t idx2) {
+                    return data[i][idx1] > data[i][idx2];
+                });
         std::copy(
                 index[i].begin(), index[i].begin() + num_samples,
                 dst + i * num_samples);
