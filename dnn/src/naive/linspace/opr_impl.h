@@ -12,7 +12,7 @@ public:
 
 private:
     template <typename ctype>
-    void exec_internal(ctype* dst, size_t n);
+    void exec_internal(ctype* dst, double start, double step, size_t n);
 };
 
 }  // namespace naive

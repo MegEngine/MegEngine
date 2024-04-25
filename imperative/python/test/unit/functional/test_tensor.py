@@ -595,6 +595,15 @@ def test_linspace(is_varnode):
     )
 
 
+def test_linspace_cpu():
+    # NOTE: the linspace param sync bug will occur frequently when we alloc a big size tensor
+    inp = Tensor(np.zeros(([512 * 7000])))
+    x = F.linspace(1, 9, 8, device="cpu:0")
+    y = F.linspace(0, 10, 10, device="cpu:0")
+    x_correct = np.linspace(1, 9, 8, dtype=np.float32)
+    np.testing.assert_allclose(x.numpy(), x_correct, rtol=1e-6)
+
+
 @pytest.mark.parametrize("is_varnode", [True, False])
 def test_arange(is_varnode):
     if is_varnode:
