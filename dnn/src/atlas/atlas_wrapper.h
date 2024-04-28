@@ -120,19 +120,22 @@ aclDataType as_acl_dtype(DType dtype);
 
 // clang-format off
 ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_check) // {
-    AclTensor(void* devptr, const TensorLayout& layout) {
+    AclTensor(void* devptr, const TensorLayout& layout, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) {
         megdnn::SmallVector<int64_t> shape(layout.ndim), stride(layout.ndim);
         for (size_t i = 0; i < layout.ndim; ++i) {
             shape[i] = static_cast<int64_t>(layout[i]);
             stride[i] = static_cast<int64_t>(layout.stride[i]);
         }
+        auto layout_span = layout.span();
+        megdnn::SmallVector<int64_t> storage_shape(1, layout_span.dist_elem());
+        int64_t offset = -1 * layout_span.low_elem;
         m_impl = aclCreateTensor(
-                shape.data(), layout.ndim, as_acl_dtype(layout.dtype), stride.data(), 0,
-                aclFormat::ACL_FORMAT_ND, shape.data(), layout.ndim, devptr);
+                shape.data(), layout.ndim, as_acl_dtype(layout.dtype), stride.data(), offset,
+                acl_format, storage_shape.data(), 1, static_cast<void*>(static_cast<uint8_t*>(devptr) - layout.dtype.size() * offset));
         megdnn_assert(m_impl, "construct aclTensor failed");
     }
 
-    AclTensor(const TensorND& src) : AclTensor(src.raw_ptr(), src.layout) {}
+    AclTensor(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) : AclTensor(src.raw_ptr(), src.layout, acl_format) {}
 };
 
 
