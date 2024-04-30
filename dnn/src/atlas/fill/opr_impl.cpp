@@ -18,6 +18,8 @@ void FillImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
             &executor));
     AclMem ws(ws_size, handle);
     aclnn_check(aclnnInplaceFillScalar(ws.ptr(), ws_size, executor, handle->stream()));
+    // TODO: fix occasional error of atlas fill
+    acl_check(aclrtSynchronizeStream(handle->stream()));
 }
 
 // vim: syntax=cpp.doxygen
