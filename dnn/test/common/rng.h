@@ -257,6 +257,20 @@ private:
     bool has_fast_float32() override { return true; }
 };
 
+class BoolRNG final : public RNG {
+    std::mt19937_64 m_rng;
+
+public:
+    BoolRNG(size_t seed) : m_rng(seed) {}
+
+    void gen(const TensorND& tensor) override {
+        std::uniform_int_distribution<int> dist(0, 1);
+        auto ptr = tensor.ptr<bool>() + tensor.layout.span().low_elem;
+        for (size_t i = 0; i < tensor.layout.span().dist_elem(); ++i)
+            ptr[i] = (dist(m_rng) == 1);
+    }
+};
+
 }  // namespace test
 }  // namespace megdnn
 // vim: syntax=cpp.doxygen

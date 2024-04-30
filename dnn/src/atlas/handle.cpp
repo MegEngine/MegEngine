@@ -6,8 +6,12 @@
 #include "src/atlas/conv_bias/opr_impl.h"
 #include "src/atlas/convolution/opr_impl.h"
 #include "src/atlas/elemwise/opr_impl.h"
+#include "src/atlas/elemwise_multi_type/opr_impl.h"
 #include "src/atlas/fill/opr_impl.h"
+#include "src/atlas/group_norm/opr_impl.h"
 #include "src/atlas/indexing_one_hot/opr_impl.h"
+#include "src/atlas/linspace/opr_impl.h"
+#include "src/atlas/mask_fill/opr_impl.h"
 #include "src/atlas/matrix_mul/opr_impl.h"
 #include "src/atlas/param_pack/opr_impl.h"
 #include "src/atlas/pooling/opr_impl.h"
@@ -17,6 +21,7 @@
 #include "src/atlas/rng/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
 #include "src/atlas/utils.h"
+#include "src/atlas/where/opr_impl.h"
 #include "src/common/handle_impl.h"
 
 #include <acl/acl.h>
@@ -113,6 +118,12 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(GaussianRNG);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(UniformRNG);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(BNBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(GroupNormForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ElemwiseMultiType);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(Linspace);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(MaskedFill);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(WhereForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(WhereBackward);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"

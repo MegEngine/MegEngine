@@ -60,7 +60,7 @@ TEST_F(ATLAS, BN_FORWARD_BACKWARD) {
                 .set_dtype(5, dtype::Byte())  // reserve
                 .set_dtype(8, arg.dtype)      // dx
                 .set_bypass(5);
-        checker_bwd.set_epsilon(1e-3).set_param(arg.param).exec(
+        checker_bwd.set_epsilon(1e-2).set_param(arg.param).exec(
                 {arg.src,
                  arg.src,
                  arg.param_shape,

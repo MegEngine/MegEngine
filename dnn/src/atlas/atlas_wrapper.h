@@ -63,6 +63,7 @@ struct acl2dnn_type;
     };
 
 FOR_ACL_C_DTYPE_MAP(IMPL);
+DNN_INC_FLOAT16(IMPL(ACL_FLOAT16, dt_float16))
 
 #undef IMPL
 
