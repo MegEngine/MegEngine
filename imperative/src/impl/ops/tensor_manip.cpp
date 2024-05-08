@@ -242,7 +242,24 @@ SmallVector<TensorPtr> param_pack_concat_apply_on_physical_tensor(
     for (size_t i = 0; i < nr_inputs; ++i) {
         srcs_raw_ptr[i] = inputs[i]->dnn_tensor().raw_ptr();
     }
-    caller.exec_with_ws(srcs_tensornd.as_megdnn(), inputs.back(), output);
+
+    // hack
+    if (comp_node.device_type() == CompNode::DeviceType::ATLAS) {
+        HostTensorStorage offsets_storage{comp_node};
+        offsets_storage.ensure_size(sizeof(int32_t) * param.offsets.size());
+        HostTensorND offsets_tensornd;
+        offsets_tensornd.reset(offsets_storage, inputs.back()->layout());
+        auto* offsets_raw_ptr = reinterpret_cast<int32_t*>(offsets_storage.ptr());
+        for (size_t i = 0; i < param.offsets.size(); i++) {
+            offsets_raw_ptr[i] = param.offsets[i];
+        }
+        caller.exec_with_ws(
+                srcs_tensornd.as_megdnn(), offsets_tensornd.as_megdnn(), output);
+        async_release(offsets_tensornd);
+    } else {
+        caller.exec_with_ws(srcs_tensornd.as_megdnn(), inputs.back(), output);
+    }
+
     async_release(srcs_tensornd);
     return {output};
 }

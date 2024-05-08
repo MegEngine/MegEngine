@@ -7,6 +7,7 @@
 #include "src/atlas/fill/opr_impl.h"
 #include "src/atlas/relayout/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
+#include "src/atlas/param_pack/opr_impl.h"
 #include "src/atlas/utils.h"
 #include "src/common/handle_impl.h"
 
@@ -90,6 +91,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(RelayoutForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardFilter);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ParamPackConcat);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"

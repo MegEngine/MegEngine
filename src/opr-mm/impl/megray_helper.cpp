@@ -33,6 +33,8 @@ MegRay::Backend mgb::opr::get_megray_backend(const std::string& backend) {
         return MegRay::MEGRAY_UCX;
     } else if (backend == "cncl") {
         return MegRay::MEGRAY_CNCL;
+    } else if (backend == "hccl") {
+        return MegRay::MEGRAY_HCCL;
     } else {
         mgb_throw(MegBrainError, "bad CollectiveComm backend");
     }
@@ -48,6 +50,9 @@ std::shared_ptr<MegRay::Context> mgb::opr::get_megray_context(CompNode comp_node
 #elif MGB_CAMBRICON
     return MegRay::CnrtContext::make(
             CompNodeEnv::from_comp_node(comp_node).cnrt_env().queue);
+#elif MGB_ATLAS
+    return MegRay::AclrtContext::make(
+            CompNodeEnv::from_comp_node(comp_node).atlas_env().stream);
 #else
 #error "neither CUDA nor ROCm is enabled"
 #endif

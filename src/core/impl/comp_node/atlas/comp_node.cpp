@@ -127,6 +127,11 @@ public:
     Locator locator() override { return m_locator; }
 
     Locator locator_logical() override { return m_locator_logical; }
+
+    uint64_t get_uid() override { return m_uid; }
+
+private:
+    uint64_t m_uid;
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(AtlasCompNode::CompNodeImpl);
 
@@ -168,6 +173,17 @@ void AtlasCompNodeImpl::init(const Locator& locator, const Locator& locator_logi
     m_locator = locator;
     m_locator_logical = locator_logical;
     m_initialized = true;
+
+#if defined(__linux__) || defined(TARGET_OS_MAC)
+    FILE* fp;
+    fp = fopen("/dev/urandom", "r");
+    mgb_assert(fread(&m_uid, sizeof(m_uid), 1, fp) == 1);
+    fclose(fp);
+#else
+    m_uid = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::system_clock::now().time_since_epoch())
+                    .count();
+#endif
 
     CompNodeEnv::AtlasEnv atlas_env;
     atlas_env.device = locator.device;
