@@ -132,6 +132,10 @@ public:
 
 class AtlasError final : public SystemError {
 public:
+    /*!
+     * \brief get extra info for current atlas status, to be appended in error message
+     */
+    static std::string get_atlas_extra_info();
     AtlasError(const std::string& msg);
 };
 

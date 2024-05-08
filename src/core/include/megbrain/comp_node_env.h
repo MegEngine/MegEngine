@@ -436,7 +436,8 @@ public:
     }
 
     //! init this as a atlas env synchronously
-    void init_atlas(CompNode comp_node, const AtlasEnv& env);
+    void init_atlas(
+            int dev, CompNode comp_node, const ContinuationCtx<aclrtStream>& cont);
 #endif
 
 #if MGB_ROCM

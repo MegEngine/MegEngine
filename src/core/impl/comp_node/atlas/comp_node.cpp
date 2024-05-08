@@ -21,6 +21,108 @@ using namespace mgb;
 
 using AtlasCompNodeImpl = AtlasCompNode::CompNodeImpl;
 
+namespace {
+size_t get_min_system_memory(size_t available) {
+    // taken from src/core/impl/cuda/comp_node.cpp
+    if (available < (1u << 31)) {
+        // 225MiB
+        return 225 * 1024 * 1024;
+    } else {
+        // max(300 MiB, 0.05 * available)
+        return std::max<size_t>(300 * 1024 * 1024, available / 20);
+    }
+}
+
+}  // anonymous namespace
+
+/* ======================= AtlasRawAlloctor ======================*/
+namespace mgb {
+namespace mem_alloc {
+class AtlasRawAllocator final : public RawAllocator {
+public:
+    void* alloc(size_t size) override {
+        void* addr;
+        aclError acl_error = aclrtMalloc(&addr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+        if (acl_error == ACL_SUCCESS) {
+            mgb_assert(addr);
+            return addr;
+        }
+        // TODO: add more error msg
+        auto msg = mgb_ssprintf_log(
+                "aclrtMalloc failed while requesting %zd bytes (%.3fMiB) of memory",
+                size, size / (1024.0 * 1024));
+        msg.append(AtlasError::get_atlas_extra_info());
+        mgb_throw_raw(MemAllocError{msg});
+    }
+
+    void free(void* ptr) override {
+        aclError acl_error = aclrtFree(ptr);
+        if (acl_error == ACL_SUCCESS)
+            return;
+        auto msg = ssprintf("aclrtFree failed for %p", ptr);
+        msg.append(AtlasError::get_atlas_extra_info());
+        mgb_throw_raw(MemAllocError{msg});
+    }
+
+    void get_mem_info(size_t& free, size_t& tot) override {
+        aclError acl_error = aclrtGetMemInfo(ACL_HBM_MEM, &free, &tot);
+        if (acl_error == ACL_SUCCESS)
+            return;
+        auto msg = ssprintf("aclrtGetMemInfo failed");
+        msg.append(AtlasError::get_atlas_extra_info());
+        mgb_throw_raw(MegBrainError{msg});
+    }
+};
+
+class AtlasHostAllocator : public RawAllocator {
+public:
+    void* alloc(size_t size) override {
+        void* addr;
+        aclError acl_error = aclrtMallocHost(&addr, size);
+        if (acl_error == ACL_SUCCESS) {
+            mgb_assert(addr);
+            return addr;
+        }
+        auto msg = mgb_ssprintf_log(
+                "aclrtMallocHost failed while requesting %zd bytes (%.3fMiB)"
+                " of pinned host memory",
+                size, size / (1024.0 * 1024));
+        msg.append(AtlasError::get_atlas_extra_info());
+        mgb_throw_raw(MemAllocError{msg});
+    }
+
+    void free(void* ptr) override {
+        aclError acl_error = aclrtFreeHost(ptr);
+        if (acl_error == ACL_SUCCESS)
+            return;
+        auto msg = ssprintf("aclrtFreeHost failed for %p", ptr);
+        msg.append(AtlasError::get_atlas_extra_info());
+        mgb_throw_raw(MemAllocError{msg});
+    }
+
+    void get_mem_info(size_t& free, size_t& tot) override {
+        free = 0;
+        tot = 0;
+    }
+};
+
+class AtlasDeviceRuntimePolicy : public DeviceRuntimePolicy {
+public:
+    CompNode::DeviceType device_type() override { return CompNode::DeviceType::ATLAS; }
+    void set_device(int device) override { MGB_ATLAS_CHECK(aclrtSetDevice(device)); }
+    void device_synchronize(int device) override {
+        MGB_ATLAS_CHECK(aclrtSetDevice(device));
+        MGB_ATLAS_CHECK(aclrtSynchronizeDevice());
+    }
+};
+
+/* ===================== DevMemAlloc  ===================== */
+std::unique_ptr<DevMemAlloc> DevMemAlloc::make_atlas_alloc() {
+    return std::make_unique<FwdDevMemAlloc>(std::make_shared<AtlasRawAllocator>());
+}
+}  // namespace mem_alloc
+}  // namespace mgb
+
 /* ===================== AtlasCompNodeImpl  ===================== */
 class AtlasCompNode::CompNodeImpl final : public CompNode::Impl {
     MGB_DYN_TYPE_OBJ_FINAL_DECL;
@@ -32,11 +134,15 @@ class AtlasCompNode::CompNodeImpl final : public CompNode::Impl {
     struct StaticData;
     static StaticData* sd;
     static Spinlock sd_mtx;
+#if !MGB_BUILD_SLIM_SERVING
+    std::mutex m_update_mem;
+#endif
 
     //! set to true when m_locator is assigned; set to false if async init
     //! failed
     bool m_initialized = false;
     Locator m_locator, m_locator_logical;
+    mem_alloc::StreamMemAlloc* m_mem_alloc;
     DeviceInfo* m_device_info;
 
     std::unique_ptr<Event> m_sync_event;
@@ -64,30 +170,13 @@ class AtlasCompNode::CompNodeImpl final : public CompNode::Impl {
 public:
     CompNodeImpl() : Impl(static_free_device, static_free_host) {}
 
-    void* alloc_device(size_t size) override {
-        activate();
-        void* addr;
-        MGB_ATLAS_CHECK(aclrtMalloc(&addr, size, ACL_MEM_MALLOC_HUGE_FIRST));
-        return addr;
-    }
+    void* alloc_device(size_t size) override;
 
-    void free_device(void* ptr) {
-        if (check_global_finalized())
-            return;
+    void free_device(void* ptr);
 
-        activate();
+    void* alloc_host(size_t size) override;
 
-        MGB_ATLAS_CHECK(aclrtFree(ptr));
-    }
-
-    void* alloc_host(size_t size) override {
-        activate();
-        void* ptr;
-        MGB_ATLAS_CHECK(aclrtMallocHost(&ptr, size));
-        return ptr;
-    }
-
-    void free_host(void* ptr) { MGB_ATLAS_CHECK(aclrtFreeHost(ptr)); }
+    void free_host(void* ptr);
 
     void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
         activate();
@@ -121,8 +210,26 @@ public:
     size_t get_mem_padding() override { return 32; }
 
     std::pair<size_t, size_t> get_mem_status_bytes() override {
-        return {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
+        m_env.atlas_env().activate();
+        size_t tot, free;
+        // TODO: ensure the mem attr
+        MGB_ATLAS_CHECK(aclrtGetMemInfo(ACL_HBM_MEM, &free, &tot));
+        free += m_mem_alloc->get_free_memory_dev().tot;
+        return {tot, free};
     }
+
+#if !MGB_BUILD_SLIM_SERVING
+    size_t get_used_memory() override;
+
+    size_t get_max_used_memory() override;
+
+    size_t get_reserved_memory() override;
+
+    size_t get_max_reserved_memory() override;
+
+    void reset_max_used_memory() override;
+    void reset_max_reserved_memory() override;
+#endif
 
     Locator locator() override { return m_locator; }
 
@@ -132,19 +239,25 @@ public:
 
 private:
     uint64_t m_uid;
+#if !MGB_BUILD_SLIM_SERVING
+    std::unordered_map<void*, size_t> ptr2size;
+#endif
 };
 MGB_DYN_TYPE_OBJ_FINAL_IMPL(AtlasCompNode::CompNodeImpl);
 
 struct AtlasCompNodeImpl::DeviceInfo {
     int dev_num = -1;
+    std::atomic_size_t m_used_mem{0};
+    std::atomic_size_t m_max_used_mem{0};
+    std::unique_ptr<mem_alloc::DevMemAlloc> mem_alloc;
 
-    void init(const CompNodeEnv& env) {
-        auto&& atlas_env = env.atlas_env();
-        atlas_env.activate();
-        dev_num = atlas_env.device;
-    }
+    bool init_done() const { return mem_alloc.get(); }
 
-    void fini() { MGB_ATLAS_CHECK(aclrtResetDevice(dev_num)); }
+    void init(const CompNodeEnv& env);
+
+    void fini() { mem_alloc.reset(); }
+
+    size_t get_mem_reserve_size();
 };
 
 struct AtlasCompNodeImpl::StaticData {
@@ -152,12 +265,22 @@ struct AtlasCompNodeImpl::StaticData {
 
     std::recursive_mutex mtx;
 
+    mem_alloc::DevMemAlloc::PreAllocConfig prealloc_config;
+
+    std::unique_ptr<mem_alloc::SimpleCachingAlloc> host_alloc;
     AtlasCompNode::CompNodeImpl node[MAX_NR_COMP_NODE];
     DeviceInfo dev_info[MAX_NR_DEVICE];
     int nr_node = 0,          //!< number of loaded node[]
             nr_dev_used = 0;  //!< number of used dev_info[]
 
-    StaticData() {}
+    StaticData()
+            : host_alloc(mem_alloc::SimpleCachingAlloc::make(
+                      std::make_unique<mem_alloc::AtlasHostAllocator>())) {
+        prealloc_config.max_overhead = 0;
+        // TODO: fix the alignment
+        prealloc_config.alignment = 64;
+        host_alloc->alignment(1);
+    }
 
     ~StaticData() {
         for (int i = 0; i < nr_node; ++i)
@@ -168,6 +291,42 @@ struct AtlasCompNodeImpl::StaticData {
 };
 AtlasCompNodeImpl::StaticData* AtlasCompNodeImpl::sd = nullptr;
 Spinlock AtlasCompNodeImpl::sd_mtx;
+
+void AtlasCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
+    mgb_assert(!mem_alloc);
+#if 0
+    // forward aclrtMalloc
+    mem_alloc = mem_alloc::DevMemAlloc::make_atlas_alloc();
+#else
+    auto&& atlas_env = env.atlas_env();
+    atlas_env.activate();
+    dev_num = atlas_env.device;
+    auto reserve_size = get_mem_reserve_size();
+    mem_alloc = mem_alloc::DevMemAlloc::make(
+            dev_num, reserve_size, std::make_shared<mem_alloc::AtlasRawAllocator>(),
+            std::make_shared<mem_alloc::AtlasDeviceRuntimePolicy>());
+    mem_alloc->prealloc_config(sd->prealloc_config);
+    auto align = env.property().mem_alignment;
+    mem_alloc->alignment(align);
+    mgb_log_debug(
+            "atlas: card%d: name=`%s' dyn_mem_reserve=%.2fMiB alignment=0x%zx", dev_num,
+            "no name", reserve_size / 1024.0 / 1024, align);
+#endif
+}
+
+size_t AtlasCompNodeImpl::DeviceInfo::get_mem_reserve_size() {
+    if (auto setting = MGB_GETENV("MGB_ATLAS_RESERVE_MEMORY")) {
+        if (!strncmp(setting, "b:", 2)) {
+            return std::stoull(setting + 2);
+        }
+        size_t tot, free;
+        // TODO: ensure the mem attr
+        MGB_ATLAS_CHECK(aclrtGetMemInfo(ACL_HBM_MEM, &free, &tot));
+        return free - get_min_system_memory(free);
+    } else {
+        return 0;
+    }
+}
 
 void AtlasCompNodeImpl::init(const Locator& locator, const Locator& locator_logical) {
     m_locator = locator;
@@ -185,25 +344,34 @@ void AtlasCompNodeImpl::init(const Locator& locator, const Locator& locator_logi
                     .count();
 #endif
 
-    CompNodeEnv::AtlasEnv atlas_env;
-    atlas_env.device = locator.device;
-    m_env.init_atlas(make_comp_node_from_impl(this), atlas_env);
+    auto on_succ = [this](aclrtStream stream) {
+        auto locator = m_locator;
+        log_comp_node_created(locator, m_locator_logical);
 
-    DeviceInfo* dev_info = nullptr;
-    for (int i = 0; i < sd->nr_dev_used; ++i) {
-        if (sd->dev_info[i].dev_num == locator.device) {
-            dev_info = &sd->dev_info[i];
-            break;
+        MGB_LOCK_GUARD(sd->mtx);
+        DeviceInfo* dev_info = nullptr;
+        for (int i = 0; i < sd->nr_dev_used; ++i) {
+            if (sd->dev_info[i].dev_num == locator.device) {
+                dev_info = &sd->dev_info[i];
+                break;
+            }
         }
-    }
 
-    if (!dev_info) {
-        dev_info = &sd->dev_info[sd->nr_dev_used];
-        dev_info->init(m_env);
-        // note: add nr_dev_used only after init succeeds
-        ++sd->nr_dev_used;
-    }
-    m_device_info = dev_info;
+        if (!dev_info) {
+            dev_info = &sd->dev_info[sd->nr_dev_used];
+            dev_info->init(m_env);
+            ++sd->nr_dev_used;
+        }
+        m_device_info = dev_info;
+        m_mem_alloc = dev_info->mem_alloc->add_stream(static_cast<void*>(stream));
+    };
+
+    auto on_error = [this](std::exception&) {
+        MGB_LOCK_GUARD(sd->mtx);
+        m_initialized = false;
+    };
+    m_env.init_atlas(
+            locator.device, make_comp_node_from_impl(this), {on_succ, on_error});
 }
 
 void AtlasCompNodeImpl::fini() {
@@ -212,8 +380,81 @@ void AtlasCompNodeImpl::fini() {
 
     m_sync_event.reset();
     m_env.fini();
+    m_mem_alloc = nullptr;
     m_initialized = false;
     m_device_info = nullptr;
+}
+
+void* AtlasCompNodeImpl::alloc_device(size_t size) {
+    activate();
+#if MGB_BUILD_SLIM_SERVING
+    return m_mem_alloc->alloc(size);
+#else
+    void* ptr = m_mem_alloc->alloc(size);
+    {
+        MGB_LOCK_GUARD(m_update_mem);
+        ptr2size[ptr] = size;
+        m_device_info->m_used_mem += size;
+        if (m_device_info->m_used_mem > m_device_info->m_max_used_mem) {
+            m_device_info->m_max_used_mem = m_device_info->m_used_mem.load();
+        }
+    }
+    return ptr;
+#endif
+}
+
+void AtlasCompNodeImpl::free_device(void* ptr) {
+    if (check_global_finalized())
+        return;
+
+    activate();
+#if !MGB_BUILD_SLIM_SERVING
+    {
+        MGB_LOCK_GUARD(m_update_mem);
+        mgb_assert(ptr2size.find(ptr) != ptr2size.end(), "ptr %p not found!", ptr);
+        m_device_info->m_used_mem -= ptr2size.at(ptr);
+        ptr2size.erase(ptr);
+    }
+#endif
+    m_mem_alloc->free(ptr);
+}
+
+#if !MGB_BUILD_SLIM_SERVING
+
+size_t AtlasCompNodeImpl::get_used_memory() {
+    return m_device_info->m_used_mem.load();
+}
+
+size_t AtlasCompNodeImpl::get_max_used_memory() {
+    return m_device_info->m_max_used_mem.load();
+}
+
+void AtlasCompNodeImpl::reset_max_used_memory() {
+    m_device_info->m_max_used_mem = 0;
+}
+
+size_t AtlasCompNodeImpl::get_reserved_memory() {
+    return m_device_info->mem_alloc->get_used_memory();
+}
+
+size_t AtlasCompNodeImpl::get_max_reserved_memory() {
+    return m_device_info->mem_alloc->get_max_used_memory();
+}
+
+void AtlasCompNodeImpl::reset_max_reserved_memory() {
+    m_device_info->mem_alloc->reset_max_used_memory();
+}
+#endif
+
+void* AtlasCompNodeImpl::alloc_host(size_t size) {
+    activate();
+    return sd->host_alloc->alloc(size);
+}
+
+void AtlasCompNodeImpl::free_host(void* ptr) {
+    if (check_global_finalized())
+        return;
+    sd->host_alloc->free(ptr);
 }
 
 void AtlasCompNodeImpl::peer_copy_to(

@@ -212,6 +212,14 @@ public:
     static std::unique_ptr<DevMemAlloc> make_cambricon_alloc();
 #endif
 
+#if MGB_ATLAS
+    /*!
+     * \brief create a new allocator for a device that merely forward aclrtMalloc and
+     * aclrtFree.
+     */
+    static std::unique_ptr<DevMemAlloc> make_atlas_alloc();
+#endif
+
     virtual ~DevMemAlloc() = default;
 
     /*!

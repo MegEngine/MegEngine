@@ -59,6 +59,24 @@ std::string CudaError::get_cuda_extra_info() {
 
 AtlasError::AtlasError(const std::string& msg) : SystemError(msg) {}
 
+std::string AtlasError::get_atlas_extra_info() {
+#if MGB_ATLAS
+    // get last error
+    const char* msg = aclGetRecentErrMsg();
+    int dev = -1;
+    aclrtGetDevice(&dev);
+    size_t free_byte = 0, total_byte = 0;
+    // TODO: fix the mem attr for all call of aclrtGetMemInfo
+    aclrtGetMemInfo(ACL_HBM_MEM, &free_byte, &total_byte);
+    constexpr double SIZE2MB = 1.0 / 1024 / 1024;
+    return ssprintf(
+            "(last_err=%s device=%d mem_free=%.3fMiB mem_tot=%.3fMiB)", dev, msg,
+            free_byte * SIZE2MB, total_byte * SIZE2MB);
+#else
+    return "atlas disabled at compile time";
+#endif
+}
+
 ROCmError::ROCmError(const std::string& msg) : SystemError(msg) {
     m_msg.append(get_rocm_extra_info());
 }
