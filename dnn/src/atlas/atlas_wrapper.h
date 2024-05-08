@@ -120,7 +120,8 @@ aclDataType as_acl_dtype(DType dtype);
 
 // clang-format off
 ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_check) // {
-    AclTensor(void* devptr, const TensorLayout& layout, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) {
+    AclTensor(void* devptr, const TensorLayout& layout, 
+            aclFormat acl_format = aclFormat::ACL_FORMAT_ND) {
         megdnn::SmallVector<int64_t> shape(layout.ndim), stride(layout.ndim);
         for (size_t i = 0; i < layout.ndim; ++i) {
             shape[i] = static_cast<int64_t>(layout[i]);
@@ -130,12 +131,15 @@ ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_
         megdnn::SmallVector<int64_t> storage_shape(1, layout_span.dist_elem());
         int64_t offset = -1 * layout_span.low_elem;
         m_impl = aclCreateTensor(
-                shape.data(), layout.ndim, as_acl_dtype(layout.dtype), stride.data(), offset,
-                acl_format, storage_shape.data(), 1, static_cast<void*>(static_cast<uint8_t*>(devptr) - layout.dtype.size() * offset));
+                shape.data(), layout.ndim, as_acl_dtype(layout.dtype), stride.data(),
+                offset, acl_format, storage_shape.data(), 1, 
+                static_cast<void*>(static_cast<uint8_t*>(devptr) - layout.dtype.size() * offset)
+        );
         megdnn_assert(m_impl, "construct aclTensor failed");
     }
 
-    AclTensor(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) : AclTensor(src.raw_ptr(), src.layout, acl_format) {}
+    AclTensor(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) 
+        : AclTensor(src.raw_ptr(), src.layout, acl_format) {}
 };
 
 
@@ -145,7 +149,8 @@ ACL_RAII_DECLARE(AclTensorDesc, aclTensorDesc, aclCreateTensorDesc, aclDestroyTe
         for (size_t i = 0; i < layout.ndim; ++i) {
             shape[i] = static_cast<int64_t>(layout[i]);
         }
-        m_impl = aclCreateTensorDesc(as_acl_dtype(layout.dtype), layout.ndim, shape.data(), aclFormat::ACL_FORMAT_ND);
+        m_impl = aclCreateTensorDesc(as_acl_dtype(layout.dtype), layout.ndim,
+                shape.data(), aclFormat::ACL_FORMAT_ND);
         megdnn_assert(m_impl, "construct aclTensorDesc failed"); 
     }
 };
@@ -153,7 +158,8 @@ ACL_RAII_DECLARE(AclTensorDesc, aclTensorDesc, aclCreateTensorDesc, aclDestroyTe
 ACL_RAII_DECLARE(AclDataBuffer, aclDataBuffer, aclCreateDataBuffer, aclDestroyDataBuffer, acl_check) // {
     AclDataBuffer(const TensorND &data) {
         auto &&layout = data.layout;
-        m_impl = aclCreateDataBuffer(data.raw_ptr(), layout.total_nr_elems() * layout.dtype.size());
+        m_impl = aclCreateDataBuffer(data.raw_ptr(), 
+                layout.total_nr_elems() * layout.dtype.size());
         megdnn_assert(m_impl, "construct aclDataBuffer failed");
     }
 };
@@ -253,7 +259,7 @@ class AclMem : public NonCopyableObj {
 public:
     AclMem() = default;
     AclMem(size_t size_in_bytes, atlas::HandleImpl* handle,
-           aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_NORMAL_ONLY) {
+           aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_HUGE_FIRST) {
         m_handle = handle;
         m_ptr = m_handle->alloc(size_in_bytes, policy);
     }
@@ -308,6 +314,11 @@ public:
                 ACL_ENGINE_SYS, ACL_COMPILE_SYS, nullptr, stream));
     }
 };
+
+#define CUBE_KEEP_DTYPE                0
+#define CUBE_ALLOW_FP32_DOWN_PRECISION 1
+#define CUBE_USE_FP16                  2
+#define CUBE_USE_FP32                  3
 
 }  // namespace atlas
 }  // namespace megdnn

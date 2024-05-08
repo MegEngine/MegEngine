@@ -1,13 +1,17 @@
 #include "src/atlas/handle.h"
 #include "megcore_atlas.h"
+#include "src/atlas/adaptive_pooling/opr_impl.h"
 #include "src/atlas/checksum/opr_impl.h"
 #include "src/atlas/conv_bias/opr_impl.h"
 #include "src/atlas/convolution/opr_impl.h"
 #include "src/atlas/elemwise/opr_impl.h"
 #include "src/atlas/fill/opr_impl.h"
+#include "src/atlas/matrix_mul/opr_impl.h"
+#include "src/atlas/param_pack/opr_impl.h"
+#include "src/atlas/pooling/opr_impl.h"
+#include "src/atlas/reduce/opr_impl.h"
 #include "src/atlas/relayout/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
-#include "src/atlas/param_pack/opr_impl.h"
 #include "src/atlas/utils.h"
 #include "src/common/handle_impl.h"
 
@@ -91,6 +95,12 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(RelayoutForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardData);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ConvolutionBackwardFilter);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(PoolingForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(PoolingBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(AdaptivePoolingForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(AdaptivePoolingBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(MatrixMulForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ReduceForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ParamPackConcat);
 
 #pragma GCC diagnostic push
