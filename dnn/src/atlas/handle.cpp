@@ -1,14 +1,17 @@
 #include "src/atlas/handle.h"
 #include "megcore_atlas.h"
 #include "src/atlas/adaptive_pooling/opr_impl.h"
+#include "src/atlas/argmxx/opr_impl.h"
 #include "src/atlas/batch_normalize/opr_impl.h"
 #include "src/atlas/checksum/opr_impl.h"
+#include "src/atlas/cond_take/opr_impl.h"
 #include "src/atlas/conv_bias/opr_impl.h"
 #include "src/atlas/convolution/opr_impl.h"
 #include "src/atlas/elemwise/opr_impl.h"
 #include "src/atlas/elemwise_multi_type/opr_impl.h"
 #include "src/atlas/fill/opr_impl.h"
 #include "src/atlas/group_norm/opr_impl.h"
+#include "src/atlas/indexing_multi_axis_vec/opr_impl.h"
 #include "src/atlas/indexing_one_hot/opr_impl.h"
 #include "src/atlas/linspace/opr_impl.h"
 #include "src/atlas/mask_fill/opr_impl.h"
@@ -18,7 +21,9 @@
 #include "src/atlas/powc/opr_impl.h"
 #include "src/atlas/reduce/opr_impl.h"
 #include "src/atlas/relayout/opr_impl.h"
+#include "src/atlas/resize/opr_impl.h"
 #include "src/atlas/rng/opr_impl.h"
+#include "src/atlas/topk/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
 #include "src/atlas/utils.h"
 #include "src/atlas/where/opr_impl.h"
@@ -124,6 +129,13 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(Linspace);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(MaskedFill);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(WhereForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(WhereBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(CondTake);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(TopK);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingMultiAxisVec);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingSetMultiAxisVec);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingIncrMultiAxisVec);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgmaxForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ResizeBackward);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"

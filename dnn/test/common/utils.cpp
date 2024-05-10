@@ -17,9 +17,12 @@ void megdnn_memcpy_internal(
         Handle* handle, void* dst, const void* src, size_t size_in_bytes,
         megcoreMemcpyKind_t kind) {
     auto comp_handle = handle->megcore_computing_handle();
-    // TODO: add synchronize at front of memcpy to fix occasional error of atlas fill
-    // temporarily.
-    megcore_check(megcoreSynchronize(comp_handle));
+#if MGB_ATLAS
+    if (src == nullptr) {
+        megcore_check(megcoreSynchronize(comp_handle));
+        return;
+    }
+#endif
     megcore_check(megcoreMemcpy(comp_handle, dst, src, size_in_bytes, kind));
     megcore_check(megcoreSynchronize(comp_handle));
 }
