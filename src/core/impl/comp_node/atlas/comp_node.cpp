@@ -179,6 +179,9 @@ public:
     void free_host(void* ptr);
 
     void copy_to_host(void* host_ptr, const void* device_ptr, size_t size) override {
+        if (size == 0) {
+            return;
+        }
         activate();
 #if MGB_USE_ATLAS_ASYNC_API
         MGB_ATLAS_CHECK(aclrtMemcpyAsync(
@@ -191,6 +194,9 @@ public:
     }
 
     void copy_to_device(void* device_ptr, const void* host_ptr, size_t size) override {
+        if (size == 0) {
+            return;
+        }
         activate();
         MGB_ATLAS_CHECK(aclrtMemcpy(
                 device_ptr, size, host_ptr, size, ACL_MEMCPY_HOST_TO_DEVICE));
@@ -459,6 +465,9 @@ void AtlasCompNodeImpl::free_host(void* ptr) {
 
 void AtlasCompNodeImpl::peer_copy_to(
         Impl* dest_impl, void* dest, const void* src, size_t size) {
+    if (size == 0) {
+        return;
+    }
     if (dest_impl->same_type<AtlasCompNodeImpl>()) {
         auto&& dst_env = static_cast<AtlasCompNodeImpl*>(dest_impl)->m_env.atlas_env();
         auto&& src_env = m_env.atlas_env();

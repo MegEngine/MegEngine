@@ -28,6 +28,9 @@ AtlasComputingContext::~AtlasComputingContext() {
 
 void AtlasComputingContext::memcpy(
         void* dst, const void* src, size_t size_in_bytes, megcoreMemcpyKind_t kind) {
+    if (size_in_bytes == 0) {
+        return;
+    }
     switch (kind) {
         case megcoreMemcpyDeviceToHost:
             acl_check(aclrtMemcpy(

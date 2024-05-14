@@ -16,9 +16,8 @@ void ReduceForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
     MEGDNN_MARK_USED_VAR(workspace);
     auto&& param = this->param();
-    SmallVector<int64_t> axes_vec = {param.axis};
 
-    AclIntArray axes(axes_vec.data(), axes_vec.size());
+    AclIntArray axes({param.axis});
     AclTensor inp(src);
     AclTensor oup(dst);
 

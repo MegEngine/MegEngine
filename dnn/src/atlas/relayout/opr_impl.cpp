@@ -56,11 +56,7 @@ bool try_transpose(
 
     TensorND origin_src(src.layout.dimshuffle(re_permute), src.get_ref_ptr());
     AclTensor acl_origin_src(origin_src), acl_dst(dst);
-    std::vector<int64_t> permute_int(permute.size());
-    for (size_t i = 0; i < permute.size(); ++i) {
-        permute_int[i] = static_cast<int64_t>(permute[i]);
-    }
-    AclIntArray acl_dims(permute_int.data(), permute_int.size());
+    AclIntArray acl_dims(permute.data(), permute.size());
     uint64_t ws_size = 0;
     aclOpExecutor* executor = nullptr;
 

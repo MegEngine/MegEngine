@@ -148,14 +148,10 @@ void ConvBiasForwardImpl::AlgoDefault::exec(const ExecArgs& args) const {
     uint64_t ws_size = 0;
     aclOpExecutor* executor = nullptr;
 
-    int64_t strides[] = {args.opr->param().stride_h, args.opr->param().stride_w};
-    AclIntArray acl_strides(strides, 2);
-    int64_t paddings[] = {args.opr->param().pad_h, args.opr->param().pad_w};
-    AclIntArray acl_paddings(paddings, 2);
-    int64_t dilations[] = {args.opr->param().dilate_h, args.opr->param().dilate_w};
-    AclIntArray acl_dilations(dilations, 2);
-    int64_t dst_paddings[] = {0, 0};
-    AclIntArray acl_dst_paddings(dst_paddings, 2);
+    AclIntArray acl_strides({args.opr->param().stride_h, args.opr->param().stride_w});
+    AclIntArray acl_paddings({args.opr->param().pad_h, args.opr->param().pad_w});
+    AclIntArray acl_dilations({args.opr->param().dilate_h, args.opr->param().dilate_w});
+    AclIntArray acl_dst_paddings({0, 0});
     int64_t group = 1;
     if (is_group_conv) {
         group = args.filter_meta.group;

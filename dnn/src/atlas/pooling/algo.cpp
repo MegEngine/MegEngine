@@ -72,13 +72,9 @@ bool PoolingForwardImpl::AlgoACL::is_available(const SizeArgs& args) const {
 
 void PoolingForwardImpl::AlgoACL::exec(const ExecArgs& args) const {
     auto&& param = args.opr->param();
-    SmallVector<int64_t> kernel_vec{param.window_h, param.window_w};
-    SmallVector<int64_t> stride_vec{param.stride_h, param.stride_w};
-    SmallVector<int64_t> padding_vec{param.pad_h, param.pad_w};
-
-    AclIntArray kernel(kernel_vec.data(), kernel_vec.size());
-    AclIntArray stride(stride_vec.data(), stride_vec.size());
-    AclIntArray padding(padding_vec.data(), padding_vec.size());
+    AclIntArray kernel({param.window_h, param.window_w});
+    AclIntArray stride({param.stride_h, param.stride_w});
+    AclIntArray padding({param.pad_h, param.pad_w});
 
     megdnn_assert(
             param.format == Param::Format::NCHW, "ascend pooling only support NCHW");
@@ -92,8 +88,7 @@ void PoolingForwardImpl::AlgoACL::exec(const ExecArgs& args) const {
     using Mode = param::Pooling::Mode;
 
     if (param.mode == Mode::MAX) {
-        SmallVector<int64_t> dilation_vec = {1, 1, 1, 1};
-        AclIntArray dilation(dilation_vec.data(), dilation_vec.size());
+        AclIntArray dilation({1, 1, 1, 1});
         aclnn_check(aclnnMaxPoolGetWorkspaceSize(
                 src.get(), kernel.get(), stride.get(), /* autoPads= */ 0, padding.get(),
                 dilation.get(), ceilmode, dst.get(), &ws_size, &executor));
@@ -181,15 +176,10 @@ bool PoolingBackwardImpl::AlgoACL::is_available(const SizeArgs& args) const {
 
 void PoolingBackwardImpl::AlgoACL::exec(const ExecArgs& args) const {
     auto&& param = args.opr->param();
-    SmallVector<int64_t> kernel_vec{param.window_h, param.window_w};
-    SmallVector<int64_t> stride_vec{param.stride_h, param.stride_w};
-    SmallVector<int64_t> padding_vec{param.pad_h, param.pad_w};
-    SmallVector<int64_t> dilation_vec = {1, 1};
-
-    AclIntArray kernel(kernel_vec.data(), kernel_vec.size());
-    AclIntArray stride(stride_vec.data(), stride_vec.size());
-    AclIntArray padding(padding_vec.data(), padding_vec.size());
-    AclIntArray dilation(dilation_vec.data(), dilation_vec.size());
+    AclIntArray kernel({param.window_h, param.window_w});
+    AclIntArray stride({param.stride_h, param.stride_w});
+    AclIntArray padding({param.pad_h, param.pad_w});
+    AclIntArray dilation({1, 1});
 
     megdnn_assert(
             param.format == Param::Format::NCHW, "ascend pooling only support NCHW");

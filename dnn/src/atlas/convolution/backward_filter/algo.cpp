@@ -82,20 +82,16 @@ void ConvolutionBackwardFilterImpl::AlgoDefault::exec(const ExecArgs& args) cons
     uint64_t ws_size = 0;
     aclOpExecutor* executor = nullptr;
 
-    int64_t bias_shape[] = {static_cast<int64_t>(args.grad_layout->shape[0])};
-    int64_t strides[] = {args.opr->param().stride_h, args.opr->param().stride_w};
-    int64_t paddings[] = {args.opr->param().pad_h, args.opr->param().pad_w};
-    int64_t dilations[] = {args.opr->param().dilate_h, args.opr->param().dilate_w};
-    int64_t dst_paddings[] = {0};
-    AclIntArray acl_bias_shape(bias_shape, 1), acl_strides(strides, 2),
-            acl_paddings(paddings, 2), acl_dilations(dilations, 2),
-            acl_dst_paddings(dst_paddings, 1);
+    AclIntArray acl_bias_shape({static_cast<int64_t>(args.grad_layout->shape[0])}),
+            acl_strides({args.opr->param().stride_h, args.opr->param().stride_w}),
+            acl_paddings({args.opr->param().pad_h, args.opr->param().pad_w}),
+            acl_dilations({args.opr->param().dilate_h, args.opr->param().dilate_w}),
+            acl_dst_paddings({0});
     int64_t group = 1;
     if (args.opr->param().sparse == param::ConvBias::Sparse::GROUP) {
         group = args.grad_filter_meta.group;
     }
-    bool output_mask[] = {false, true, false};
-    AclBoolArray acl_output_mask(output_mask, 3);
+    AclBoolArray acl_output_mask({false, true, false});
 
     //! null filter will introduce error.
     aclnn_check(aclnnConvolutionBackwardGetWorkspaceSize(

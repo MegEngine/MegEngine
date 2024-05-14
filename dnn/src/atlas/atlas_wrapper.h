@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 #include "acl/acl.h"
 #include "acl/acl_op.h"
 #include "acl/acl_op_compiler.h"
@@ -120,8 +122,20 @@ aclDataType as_acl_dtype(DType dtype);
 
 // clang-format off
 ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_check) // {
+    AclTensor() = default;
+
     AclTensor(void* devptr, const TensorLayout& layout, 
             aclFormat acl_format = aclFormat::ACL_FORMAT_ND) {
+        init(devptr, layout, acl_format);
+    }
+
+    AclTensor(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND)  {
+        init(src, acl_format);
+    }
+
+    void init(void* devptr, const TensorLayout& layout, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) {
+        megdnn_assert(m_impl == nullptr, "AclTensor has already been initialized");
+
         megdnn::SmallVector<int64_t> shape(layout.ndim), stride(layout.ndim);
         for (size_t i = 0; i < layout.ndim; ++i) {
             shape[i] = static_cast<int64_t>(layout[i]);
@@ -138,10 +152,10 @@ ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_
         megdnn_assert(m_impl, "construct aclTensor failed");
     }
 
-    AclTensor(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) 
-        : AclTensor(src.raw_ptr(), src.layout, acl_format) {}
+    void init(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND) {
+        init(src.raw_ptr(), src.layout, acl_format);
+    }
 };
-
 
 ACL_RAII_DECLARE(AclTensorDesc, aclTensorDesc, aclCreateTensorDesc, aclDestroyTensorDesc, void) // {
     AclTensorDesc(const TensorLayout &layout) {
@@ -216,18 +230,66 @@ ACL_RAII_DECLARE(AclScalar, aclScalar, aclCreateScalar, aclDestroyScalar, aclnn_
 
 ACL_RAII_DECLARE(
         AclIntArray, aclIntArray, aclCreateIntArray, aclDestroyIntArray, aclnn_check) // {
-    AclIntArray(const int64_t* src, size_t sz) {
-        m_impl = aclCreateIntArray(src, sz);
+    template <typename T>
+    AclIntArray(const SmallVector<T> &value) {
+        static_assert(std::is_integral_v<T> == true, "construct AclIntArray with non-int input");
+        m_vector.reserve(value.size());
+        for (auto element: value) {
+            m_vector.push_back(static_cast<int64_t>(element));
+        }
+        m_impl = aclCreateIntArray(m_vector.data(), m_vector.size());
         megdnn_assert(m_impl, "construct AclIntArray failed");
     }
+
+    template <typename T>
+    AclIntArray(std::initializer_list<T> value) {
+        static_assert(std::is_integral_v<T> == true, "construct AclIntArray with non-int input");
+        m_vector.reserve(value.size());
+        for (auto element: value) {
+            m_vector.push_back(static_cast<int64_t>(element));
+        }
+        m_impl = aclCreateIntArray(m_vector.data(), m_vector.size());
+        megdnn_assert(m_impl, "construct AclIntArray failed");
+    }
+
+    template <typename T>
+    AclIntArray(const T* src, size_t sz) {
+        static_assert(std::is_integral_v<T> == true, "construct AclIntArray with non-int input");
+        m_vector.reserve(sz);
+        for (size_t i=0; i<sz; ++i) {
+            m_vector.push_back(static_cast<int64_t>(src[i]));
+        }
+        m_impl = aclCreateIntArray(m_vector.data(), m_vector.size());
+        megdnn_assert(m_impl, "construct AclIntArray failed");
+    }
+private:
+    SmallVector<int64_t> m_vector;
 };
 
 ACL_RAII_DECLARE(
         AclFloatArray, aclFloatArray, aclCreateFloatArray, aclDestroyFloatArray, aclnn_check) // {
-    AclFloatArray(const float* src, size_t sz) {
-        m_impl = aclCreateFloatArray(src, sz);
+    template <typename T>
+    AclFloatArray(const SmallVector<T> &value) {
+        static_assert(std::is_floating_point_v<T> == true, "construct AclFloatArray with non-float input");
+        m_vector.reserve(value.size());
+        for (auto element: value) {
+            m_vector.push_back(static_cast<float>(element));
+        }
+        m_impl = aclCreateFloatArray(m_vector.data(), m_vector.size());
         megdnn_assert(m_impl, "construct AclFloatArray failed");
     }
+    template <typename T>
+    AclFloatArray(const T* src, size_t sz) {
+        static_assert(std::is_floating_point_v<T> == true, "construct AclFloatArray with non-float input");
+        m_vector.reserve(sz);
+        for (size_t i=0; i<sz; ++i) {
+            m_vector.push_back(static_cast<float>(src[i]));
+        }
+        m_impl = aclCreateFloatArray(m_vector.data(), m_vector.size());
+        megdnn_assert(m_impl, "construct AclFloatArray failed");
+    }
+private:
+    SmallVector<float> m_vector;
 };
 
 ACL_RAII_DECLARE(
@@ -236,6 +298,24 @@ ACL_RAII_DECLARE(
         m_impl = aclCreateBoolArray(src, sz);
         megdnn_assert(m_impl, "construct AclBoolArray failed");
     }
+    AclBoolArray(std::initializer_list<bool> values) {
+        static_assert(sizeof(uint8_t) == sizeof(bool));
+        for (auto val: values) {
+            m_vector.push_back(static_cast<uint8_t>(val));
+        }
+        m_impl = aclCreateBoolArray(reinterpret_cast<bool*>(m_vector.data()), m_vector.size());
+        megdnn_assert(m_impl, "construct AclBoolArray failed");
+    }
+    AclBoolArray(const SmallVector<uint8_t> &values) {
+        static_assert(sizeof(uint8_t) == sizeof(bool));
+        for (auto val: values) {
+            m_vector.push_back(val);
+        }
+        m_impl = aclCreateBoolArray(reinterpret_cast<bool*>(m_vector.data()), m_vector.size());
+        megdnn_assert(m_impl, "construct AclBoolArray failed");
+    }
+private:
+    SmallVector<uint8_t> m_vector;
 };
 
 ACL_RAII_DECLARE(
@@ -255,21 +335,34 @@ ACL_RAII_DECLARE(
 class AclMem : public NonCopyableObj {
     void* m_ptr = nullptr;
     atlas::HandleImpl* m_handle = nullptr;
+    size_t m_size = 0;
 
 public:
     AclMem() = default;
     AclMem(size_t size_in_bytes, atlas::HandleImpl* handle,
            aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_HUGE_FIRST) {
+        alloc(size_in_bytes, handle, policy);
+    }
+    ~AclMem() { free(); }
+
+    void alloc(
+            size_t size_in_bytes, atlas::HandleImpl* handle,
+            aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_HUGE_FIRST) {
+        megdnn_assert(m_ptr == nullptr, "workspace is already allocted");
         m_handle = handle;
+        m_size = size_in_bytes;
         m_ptr = m_handle->alloc(size_in_bytes, policy);
     }
-    void* ptr() const { return m_ptr; }
-    ~AclMem() {
+
+    void free() {
         if (m_ptr) {
             m_handle->free(m_ptr);
         }
         m_ptr = nullptr;
+        m_handle = nullptr;
     }
+
+    void* ptr() const { return m_ptr; }
 };
 
 class AclOprRunner {
