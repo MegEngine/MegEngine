@@ -353,4 +353,36 @@ TEST_F(ATLAS, RELAYOUT_TEST) {
     }
 }
 
+TEST_F(ATLAS, RELAYOUT_SRC_NEG_STRIDE) {
+    struct Arg {
+        TensorLayout src, dst;
+        Arg(TensorLayout src, TensorLayout dst) : src(src), dst(dst) {}
+    };
+    std::vector<Arg> args;
+    args.emplace_back(
+            TensorLayout({9}, {-1}, dtype::Float32()),
+            TensorLayout({9}, {1}, dtype::Float32()));
+
+    Checker<Relayout> checker(handle_atlas());
+    for (auto&& arg : args) {
+        checker.exec(TensorLayoutArray{arg.src, arg.dst});
+    }
+}
+
+TEST_F(ATLAS, RELAYOUT_DST_NEG_STRIDE) {
+    struct Arg {
+        TensorLayout src, dst;
+        Arg(TensorLayout src, TensorLayout dst) : src(src), dst(dst) {}
+    };
+    std::vector<Arg> args;
+    args.emplace_back(
+            TensorLayout({9}, {1}, dtype::Float32()),
+            TensorLayout({9}, {-1}, dtype::Float32()));
+
+    Checker<Relayout> checker(handle_atlas());
+    for (auto&& arg : args) {
+        checker.exec(TensorLayoutArray{arg.src, arg.dst});
+    }
+}
+
 // vim: syntax=cpp.doxygen

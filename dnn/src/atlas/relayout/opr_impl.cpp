@@ -121,6 +121,19 @@ bool try_copy_non_contig(
         return false;
     }
 
+    // TODO: for src/dst has negative dim, copy may introduce strange error in some
+    // cases, so skip it temporarily.
+    for (size_t i = 0; i < src.layout.ndim; ++i) {
+        if (src.layout.stride[i] < 0) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < dst.layout.ndim; ++i) {
+        if (dst.layout.stride[i] < 0) {
+            return false;
+        }
+    }
+
     TensorLayout src_layout = src.layout;
     rep(i, src_layout.ndim) {
         src_layout.shape[i] = src_layout.stride[i] != 0 ? src_layout.shape[i] : 1;
