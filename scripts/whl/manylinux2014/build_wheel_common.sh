@@ -11,10 +11,11 @@ CUDNN_LIB_DIR="/opt/cudnn/lib64/"
 CUDA_LIB_DIR="/usr/local/cuda/lib64/"
 TensorRT_LIB_DIR="/opt/tensorrt/lib/"
 NEUWARE_LIB_DIR="/usr/local/neuware/lib64"
+ASCEND_LIB_DIR="/usr/local/ascend/aarch64-linux/lib64"
 
 SDK_NAME="unknown"
 x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118 neuware113 neuware115"
-aarch64_support_version="cu102_JetsonNano cu111 cpu cu118"
+aarch64_support_version="cu102_JetsonNano cu111 cpu cu118 ascend_8_0_RC1_alpha003"
 docker_tag="env_manylinux2014:latest"
 
 if [[ -z ${IN_CI} ]]
@@ -325,6 +326,64 @@ else
     BUILD_WHL_WITH_CAMBRICON="OFF"
 fi
 
+if [ $SDK_NAME == "ascend_8_0_RC1_alpha003" ];then
+    echo "use $SDK_NAME with ascend support"
+    BUILD_GCC8="ON"
+    if [ ${machine} == "x86_64" ];then
+        echo "no support machine: ${machine}"
+        exit -1
+    fi
+    COPY_LIB_LIST="\
+        ${ASCEND_LIB_DIR}/libascendcl.so:\
+        ${ASCEND_LIB_DIR}/libnnopbase.so:\
+        ${ASCEND_LIB_DIR}/libopapi.so:\
+        ${ASCEND_LIB_DIR}/libacl_op_compiler.so:\
+        ${ASCEND_LIB_DIR}/libhccl.so:\
+        ${ASCEND_LIB_DIR}/libmsprofiler.so:\
+        ${ASCEND_LIB_DIR}/libgert.so:\
+        ${ASCEND_LIB_DIR}/libge_executor.so:\
+        ${ASCEND_LIB_DIR}/libge_runner.so:\
+        ${ASCEND_LIB_DIR}/libge_common_base.so:\
+        ${ASCEND_LIB_DIR}/libge_common.so:\
+        ${ASCEND_LIB_DIR}/libascend_dump.so:\
+        ${ASCEND_LIB_DIR}/libascendalog.so:\
+        ${ASCEND_LIB_DIR}/libascend_trace.so:\
+        ${ASCEND_LIB_DIR}/libgraph.so:\
+        ${ASCEND_LIB_DIR}/libgraph_base.so:\
+        ${ASCEND_LIB_DIR}/libexe_graph.so:\
+        ${ASCEND_LIB_DIR}/libflow_graph.so:\
+        ${ASCEND_LIB_DIR}/libruntime.so:\
+        ${ASCEND_LIB_DIR}/libprofapi.so:\
+        ${ASCEND_LIB_DIR}/liberror_manager.so:\
+        ${ASCEND_LIB_DIR}/libdummy_tls.so:\
+        ${ASCEND_LIB_DIR}/libregister.so:\
+        ${ASCEND_LIB_DIR}/libhccl_alg.so:\
+        ${ASCEND_LIB_DIR}/libhccl_plf.so:\
+        ${ASCEND_LIB_DIR}/libhccl_alg_research.so:\
+        ${ASCEND_LIB_DIR}/libhybrid_executor.so:\
+        ${ASCEND_LIB_DIR}/libtprt.so:\
+        ${ASCEND_LIB_DIR}/libdavinci_executor.so:\
+        ${ASCEND_LIB_DIR}/libplatform.so:\
+        ${ASCEND_LIB_DIR}/libge_compiler.so:\
+        ${ASCEND_LIB_DIR}/libopt_feature.so:\
+        ${ASCEND_LIB_DIR}/libascend_protobuf.so.3.13.0.0:\
+        ${ASCEND_LIB_DIR}/libtsdclient.so:\
+        ${ASCEND_LIB_DIR}/libprofimpl.so"
+    DEPEND_DIR_RELATIVE_PATH_LIST="\
+        ./aarch64-linux/conf:\
+        ./aarch64-linux/data/platform_config:\
+        ./opp/scene.info:\
+        ./opp/built-in/op_proto/lib/linux:\
+        ./opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux:\
+        ./opp/built-in/op_impl/ai_core/tbe/config:\
+        ./opp/built-in/op_impl/ai_core/tbe/kernel"
+
+    BUILD_WHL_WITH_ASCEND="ON"
+    EXTRA_CMAKE_FLAG=" -DMGE_WITH_ATLAS=ON"
+else
+    BUILD_WHL_WITH_ASCEND="OFF"
+fi
+
 if [ $SDK_NAME == "cpu" ];then
     echo "use $SDK_NAME without cuda support"
     BUILD_WHL_CPU_ONLY="ON"
@@ -389,6 +448,10 @@ if [ ${BUILD_WHL_WITH_CAMBRICON} == "ON" ]; then
     mount_args="-v ${NEUWARE_HOME}:/usr/local/neuware"
 fi
 
+if [ ${BUILD_WHL_WITH_ASCEND} == "ON" ]; then
+    mount_args="-v ${ASCEND_HOME}:/usr/local/ascend"
+fi
+
 echo "mount args: ${mount_args}"
 
 if [ -z "${PYTHON_EXTRA_REQUIRES}" ]; then
@@ -403,14 +466,18 @@ docker run --rm ${docker_args} $TMPFS_ARGS \
     -e BUILD_WHL_CPU_ONLY=${BUILD_WHL_CPU_ONLY} \
     -e BUILD_WHL_WITH_CUDA=${BUILD_WHL_WITH_CUDA} \
     -e BUILD_WHL_WITH_CAMBRICON=${BUILD_WHL_WITH_CAMBRICON} \
+    -e BUILD_WHL_WITH_ASCEND=${BUILD_WHL_WITH_ASCEND} \
     -e ALL_PYTHON="${ALL_PYTHON}" \
     -e EXTRA_CMAKE_FLAG="$EXTRA_CMAKE_FLAG" \
     -e COPY_LIB_LIST="$COPY_LIB_LIST"  \
+    -e DEPEND_DIR_RELATIVE_PATH_LIST="$DEPEND_DIR_RELATIVE_PATH_LIST" \
     -e SDK_NAME="$SDK_NAME"  \
     -e CUDA_ROOT_DIR="/usr/local/cuda" \
     -e CUDNN_ROOT_DIR="/opt/cudnn" \
     -e TRT_ROOT_DIR="/opt/tensorrt" \
     -e NEUWARE_HOME="/usr/local/neuware" \
+    -e ASCEND_TOOLKIT_HOME="/usr/local/ascend" \
+    -e ASCEND_HOME_PATH="/usr/local/ascend" \
     -e PYTHON_EXTRA_REQUIRES="$PYTHON_EXTRA_REQUIRES" \
     ${mount_args} \
     -v ${BASEDIR}:/home/code \

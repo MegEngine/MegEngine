@@ -53,6 +53,21 @@ function handle_copy_libs() {
             full_copy_so $lib_name ${TO_DIR} $append_rpath
         done
     fi
+    if [ ${BUILD_WHL_WITH_ASCEND} = "ON" ]; then
+        echo "handle ascend lib to ${TO_DIR}"
+        mkdir -p ${TO_DIR}/ascend/aarch64-linux/lib64
+        pushd ${ASCEND_TOOLKIT_HOME}
+            IFS=: read -a depend_dir_array <<<"$DEPEND_DIR_RELATIVE_PATH_LIST"
+            for dir_name in ${depend_dir_array[@]};do
+                cp -r --parent $dir_name ${TO_DIR}/ascend/
+            done
+        popd
+        IFS=: read -a copy_lib_name_array <<<"$COPY_LIB_LIST"
+        append_rpath='$ORIGIN'
+        for lib_name in ${copy_lib_name_array[@]};do
+            full_copy_so $lib_name ${TO_DIR}/ascend/aarch64-linux/lib64 $append_rpath
+        done
+    fi
 }
 
 function patch_elf_depend_lib_name(){
@@ -76,14 +91,22 @@ function patch_elf_depend_lib_mgb_mge() {
     fi
 
     patchelf --remove-rpath ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
-    patchelf --force-rpath --set-rpath '$ORIGIN/lib' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
+    if [ ${BUILD_WHL_WITH_ASCEND} = "ON" ]; then
+        patchelf --force-rpath --set-rpath '$ORIGIN/lib:$ORIGIN/lib/ascend/aarch64-linux/lib64' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
+    else
+        patchelf --force-rpath --set-rpath '$ORIGIN/lib' ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
+    fi
     handle_strip ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
     patch_elf_depend_lib_name ${BUILD_DIR}/staging/megengine/core/_imperative_rt.so
 
     cp ${BUILD_DIR}/src/libmegengine_shared.so ${LIBS_DIR}
     handle_strip ${LIBS_DIR}/libmegengine_shared.so
     patchelf --remove-rpath ${LIBS_DIR}/libmegengine_shared.so
-    patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_shared.so
+    if [ ${BUILD_WHL_WITH_ASCEND} = "ON" ]; then
+        patchelf --force-rpath --set-rpath '$ORIGIN/.:$ORIGIN/ascend/aarch64-linux/lib64' ${LIBS_DIR}/libmegengine_shared.so
+    else
+        patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_shared.so
+    fi
     patch_elf_depend_lib_name ${LIBS_DIR}/libmegengine_shared.so
 
     # as some version of cudnn/trt libs have dlopen libs, so we can not use auditwheel
@@ -98,7 +121,11 @@ function patch_elf_depend_lib_megenginelite() {
 
     cp ${BUILD_DIR}/lite/liblite_shared_whl.so ${LIBS_DIR}/
     patchelf --remove-rpath ${LIBS_DIR}/liblite_shared_whl.so
-    patchelf --force-rpath --set-rpath '$ORIGIN/../../megengine/core/lib' ${LIBS_DIR}/liblite_shared_whl.so
+    if [ ${BUILD_WHL_WITH_ASCEND} = "ON" ]; then
+        patchelf --force-rpath --set-rpath '$ORIGIN/../../megengine/core/lib:$ORIGIN/../../megengine/core/lib/ascend/aarch64-linux/lib64' ${LIBS_DIR}/liblite_shared_whl.so
+    else
+        patchelf --force-rpath --set-rpath '$ORIGIN/../../megengine/core/lib' ${LIBS_DIR}/liblite_shared_whl.so
+    fi
     handle_strip ${LIBS_DIR}/liblite_shared_whl.so
 
     patch_elf_depend_lib_name ${LIBS_DIR}/liblite_shared_whl.so

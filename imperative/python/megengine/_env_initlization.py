@@ -15,6 +15,15 @@ def config_env():
         may_user_config = os.getenv("CUDA_MODULE_LOADING", "LAZY")
         os.environ["CUDA_MODULE_LOADING"] = may_user_config
 
+    opp_env_key = "ASCEND_OPP_PATH"
+    if opp_env_key not in os.environ or os.environ.get(opp_env_key) == "":
+        opp_env_value = (
+            os.path.dirname(os.path.abspath(__file__)) + "/core/lib/ascend/opp"
+        )
+        if os.path.exists(opp_env_value):
+            os.environ[opp_env_key] = opp_env_value
+            print("set env ASCEND_OPP_PATH={}".format(opp_env_value))
+
 
 def check_pip_env():
     filter_package_name = 'megbrain'
