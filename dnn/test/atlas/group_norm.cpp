@@ -63,6 +63,32 @@ TEST_F(ATLAS, GROUPNORM_FORWARD) {
                     TensorValue(
                             {1, 3}, dtype::Float32(), {0.1023, 0.0460, 0.0151}),  // var
             });
+
+    checker.set_param(param).exect(
+            Testcase{
+                    TensorValue(
+                            {1, 3, 1, 2}, dtype::Float32(),
+                            {-2.4348, -1.7948, 0.5223, 0.0932, -0.2955,
+                             -0.0492}),                                         // input
+                    TensorValue({1, 3, 1, 1}, dtype::Float32(), {1., 1., 1.}),  // hx
+                    TensorValue({1, 3, 1, 1}, dtype::Float32(), {0., 0., 0.}),  // cx
+                    {},
+                    {},
+                    {}},
+            Testcase{
+                    {},
+                    {},
+                    {},
+                    TensorValue(
+                            {1, 3, 1, 2}, dtype::Float32(),
+                            {-0.9999, 0.9999, 0.9999, -0.9999, -0.9997,
+                             0.9997}),  // output
+                    TensorValue(
+                            {1, 3}, dtype::Float32(),
+                            {-2.1148, 0.3077, -0.1724}),  // mean
+                    TensorValue(
+                            {1, 3}, dtype::Float32(), {0.1023, 0.0460, 0.0151}),  // var
+            });
 }
 }  // namespace test
 }  // namespace megdnn

@@ -18,6 +18,20 @@ namespace atlas {
 
 using Param = megdnn::GroupNorm::Param;
 
+TensorND flatten(const TensorND& inp) {
+    const TensorLayout inp_layout = inp.layout;
+    TensorND dst;
+    if (inp_layout.ndim == 1) {
+        dst = inp;
+    } else if (inp_layout.ndim == 4) {
+        constexpr int C_POS = 1;
+        int c = inp_layout.shape[C_POS];
+        TensorLayout dst_layout({c}, inp_layout.dtype);
+        dst = TensorND(inp.raw_ptr(), dst_layout);
+    }
+    return dst;
+}
+
 void GroupNormForwardImpl::exec(
         _megdnn_tensor_in data, _megdnn_tensor_in weight, _megdnn_tensor_in bias,
         _megdnn_tensor_out dst, _megdnn_tensor_out mean, _megdnn_tensor_out rstd,
@@ -30,16 +44,17 @@ void GroupNormForwardImpl::exec(
     size_t HxW = data.layout.shape[2] * data.layout.shape[3];
     const int64_t G = param.group;
 
-    AclTensor acl_self(data), acl_gamma(weight), acl_beta(bias), acl_out(dst),
-            acl_meanOut(mean), acl_rstdOut(rstd);
+    TensorND flatten_weight = flatten(weight), flatten_bias = flatten(bias);
+    AclTensor acl_self(data), acl_gamma(flatten_weight), acl_beta(flatten_bias),
+            acl_out(dst), acl_meanOut(mean), acl_rstdOut(rstd);
 
     uint64_t ws_size;
     aclOpExecutor* executor = nullptr;
     auto handle = concrete_handle(this->handle());
 
-    aclnnGroupNormGetWorkspaceSize(
+    aclnn_check(aclnnGroupNormGetWorkspaceSize(
             acl_self.get(), acl_gamma.get(), acl_beta.get(), N, C, HxW, G, eps,
-            acl_out.get(), acl_meanOut.get(), acl_rstdOut.get(), &ws_size, &executor);
+            acl_out.get(), acl_meanOut.get(), acl_rstdOut.get(), &ws_size, &executor));
     AclMem ws(ws_size, handle);
     aclnn_check(aclnnGroupNorm(ws.ptr(), ws_size, executor, handle->stream()));
 
