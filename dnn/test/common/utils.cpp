@@ -18,8 +18,8 @@ void megdnn_memcpy_internal(
         megcoreMemcpyKind_t kind) {
     auto comp_handle = handle->megcore_computing_handle();
 #if MGB_ATLAS
+    megcore_check(megcoreSynchronize(comp_handle));
     if (src == nullptr) {
-        megcore_check(megcoreSynchronize(comp_handle));
         return;
     }
 #endif

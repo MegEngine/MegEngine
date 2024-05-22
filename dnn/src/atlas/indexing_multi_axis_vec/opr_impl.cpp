@@ -307,13 +307,6 @@ void exec_index(
     if (!dst_contig) {
         atlas_handle->free(prepared_dst.raw_ptr());
     }
-
-    // TODO: without sync, incr may introduce incidental error in some cases, so fix it
-    // with sync.
-    // TODO: the reason of that other ops introduce no error may be because of test cases.
-    if (std::is_same<Opr, IndexingIncrMultiAxisVecImpl>::value) {
-        acl_check(aclrtSynchronizeStream(atlas_handle->stream()));
-    }
 }
 }  // namespace
 
