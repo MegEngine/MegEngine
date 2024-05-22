@@ -29,14 +29,14 @@ public:
             _megdnn_workspace workspace) override;
 
     size_t get_workspace_in_bytes(
-            const TensorLayout&, const TensorLayout& data, const TensorLayout&,
-            const TensorLayout&, const TensorLayout& rstd, const TensorLayout&,
-            const TensorLayout&, const TensorLayout&) override;
-
-private:
-    WorkspaceBundle get_workspace_bundle(
-            size_t N, size_t C, size_t G, size_t dtype_size, void* raw_ptr = nullptr);
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&, const TensorLayout&, const TensorLayout&,
+            const TensorLayout&, const TensorLayout&) override {
+        return 0;
+    }
 };
 
 }  // namespace atlas
 }  // namespace megdnn
+
+// vim: syntax=cpp.doxygen

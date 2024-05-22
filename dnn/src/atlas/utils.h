@@ -21,6 +21,22 @@
         }                                                    \
     } while (0)
 
+#define aclnn_call(handle, AclnnOp, ...)                                           \
+    do {                                                                           \
+        uint64_t AclnnOp##_ws_size = 0;                                            \
+        aclOpExecutor* AclnnOp##_executor = nullptr;                               \
+        aclnn_check(AclnnOp##GetWorkspaceSize(                                     \
+                __VA_ARGS__, &AclnnOp##_ws_size, &AclnnOp##_executor));            \
+        AclMem AclnnOp##_ws(AclnnOp##_ws_size, handle);                            \
+        aclnn_check(                                                               \
+                AclnnOp(AclnnOp##_ws.ptr(), AclnnOp##_ws_size, AclnnOp##_executor, \
+                        handle->stream()));                                        \
+    } while (0)
+
+#define AclTempTensor(handle, var, var_layout)           \
+    AclMem var##_buf(var_layout.access_bytes(), handle); \
+    AclTensor var(var##_buf.ptr(), var_layout)
+
 namespace megdnn {
 namespace atlas {
 
@@ -30,6 +46,24 @@ inline HandleImpl* concrete_handle(Handle* handle) {
 
 //! Error handling funcions
 MEGDNN_NORETURN void __throw_acl_error__(aclError err, const char* msg);
+
+template <typename T>
+void print_tensor(const void* ptr, const TensorLayout& lyt) {
+    lyt.dtype.assert_is_ctype<T>();
+    size_t elem_bytes = lyt.access_bytes();
+    SmallVector<uint8_t> host(elem_bytes);
+
+    acl_check(aclrtSynchronizeDevice());
+    acl_check(aclrtMemcpy(
+            host.data(), elem_bytes, ptr, elem_bytes, ACL_MEMCPY_DEVICE_TO_HOST));
+    acl_check(aclrtSynchronizeDevice());
+
+    T* data = reinterpret_cast<T*>(host.data());
+    for (size_t i = 0; i < elem_bytes / sizeof(T); ++i) {
+        printf("%f ", float(data[i]));
+    }
+    printf("\n");
+}
 
 }  // namespace atlas
 }  // namespace megdnn

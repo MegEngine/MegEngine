@@ -92,6 +92,7 @@ using acl2dnn_t = typename acl2dnn_type<dt>::type;
 
 aclDataType as_acl_dtype(DTypeEnum dtype);
 aclDataType as_acl_dtype(DType dtype);
+DType as_dnn_dtype(aclDataType dtype);
 
 #define ACL_RAII_DECLARE(wrapper_cls, acl_t, create, destroy, checker) \
     class wrapper_cls : public NonCopyableObj {                        \
@@ -157,6 +158,47 @@ ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_
 
     void init(const TensorND& src, aclFormat acl_format = aclFormat::ACL_FORMAT_ND, aclDataType acl_type = ACL_DT_UNDEFINED) {
         init(src.raw_ptr(), src.layout, acl_format, acl_type);
+    }
+
+    std::string to_string() const {
+        megdnn_assert(m_impl, "construct aclTensor failed");
+        int64_t* shape_value = nullptr;
+        uint64_t shape_ndim = 0;
+        acl_check(aclGetViewShape(m_impl, &shape_value, &shape_ndim));
+        int64_t* stride_value = nullptr;
+        uint64_t stride_ndim = 0;
+        acl_check(aclGetViewStrides(m_impl, &stride_value, &stride_ndim));
+        int64_t* storage_value = nullptr;
+        uint64_t storage_ndim = 0;
+        acl_check(aclGetStorageShape(m_impl, &storage_value, &storage_ndim));
+        int64_t offset = 0;
+        acl_check(aclGetViewOffset(m_impl, &offset));
+        aclDataType data_type = ACL_DT_UNDEFINED;
+        acl_check(aclGetDataType(m_impl, &data_type));
+        aclFormat fmt = ACL_FORMAT_UNDEFINED;
+        acl_check(aclGetFormat(m_impl, &fmt));
+
+        auto str_list = [](const int64_t* values, uint64_t ndim) -> std::string {
+            std::string str = "{";
+            for (size_t i = 0; i < ndim; ++i) {
+                str += std::to_string(values[i]);
+                if (i + 1 != ndim) {
+                    str += ", ";
+                }
+            }
+            str += "}";
+            return str;
+        };
+        
+        std::string shape_str = str_list(shape_value, shape_ndim);
+        std::string stride_str = str_list(stride_value, stride_ndim);
+        std::string storage_str = str_list(storage_value, storage_ndim);
+
+        char ret[128];
+        sprintf(ret, "shape: %s, stride: %s, storage: %s, offset: %ld, dtype: %s", 
+                shape_str.c_str(), stride_str.c_str(), storage_str.c_str(), offset,
+                as_dnn_dtype(data_type).name());
+        return std::string(ret);
     }
 };
 
