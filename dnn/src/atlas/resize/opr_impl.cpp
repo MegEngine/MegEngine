@@ -1,4 +1,5 @@
 #include "opr_impl.h"
+#include "aclnnop/aclnn_resize.h"
 #include "aclnnop/aclnn_upsample_bilinear_2d_backward.h"
 #include "aclnnop/aclnn_upsample_nearest_2d_backward.h"
 #include "src/atlas/atlas_wrapper.h"
@@ -71,3 +72,48 @@ void ResizeBackwardImpl::exec(
             megdnn_throw("unsupported mode");
     }
 }
+
+// *************************** Forward *************************** //
+void ResizeForwardImpl::exec(
+        _megdnn_tensor_in src, _megdnn_tensor_out dst, _megdnn_workspace workspace) {
+    check_exec(src.layout, dst.layout, workspace.size);
+    //! FIXME: Although ascend official docs stated that resize supports non-contiguous
+    //! tensor, but getWorkspace will crash when layout is not contiguous, may be
+    //! related to aclCreateTensor's storageDim parameter.
+    megdnn_assert_contiguous(src.layout);
+    megdnn_assert_contiguous(dst.layout);
+    auto&& _param = param();
+
+    megdnn_assert(
+            _param.format == Param::Format::NCHW, "ascend resize only support NCHW");
+    aclFormat fmt = aclFormat::ACL_FORMAT_NCHW;
+    AclTensor acl_src(src.raw_ptr(), src.layout, fmt);
+    AclTensor acl_dst(dst.raw_ptr(), dst.layout, fmt);
+
+    const char* imode = "";
+    if (_param.imode == param::Resize::InterpolationMode::INTER_NEAREST) {
+        imode = "nearest";
+    } else if (_param.imode == param::Resize::InterpolationMode::INTER_LINEAR) {
+        imode = "bilinear";
+    } else {
+        megdnn_assert(false, "ascend resize only support nearest and bilinear");
+    }
+
+    SmallVector<float> scale{
+            static_cast<float>(dst.layout.shape[0]) / src.layout.shape[0],
+            static_cast<float>(dst.layout.shape[1]) / src.layout.shape[1],
+            static_cast<float>(dst.layout.shape[2]) / src.layout.shape[2],
+            static_cast<float>(dst.layout.shape[3]) / src.layout.shape[3]};
+    AclFloatArray acl_scale(scale);
+
+    uint64_t ws_size = 0;
+    aclOpExecutor* executor = nullptr;
+
+    aclnn_check(aclnnResizeGetWorkspaceSize(
+            acl_src.get(), acl_scale.get(), imode, acl_dst.get(), &ws_size, &executor));
+    auto ws = AclMem(ws_size, concrete_handle(handle()));
+    aclnn_check(aclnnResize(
+            ws.ptr(), ws_size, executor, concrete_handle(handle())->stream()));
+}
+
+// vim: syntax=cpp.doxygen

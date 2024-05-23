@@ -146,13 +146,22 @@ ACL_RAII_DECLARE(AclTensor, aclTensor, aclCreateTensor, aclDestroyTensor, aclnn_
             stride[i] = static_cast<int64_t>(layout.stride[i]);
         }
         auto layout_span = layout.span();
-        megdnn::SmallVector<int64_t> storage_shape(1, layout_span.dist_elem());
         int64_t offset = -1 * layout_span.low_elem;
-        m_impl = aclCreateTensor(
-                shape.data(), layout.ndim, acl_type == ACL_DT_UNDEFINED ? as_acl_dtype(layout.dtype):acl_type, stride.data(),
-                offset, acl_format, storage_shape.data(), 1, 
-                static_cast<void*>(static_cast<uint8_t*>(devptr) - layout.dtype.size() * offset)
-        );
+        if (layout.is_contiguous()) {
+            //! for resize opr
+            m_impl = aclCreateTensor(
+                    shape.data(), layout.ndim, acl_type == ACL_DT_UNDEFINED ? as_acl_dtype(layout.dtype):acl_type, stride.data(),
+                    offset, acl_format, shape.data(), shape.size(), 
+                    static_cast<void*>(static_cast<uint8_t*>(devptr) - layout.dtype.size() * offset)
+            );
+        } else {
+            megdnn::SmallVector<int64_t> storage_shape(1, layout_span.dist_elem());
+            m_impl = aclCreateTensor(
+                    shape.data(), layout.ndim, acl_type == ACL_DT_UNDEFINED ? as_acl_dtype(layout.dtype):acl_type, stride.data(),
+                    offset, acl_format, storage_shape.data(), storage_shape.size(), 
+                    static_cast<void*>(static_cast<uint8_t*>(devptr) - layout.dtype.size() * offset)
+            );
+        }
         megdnn_assert(m_impl, "construct aclTensor failed");
     }
 
