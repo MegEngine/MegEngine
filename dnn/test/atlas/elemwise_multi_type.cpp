@@ -33,7 +33,8 @@ static void run_test_bool(int arity, Checker<ElemwiseMultiType>& checker, Mode m
         checker.set_dtype(2, dtype::Bool());
 
         if (arity == 2) {
-            checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+            // checker.execs({{3, 4, 5, 6}, {3, 4, 5, 6}, {}});
+            checker.execs({{3, 4, 5, 6}, {3, 4, 5, 1}, {}});
         } else {
             megdnn_assert(0);
         }

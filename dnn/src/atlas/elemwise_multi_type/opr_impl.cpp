@@ -16,15 +16,90 @@
 using namespace megdnn;
 using namespace atlas;
 
+void print_shape(const AclTensor& tensor) {
+    int64_t shapes[10];
+    int64_t* shape_ptr = &shapes[0];
+    uint64_t ndim;
+    aclGetViewShape(tensor.get(), &shape_ptr, &ndim);
+    for (int i = 0; i < ndim; i++) {
+        printf("%d\t", shapes[i]);
+    }
+    printf("\n");
+}
+
+template <typename T>
+void print(T t) {
+    if (typeid(T) == typeid(double) || typeid(T) == typeid(float)) {
+        printf("%f", t);
+    } else if (typeid(T) == typeid(int)) {
+        printf("%d", t);
+    } else if (typeid(T) == typeid(bool)) {
+        printf(t ? "true" : "false");
+    }
+}
+
+template <typename T>
+void print(std::string name, void* ptr, const TensorShape& shape, HandleImpl* handle) {
+    auto size = shape.total_nr_elems();
+    std::vector<T> resultData(size, 0);
+    aclrtMemcpyAsync(
+            resultData.data(), size * sizeof(T), ptr, size * sizeof(T),
+            ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
+    aclrtSynchronizeStream(handle->stream());
+    printf("%s\n", name.c_str());
+    for (int64_t idx = 0; idx < size; idx++) {
+        print<T>(resultData[idx]);
+        printf(",\t");
+    }
+    printf("\n");
+}
+
+void print_bool(
+        std::string name, void* ptr, const TensorShape& shape, HandleImpl* handle) {
+    auto size = shape.total_nr_elems();
+    bool arr[size];
+    aclrtMemcpyAsync(
+            arr, size * sizeof(bool), ptr, size * sizeof(bool),
+            ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
+    aclrtSynchronizeStream(handle->stream());
+    printf("%s\n", name.c_str());
+    for (int64_t idx = 0; idx < size; idx++) {
+        print<bool>(arr[idx]);
+        printf(",\t");
+    }
+    printf("\n");
+}
+
 void ElemwiseMultiTypeImpl::dest_type_bool_mode(
         const ElemwiseOpParamN<2>& param, const TensorND& dst, Elemwise::Mode mode) {
+    megdnn_assert(
+            param[0].layout.total_nr_elems() == param[1].layout.total_nr_elems() &&
+            param[1].layout.total_nr_elems() == dst.layout.total_nr_elems());
+
     auto handle = concrete_handle(this->handle());
     SmallVector<AclTensor> acl_inps;
+    TensorLayout formated_shape = param[0].layout;
+    for (int i = 0; i < 2; i++) {
+        if (!param[i].layout.is_contiguous()) {
+            formated_shape = param[i].layout;
+        }
+    }
+
     for (size_t i = 0; i < 2; ++i) {
         const TensorND& inp = param[i];
-        acl_inps.push_back(AclTensor(inp));
+        TensorLayout inp_layout = inp.layout;
+        if (!inp_layout.eq_shape(formated_shape)) {
+            inp_layout = inp_layout.reshape(formated_shape);
+        }
+        TensorND formated_inp(inp.raw_ptr(), inp_layout);
+        acl_inps.push_back(formated_inp);
     }
-    TensorND format_dst(dst.raw_ptr(), TensorLayout(param[0].layout, dst.layout.dtype));
+
+    TensorLayout dst_layout = dst.layout;
+    if (!dst_layout.eq_shape(formated_shape)) {
+        dst_layout = dst_layout.reshape(formated_shape);
+    }
+    TensorND format_dst(dst.raw_ptr(), dst_layout);
     AclTensor acl_out(format_dst);
 
     uint64_t ws_size = 0;
