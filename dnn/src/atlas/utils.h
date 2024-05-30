@@ -50,6 +50,7 @@ MEGDNN_NORETURN void __throw_acl_error__(aclError err, const char* msg);
 template <typename T>
 void print_tensor(const void* ptr, const TensorLayout& lyt) {
     lyt.dtype.assert_is_ctype<T>();
+    printf("%s\n", lyt.to_string().c_str());
     size_t elem_bytes = lyt.access_bytes();
     SmallVector<uint8_t> host(elem_bytes);
 

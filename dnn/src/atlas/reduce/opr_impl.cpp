@@ -2,6 +2,7 @@
 #include "aclnnop/aclnn_amax.h"
 #include "aclnnop/aclnn_amin.h"
 #include "aclnnop/aclnn_mean.h"
+#include "aclnnop/aclnn_pow.h"
 #include "aclnnop/aclnn_prod.h"
 #include "aclnnop/aclnn_reduce_sum.h"
 #include "src/atlas/atlas_wrapper.h"
@@ -68,7 +69,13 @@ void ReduceForwardImpl::exec(
             break;
         }
         case Param::Mode::SUM_SQR: {
-            megdnn_assert(false, "ReduceMode SUM_SQR is not supported in ATLAS");
+            AclTempTensor(handle, tmp, src.layout);
+            aclnn_call(
+                    handle, aclnnPowTensorScalar, inp.get(), AclScalar(2).get(),
+                    tmp.get());
+            aclnn_call(
+                    handle, aclnnReduceSum, tmp.get(), axes.get(), keepdims, data_type,
+                    oup.get());
             break;
         }
         default: {

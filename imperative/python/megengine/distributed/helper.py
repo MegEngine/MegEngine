@@ -130,7 +130,7 @@ def pack_allreduce_split(pack_list, shapes, group, reduce_method):
     packed_grads = param_pack_concat(pack_list, offsets, offsets_val)
     group_cn = group.comp_node
     if group_cn.startswith("atlas"):
-        packed_grads = packed_grads.to(group_cn, _borrow=True)
+        group_cn = str(packed_grads.device)
     packed_grads = all_reduce_sum(packed_grads, group, group_cn)
     if reduce_method == "mean":
         packed_grads /= group.size

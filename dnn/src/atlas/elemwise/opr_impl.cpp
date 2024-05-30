@@ -163,8 +163,9 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
         aclnn_check(
                 aclnnBitwiseAndTensor(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::COND_LEQ_MOV) {
-        AclMem temp_mem(src[0].layout.access_bytes(), handle);
-        AclTensor temp_tensor(temp_mem.ptr(), src[0].layout);
+        TensorLayout tmplyt(TensorShape(dst.layout), src[0].layout.dtype);
+        AclMem temp_mem(tmplyt.access_bytes(), handle);
+        AclTensor temp_tensor(temp_mem.ptr(), tmplyt);
 
         AclScalar alpha(1.0, dtype::Float32());
         aclnn_check(aclnnSubGetWorkspaceSize(
@@ -181,8 +182,9 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
         aclnn_check(
                 aclnnThresholdBackward(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::COND_LT_MOV) {
-        AclMem temp_mem(src[0].layout.access_bytes(), handle);
-        AclTensor temp_tensor(temp_mem.ptr(), src[0].layout);
+        TensorLayout tmplyt(TensorShape(dst.layout), src[0].layout.dtype);
+        AclMem temp_mem(tmplyt.access_bytes(), handle);
+        AclTensor temp_tensor(temp_mem.ptr(), tmplyt);
 
         AclScalar alpha(1.0, dtype::Float32());
         aclnn_check(aclnnSubGetWorkspaceSize(

@@ -17,7 +17,9 @@ TEST_F(ATLAS, REDUCE_FORWARD_DEFAULT) {
         if (dtype == dtype::Float16()) {
             checker.set_epsilon(1e-2);
         }
-        for (auto mode : {Mode::MIN, Mode::MAX, Mode::SUM, Mode::PRODUCT, Mode::MEAN}) {
+        for (auto mode :
+             {Mode::MIN, Mode::MAX, Mode::SUM, Mode::PRODUCT, Mode::MEAN,
+              Mode::SUM_SQR}) {
             param.mode = mode;
             for (size_t n : {1, 2}) {
                 for (size_t ic : {8, 256, 1024}) {
@@ -121,7 +123,9 @@ TEST_F(ATLAS, REDUCE_FORWARD_FLOAT_O32xC32) {
         Param param;
         param.data_type = Param::DataType::FLOAT_O32xC32;
         checker.set_dtype(0, dtype).set_dtype(1, dtype);
-        for (auto mode : {Mode::MIN, Mode::MAX, Mode::SUM, Mode::PRODUCT, Mode::MEAN}) {
+        for (auto mode :
+             {Mode::MIN, Mode::MAX, Mode::SUM, Mode::PRODUCT, Mode::MEAN,
+              Mode::SUM_SQR}) {
             param.mode = mode;
             for (size_t n : {1, 2}) {
                 for (size_t ic : {8, 256, 1024}) {
@@ -159,7 +163,9 @@ TEST_F(ATLAS, REDUCE_FORWARD_FLOAT_O16xC32) {
         Param param;
         param.data_type = Param::DataType::FLOAT_O16xC32;
         checker.set_dtype(0, dtype).set_dtype(1, dtype);
-        for (auto mode : {Mode::MIN, Mode::MAX, Mode::SUM, Mode::PRODUCT, Mode::MEAN}) {
+        for (auto mode :
+             {Mode::MIN, Mode::MAX, Mode::SUM, Mode::PRODUCT, Mode::MEAN,
+              Mode::SUM_SQR}) {
             param.mode = mode;
             for (size_t n : {1, 2}) {
                 for (size_t ic : {8, 256, 1024}) {
