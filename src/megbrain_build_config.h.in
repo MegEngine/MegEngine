@@ -5,6 +5,7 @@
 #cmakedefine01 MGB_ROCM
 #cmakedefine01 MGB_CAMBRICON
 #cmakedefine01 MGB_ATLAS
+#cmakedefine01 MGB_USE_ATLAS_ASYNC_API
 #cmakedefine01 MGB_ASSERT_LOC
 #cmakedefine01 MGB_ENABLE_DEBUG_UTIL
 #cmakedefine01 MGB_ENABLE_LOGGING

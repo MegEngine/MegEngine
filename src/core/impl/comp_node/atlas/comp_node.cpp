@@ -188,6 +188,8 @@ public:
                 host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST,
                 m_env.atlas_env().stream));
 #else
+        // aclrtMemcpy is not synchronized, so we need sync mannually before copy
+        MGB_ATLAS_CHECK(aclrtSynchronizeStream(m_env.atlas_env().stream));
         MGB_ATLAS_CHECK(aclrtMemcpy(
                 host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST));
 #endif
@@ -198,6 +200,8 @@ public:
             return;
         }
         activate();
+        // aclrtMemcpy is not synchronized, so we need sync mannually before copy
+        MGB_ATLAS_CHECK(aclrtSynchronizeStream(m_env.atlas_env().stream));
         MGB_ATLAS_CHECK(aclrtMemcpy(
                 device_ptr, size, host_ptr, size, ACL_MEMCPY_HOST_TO_DEVICE));
     }
@@ -497,6 +501,8 @@ void AtlasCompNodeImpl::peer_copy_to(
                 m_env.atlas_env().stream));
         MGB_ATLAS_CHECK(aclrtSynchronizeStream(stream));
 #else
+        // aclrtMemcpy is not synchronized, so we need sync mannually before copy
+        MGB_ATLAS_CHECK(aclrtSynchronizeStream(m_env.atlas_env().stream));
         MGB_ATLAS_CHECK(aclrtMemcpy(dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST));
 #endif
     };

@@ -1093,6 +1093,7 @@ if(MGE_WITH_ATLAS)
   list(APPEND MGE_ATLAS_LIBS ascendcl nnopbase opapi acl_op_compiler)
   set(MGE_ATLAS_LIBS "${MGE_ATLAS_LIBS}")
   set(MGB_ATLAS ${MGE_WITH_ATLAS})
+  set(MGB_USE_ATLAS_ASYNC_API ${MGE_WITH_ATLAS})
 endif()
 
 find_program(CCACHE_BIN ccache)
