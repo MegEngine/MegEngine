@@ -147,80 +147,88 @@ void exec_index(
     size_t end_dst_index = end_src_index + dst.layout.ndim - src.layout.ndim;
 
     // init non indexed indices and broadcast all indices to dst
-    for (size_t i = 0; i < prepared_src.layout.ndim; ++i) {
-        if (!is_indices_defined[i]) {
-            TensorLayout layout(
-                    TensorShape({prepared_src.layout.shape[i]}), dtype::Int32());
-            size_t size = layout.span().dist_byte();
-            AclMem acl_one_mem(size, atlas_handle),
-                    acl_one_start_mem(size, atlas_handle),
-                    acl_zero_start_mem(size, atlas_handle);
-            TensorND one_tensor(acl_one_mem.ptr(), layout),
-                    one_start_tensor(acl_one_start_mem.ptr(), layout),
-                    zero_start_tensor(acl_zero_start_mem.ptr(), layout);
+    if (start_src_index == 0) {
+        indices.resize(index.size());
+    } else {
+        for (size_t i = 0; i < prepared_src.layout.ndim; ++i) {
+            if (!is_indices_defined[i]) {
+                TensorLayout layout(
+                        TensorShape({prepared_src.layout.shape[i]}), dtype::Int32());
+                size_t size = layout.span().dist_byte();
+                AclMem acl_one_mem(size, atlas_handle),
+                        acl_one_start_mem(size, atlas_handle),
+                        acl_zero_start_mem(size, atlas_handle);
+                void* zero_start_mem_ptr = atlas_handle->alloc(size);
+                TensorND one_tensor(acl_one_mem.ptr(), layout),
+                        one_start_tensor(acl_one_start_mem.ptr(), layout),
+                        zero_start_tensor(zero_start_mem_ptr, layout);
 
-            // fill tensor with 1
-            auto fill_opr = atlas_handle->create_operator<Fill>();
-            fill_opr->param().value = 1;
-            Workspace ws;
-            fill_opr->exec(one_tensor, ws);
+                // fill tensor with 1
+                auto fill_opr = atlas_handle->create_operator<Fill>();
+                fill_opr->param().value = 1;
+                Workspace ws;
+                fill_opr->exec(one_tensor, ws);
 
-            // cumsum
-            AclTensor acl_one(one_tensor), acl_one_start(one_start_tensor);
-            uint64_t cumsum_ws_size = 0;
-            aclOpExecutor* cumsum_executor = nullptr;
-            aclnn_check(aclnnCumsumV2GetWorkspaceSize(
-                    acl_one.get(), static_cast<int64_t>(0), false, false,
-                    acl_one_start.get(), &cumsum_ws_size, &cumsum_executor));
-            AclMem acl_cumsum_ws(cumsum_ws_size, atlas_handle);
-            aclnn_check(aclnnCumsumV2(
-                    acl_cumsum_ws.ptr(), cumsum_ws_size, cumsum_executor,
-                    atlas_handle->stream()));
+                // cumsum
+                AclTensor acl_one(one_tensor), acl_one_start(one_start_tensor);
+                uint64_t cumsum_ws_size = 0;
+                aclOpExecutor* cumsum_executor = nullptr;
+                aclnn_check(aclnnCumsumV2GetWorkspaceSize(
+                        acl_one.get(), static_cast<int64_t>(0), false, false,
+                        acl_one_start.get(), &cumsum_ws_size, &cumsum_executor));
+                AclMem acl_cumsum_ws(cumsum_ws_size, atlas_handle);
+                aclnn_check(aclnnCumsumV2(
+                        acl_cumsum_ws.ptr(), cumsum_ws_size, cumsum_executor,
+                        atlas_handle->stream()));
 
-            // sub 1
-            auto sub_opr = atlas_handle->create_operator<Elemwise>();
-            sub_opr->param().mode = Elemwise::Param::Mode::SUB;
-            sub_opr->exec({one_start_tensor, one_tensor}, zero_start_tensor);
+                // sub 1
+                auto sub_opr = atlas_handle->create_operator<Elemwise>();
+                sub_opr->param().mode = Elemwise::Param::Mode::SUB;
+                sub_opr->exec({one_start_tensor, one_tensor}, zero_start_tensor);
 
-            TensorLayout contians_all_dims_layout(
-                    TensorShape(zero_start_tensor.layout),
-                    zero_start_tensor.layout.dtype);
-            for (size_t j = 0; j < dst.layout.ndim; ++j) {
-                if ((i < start_src_index && j != i) ||
-                    (i > start_src_index &&
-                     j != i + (dst.layout.ndim - prepared_src.layout.ndim))) {
-                    contians_all_dims_layout.shape[j] = 1;
-                    contians_all_dims_layout.stride[j] = 1;
-                } else {
-                    contians_all_dims_layout.shape[j] = prepared_src.layout.shape[i];
-                    contians_all_dims_layout.stride[j] = 1;
+                indices[i] = zero_start_tensor;
+                TensorLayout contians_all_dims_layout(
+                        TensorShape(zero_start_tensor.layout),
+                        zero_start_tensor.layout.dtype);
+                for (size_t j = 0; j < dst.layout.ndim; ++j) {
+                    if ((i < start_src_index && j != i) ||
+                        (i > start_src_index &&
+                         j != i + (dst.layout.ndim - prepared_src.layout.ndim))) {
+                        contians_all_dims_layout.shape[j] = 1;
+                        contians_all_dims_layout.stride[j] = 1;
+                    } else {
+                        contians_all_dims_layout.shape[j] =
+                                prepared_src.layout.shape[i];
+                        contians_all_dims_layout.stride[j] = 1;
+                    }
                 }
-            }
-            contians_all_dims_layout.ndim = dst.layout.ndim;
-            zero_start_tensor.layout = contians_all_dims_layout.broadcast(dst.layout);
+                contians_all_dims_layout.ndim = dst.layout.ndim;
+                zero_start_tensor.layout =
+                        contians_all_dims_layout.broadcast(dst.layout);
 
-            auto zero_start_tensor_contig_layout = TensorLayout(
-                    TensorShape(zero_start_tensor.layout),
-                    zero_start_tensor.layout.dtype);
-            void* mem_ptr = atlas_handle->alloc(
-                    zero_start_tensor_contig_layout.span().dist_byte());
-            indices[i] = TensorND(mem_ptr, zero_start_tensor_contig_layout);
-            auto relayout_opr = atlas_handle->create_operator<Relayout>();
-            relayout_opr->exec(zero_start_tensor, indices[i], opr.handle());
-        } else {
-            TensorLayout contians_all_dims_layout = dst.layout;
-            contians_all_dims_layout.dtype = dtype::Int32();
-            size_t count = 0;
-            for (size_t j = 0; j < dst.layout.ndim; ++j) {
-                if (!(j < end_dst_index && j >= start_dst_index)) {
-                    contians_all_dims_layout.stride[j] = 0;
-                } else {
-                    contians_all_dims_layout.stride[j] =
-                            indices[i].layout.stride[count];
-                    count++;
+                auto zero_start_tensor_contig_layout = TensorLayout(
+                        TensorShape(zero_start_tensor.layout),
+                        zero_start_tensor.layout.dtype);
+                void* mem_ptr = atlas_handle->alloc(
+                        zero_start_tensor_contig_layout.span().dist_byte());
+                indices[i] = TensorND(mem_ptr, zero_start_tensor_contig_layout);
+                auto relayout_opr = atlas_handle->create_operator<Relayout>();
+                relayout_opr->exec(zero_start_tensor, indices[i], opr.handle());
+            } else {
+                TensorLayout contians_all_dims_layout = dst.layout;
+                contians_all_dims_layout.dtype = dtype::Int32();
+                size_t count = 0;
+                for (size_t j = 0; j < dst.layout.ndim; ++j) {
+                    if (!(j < end_dst_index && j >= start_dst_index)) {
+                        contians_all_dims_layout.stride[j] = 0;
+                    } else {
+                        contians_all_dims_layout.stride[j] =
+                                indices[i].layout.stride[count];
+                        count++;
+                    }
                 }
+                indices[i].layout = contians_all_dims_layout;
             }
-            indices[i].layout = contians_all_dims_layout;
         }
     }
 

@@ -36,25 +36,15 @@ CondTakeImpl::Output CondTakeImpl::exec(
 
     // perform abs(mask - value) for eq and neq
     if (param().mode == Param::Mode::EQ || param().mode == Param::Mode::NEQ) {
-        // tensor value
-        TensorLayout value_layout(TensorShape({1}), dtype::Float32());
-        AclMem acl_value_mem(value_layout.span().dist_byte(), handle);
-        TensorND value(acl_value_mem.ptr(), value_layout);
-        AclTensor acl_value(value);
-        auto fill_opr = handle->create_operator<Fill>();
-        fill_opr->param().value = param().val;
-        fill_opr->exec(value, {});
-
         AclScalar acl_alpha(1.0);
-
-        uint64_t sub_ws_size = 0;
-        aclOpExecutor* sub_executor = nullptr;
-        aclnn_check(aclnnInplaceSubGetWorkspaceSize(
-                acl_float_mask.get(), acl_value.get(), acl_alpha.get(), &sub_ws_size,
-                &sub_executor));
-        AclMem sub_ws(sub_ws_size, handle);
+        uint64_t subs_ws_size = 0;
+        aclOpExecutor* subs_executor = nullptr;
+        aclnn_check(aclnnInplaceSubsGetWorkspaceSize(
+                acl_float_mask.get(), acl_scalar_value.get(), acl_alpha.get(),
+                &subs_ws_size, &subs_executor));
+        AclMem subs_ws(subs_ws_size, handle);
         aclnn_check(aclnnInplaceSub(
-                sub_ws.ptr(), sub_ws_size, sub_executor, handle->stream()));
+                subs_ws.ptr(), subs_ws_size, subs_executor, handle->stream()));
 
         uint64_t abs_ws_size = 0;
         aclOpExecutor* abs_executor = nullptr;
