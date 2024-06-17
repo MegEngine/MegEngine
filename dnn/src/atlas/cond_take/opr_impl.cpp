@@ -9,6 +9,7 @@
 #include "aclnnop/aclnn_lt_scalar.h"
 #include "aclnnop/aclnn_masked_select.h"
 #include "aclnnop/aclnn_nonzero_v2.h"
+#include "aclnnop/aclnn_reduce_sum.h"
 #include "aclnnop/aclnn_sub.h"
 #include "aclnnop/aclnn_unique2.h"
 #include "src/atlas/atlas_wrapper.h"
@@ -23,118 +24,95 @@ CondTakeImpl::Output CondTakeImpl::exec(
     check_exec_get_size(data.layout, mask.layout, workspace.size);
     auto handle = concrete_handle(this->handle());
 
-    // convert mask to float mask
-    TensorLayout float_mask_layout(TensorShape(mask.layout), dtype::Float32());
-    AclMem acl_float_mask_mem(float_mask_layout.span().dist_byte(), handle);
-    TensorND float_mask(acl_float_mask_mem.ptr(), float_mask_layout);
-    AclTensor acl_float_mask(float_mask);
-    auto type_cvt_opr = handle->create_operator<TypeCvt>();
-    type_cvt_opr->exec(mask, float_mask);
-
-    // scalar value
-    AclScalar acl_scalar_value(param().val);
-
-    // perform abs(mask - value) for eq and neq
-    if (param().mode == Param::Mode::EQ || param().mode == Param::Mode::NEQ) {
-        AclScalar acl_alpha(1.0);
-        uint64_t subs_ws_size = 0;
-        aclOpExecutor* subs_executor = nullptr;
-        aclnn_check(aclnnInplaceSubsGetWorkspaceSize(
-                acl_float_mask.get(), acl_scalar_value.get(), acl_alpha.get(),
-                &subs_ws_size, &subs_executor));
-        AclMem subs_ws(subs_ws_size, handle);
-        aclnn_check(aclnnInplaceSub(
-                subs_ws.ptr(), subs_ws_size, subs_executor, handle->stream()));
-
-        uint64_t abs_ws_size = 0;
-        aclOpExecutor* abs_executor = nullptr;
-        aclnn_check(aclnnAbsGetWorkspaceSize(
-                acl_float_mask.get(), acl_float_mask.get(), &abs_ws_size,
-                &abs_executor));
-        AclMem abs_ws(abs_ws_size, handle);
-        aclnn_check(
-                aclnnAbs(abs_ws.ptr(), abs_ws_size, abs_executor, handle->stream()));
-
-        acl_scalar_value = AclScalar(param().eps);
-    }
-
-    // perform logic to get bool mask
     TensorLayout bool_mask_layout({TensorShape(mask.layout), dtype::Bool()});
     AclMem acl_bool_mask_mem(bool_mask_layout.span().dist_byte(), handle);
     TensorND bool_mask(acl_bool_mask_mem.ptr(), bool_mask_layout);
-    AclTensor acl_bool_mask(bool_mask);
-    switch (param().mode) {
-        case Param::Mode::EQ: {
-            uint64_t eq_ws_size = 0;
-            aclOpExecutor* eq_executor = nullptr;
-            aclnn_check(aclnnLtScalarGetWorkspaceSize(
-                    acl_float_mask.get(), acl_scalar_value.get(), acl_bool_mask.get(),
-                    &eq_ws_size, &eq_executor));
-            AclMem eq_ws(eq_ws_size, handle);
-            aclnn_check(aclnnLtScalar(
-                    eq_ws.ptr(), eq_ws_size, eq_executor, handle->stream()));
-            break;
+    if (mask.layout.dtype.enumv() == DTypeEnum::Bool &&
+        (param().mode == Param::Mode::EQ &&
+         std::abs(1.0f - param().val) < param().eps)) {
+        bool_mask = mask;
+    } else {
+        // convert mask to float mask
+        TensorLayout float_mask_layout(TensorShape(mask.layout), dtype::Float32());
+        AclMem acl_float_mask_mem(float_mask_layout.span().dist_byte(), handle);
+        TensorND float_mask(acl_float_mask_mem.ptr(), float_mask_layout);
+        AclTensor acl_float_mask(float_mask);
+        auto type_cvt_opr = handle->create_operator<TypeCvt>();
+        type_cvt_opr->exec(mask, float_mask);
+
+        // scalar value
+        AclScalar acl_scalar_value(param().val);
+
+        // perform abs(mask - value) for eq and neq
+        if (param().mode == Param::Mode::EQ || param().mode == Param::Mode::NEQ) {
+            AclScalar acl_alpha(1.0);
+            uint64_t subs_ws_size = 0;
+            aclOpExecutor* subs_executor = nullptr;
+            aclnn_check(aclnnInplaceSubsGetWorkspaceSize(
+                    acl_float_mask.get(), acl_scalar_value.get(), acl_alpha.get(),
+                    &subs_ws_size, &subs_executor));
+            AclMem subs_ws(subs_ws_size, handle);
+            aclnn_check(aclnnInplaceSub(
+                    subs_ws.ptr(), subs_ws_size, subs_executor, handle->stream()));
+
+            uint64_t abs_ws_size = 0;
+            aclOpExecutor* abs_executor = nullptr;
+            aclnn_check(aclnnAbsGetWorkspaceSize(
+                    acl_float_mask.get(), acl_float_mask.get(), &abs_ws_size,
+                    &abs_executor));
+            AclMem abs_ws(abs_ws_size, handle);
+            aclnn_check(aclnnAbs(
+                    abs_ws.ptr(), abs_ws_size, abs_executor, handle->stream()));
+
+            acl_scalar_value = AclScalar(param().eps);
         }
-        case Param::Mode::NEQ: {
-            uint64_t neq_ws_size = 0;
-            aclOpExecutor* neq_executor = nullptr;
-            aclnn_check(aclnnGeScalarGetWorkspaceSize(
-                    acl_float_mask.get(), acl_scalar_value.get(), acl_bool_mask.get(),
-                    &neq_ws_size, &neq_executor));
-            AclMem neq_ws(neq_ws_size, handle);
-            aclnn_check(aclnnGeScalar(
-                    neq_ws.ptr(), neq_ws_size, neq_executor, handle->stream()));
-            break;
+
+        // perform logic to get bool mask
+        AclTensor acl_bool_mask(bool_mask);
+        switch (param().mode) {
+            case Param::Mode::EQ: {
+                aclnn_call(
+                        handle, aclnnLtScalar, acl_float_mask.get(),
+                        acl_scalar_value.get(), acl_bool_mask.get());
+                break;
+            }
+            case Param::Mode::NEQ: {
+                aclnn_call(
+                        handle, aclnnGeScalar, acl_float_mask.get(),
+                        acl_scalar_value.get(), acl_bool_mask.get());
+                break;
+            }
+            case Param::Mode::LT: {
+                aclnn_call(
+                        handle, aclnnLtScalar, acl_float_mask.get(),
+                        acl_scalar_value.get(), acl_bool_mask.get());
+                break;
+            }
+            case Param::Mode::GT: {
+                aclnn_call(
+                        handle, aclnnGtScalar, acl_float_mask.get(),
+                        acl_scalar_value.get(), acl_bool_mask.get());
+                break;
+            }
+            case Param::Mode::LEQ: {
+                aclnn_call(
+                        handle, aclnnLeScalar, acl_float_mask.get(),
+                        acl_scalar_value.get(), acl_bool_mask.get());
+                break;
+            }
+            case Param::Mode::GEQ: {
+                aclnn_call(
+                        handle, aclnnGeScalar, acl_float_mask.get(),
+                        acl_scalar_value.get(), acl_bool_mask.get());
+                break;
+            }
+            default:
+                megdnn_throw("error mode");
+                break;
         }
-        case Param::Mode::LT: {
-            uint64_t lt_ws_size = 0;
-            aclOpExecutor* lt_executor = nullptr;
-            aclnn_check(aclnnLtScalarGetWorkspaceSize(
-                    acl_float_mask.get(), acl_scalar_value.get(), acl_bool_mask.get(),
-                    &lt_ws_size, &lt_executor));
-            AclMem lt_ws(lt_ws_size, handle);
-            aclnn_check(aclnnLtScalar(
-                    lt_ws.ptr(), lt_ws_size, lt_executor, handle->stream()));
-            break;
-        }
-        case Param::Mode::GT: {
-            uint64_t gt_ws_size = 0;
-            aclOpExecutor* gt_executor = nullptr;
-            aclnn_check(aclnnGtScalarGetWorkspaceSize(
-                    acl_float_mask.get(), acl_scalar_value.get(), acl_bool_mask.get(),
-                    &gt_ws_size, &gt_executor));
-            AclMem gt_ws(gt_ws_size, handle);
-            aclnn_check(aclnnGtScalar(
-                    gt_ws.ptr(), gt_ws_size, gt_executor, handle->stream()));
-            break;
-        }
-        case Param::Mode::LEQ: {
-            uint64_t le_ws_size = 0;
-            aclOpExecutor* le_executor = nullptr;
-            aclnn_check(aclnnLeScalarGetWorkspaceSize(
-                    acl_float_mask.get(), acl_scalar_value.get(), acl_bool_mask.get(),
-                    &le_ws_size, &le_executor));
-            AclMem le_ws(le_ws_size, handle);
-            aclnn_check(aclnnLeScalar(
-                    le_ws.ptr(), le_ws_size, le_executor, handle->stream()));
-            break;
-        }
-        case Param::Mode::GEQ: {
-            uint64_t ge_ws_size = 0;
-            aclOpExecutor* ge_executor = nullptr;
-            aclnn_check(aclnnGeScalarGetWorkspaceSize(
-                    acl_float_mask.get(), acl_scalar_value.get(), acl_bool_mask.get(),
-                    &ge_ws_size, &ge_executor));
-            AclMem ge_ws(ge_ws_size, handle);
-            aclnn_check(aclnnGeScalar(
-                    ge_ws.ptr(), ge_ws_size, ge_executor, handle->stream()));
-            break;
-        }
-        default:
-            megdnn_throw("error mode");
-            break;
     }
 
+    AclTensor acl_bool_mask(bool_mask);
     // get num of true elements in bool mask
     TensorLayout collapse_2dim_bool_mask_layout(
             TensorShape({1, bool_mask.layout.total_nr_elems()}), dtype::Bool());
@@ -142,97 +120,27 @@ CondTakeImpl::Output CondTakeImpl::exec(
             bool_mask.raw_ptr(), collapse_2dim_bool_mask_layout);
     AclTensor acl_collapse_2dim_bool_mask(collapse_2dim_bool_mask);
 
-    TensorLayout any_value_bool_mask_layout({1}, dtype::Bool());
-    AclMem any_value_bool_mask_mem(
-            any_value_bool_mask_layout.span().dist_byte(), handle);
-    TensorND any_value_bool_mask(
-            any_value_bool_mask_mem.ptr(), any_value_bool_mask_layout);
-    AclTensor acl_any_value_bool_mask(any_value_bool_mask);
+    float num_true = 0;
+    AclIntArray acl_dims({1});
+    TensorLayout reduce_sum_out_layout(
+            TensorShape({static_cast<size_t>(1)}), dtype::Float32());
+    AclMem acl_reduce_sum_out_mem(reduce_sum_out_layout.span().dist_byte(), handle);
+    TensorND reduce_sum_out(acl_reduce_sum_out_mem.ptr(), reduce_sum_out_layout);
+    AclTensor acl_reduce_sum_out(reduce_sum_out);
 
-    std::vector<int64_t> any_dim(1, 1);
-    AclIntArray acl_any_dim(any_dim.data(), 1);
-
-    uint64_t any_ws_size = 0;
-    aclOpExecutor* any_executor = nullptr;
-    aclnn_check(aclnnAnyGetWorkspaceSize(
-            acl_collapse_2dim_bool_mask.get(), acl_any_dim.get(), false,
-            acl_any_value_bool_mask.get(), &any_ws_size, &any_executor));
-    AclMem any_ws(any_ws_size, handle);
-    aclnn_check(aclnnAny(any_ws.ptr(), any_ws_size, any_executor, handle->stream()));
-
-    bool any_value_bool_mask_host = false;
+    uint64_t reduce_sum_ws_size = 0;
+    aclOpExecutor* reduce_sum_executor = nullptr;
+    aclnnReduceSumGetWorkspaceSize(
+            acl_collapse_2dim_bool_mask.get(), acl_dims.get(), false,
+            aclDataType::ACL_FLOAT, acl_reduce_sum_out.get(), &reduce_sum_ws_size,
+            &reduce_sum_executor);
+    AclMem reduce_sum_ws(reduce_sum_ws_size, handle);
+    aclnn_check(aclnnReduceSum(
+            reduce_sum_ws.ptr(), reduce_sum_ws_size, reduce_sum_executor,
+            handle->stream()));
     acl_safe_memcpy_async_with_sync(
-            &any_value_bool_mask_host, sizeof(bool), any_value_bool_mask.raw_ptr(),
-            sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
-
-    if (!any_value_bool_mask_host) {
-        auto out_data = malloc_policy.alloc_output(0, data.layout.dtype, {0});
-        auto out_idx = malloc_policy.alloc_output(1, dtype::Int32(), {0});
-        return {{out_data, out_idx}};
-    }
-
-    TensorLayout all_value_bool_mask_layout({1}, dtype::Bool());
-    AclMem all_value_bool_mask_mem(
-            all_value_bool_mask_layout.span().dist_byte(), handle);
-    TensorND all_value_bool_mask(
-            all_value_bool_mask_mem.ptr(), all_value_bool_mask_layout);
-    AclTensor acl_all_value_bool_mask(all_value_bool_mask);
-
-    std::vector<int64_t> all_dim(1, 1);
-    AclIntArray acl_all_dim(all_dim.data(), 1);
-
-    uint64_t all_ws_size = 0;
-    aclOpExecutor* all_executor = nullptr;
-    aclnn_check(aclnnAllGetWorkspaceSize(
-            acl_collapse_2dim_bool_mask.get(), acl_all_dim.get(), false,
-            acl_all_value_bool_mask.get(), &all_ws_size, &all_executor));
-    AclMem all_ws(all_ws_size, handle);
-    aclnn_check(aclnnAll(all_ws.ptr(), all_ws_size, all_executor, handle->stream()));
-
-    bool all_value_bool_mask_host = false;
-    acl_safe_memcpy_async_with_sync(
-            &all_value_bool_mask_host, sizeof(bool), all_value_bool_mask.raw_ptr(),
-            sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
-
-    int64_t num_true = 0;
-    if (all_value_bool_mask_host) {
-        num_true = bool_mask_layout.total_nr_elems();
-    } else {
-        TensorLayout unique_value_out_layout({2}, dtype::Bool());
-        AclMem unique_value_out_mem(unique_value_out_layout.span().dist_byte(), handle);
-        TensorND unique_value_out(unique_value_out_mem.ptr(), unique_value_out_layout);
-        AclTensor acl_unique_value_out(unique_value_out);
-
-        TensorLayout unique_count_out_layout({2}, dtype::Complex64());
-        AclMem unique_count_out_mem(unique_count_out_layout.span().dist_byte(), handle);
-        TensorND unique_count_out(unique_count_out_mem.ptr(), unique_count_out_layout);
-        AclTensor acl_unique_count_out(unique_count_out, ACL_FORMAT_ND, ACL_INT64);
-
-        TensorLayout unique_inverse_out_layout(
-                TensorShape(bool_mask.layout), dtype::Complex64());
-        AclMem unique_inverse_out_mem(
-                unique_inverse_out_layout.span().dist_byte(), handle);
-        TensorND unique_inverse_out(
-                unique_inverse_out_mem.ptr(), unique_inverse_out_layout);
-        AclTensor acl_unique_inverse_out(unique_inverse_out, ACL_FORMAT_ND, ACL_INT64);
-
-        uint64_t unique2_ws_size = 0;
-        aclOpExecutor* unique2_executor = nullptr;
-        aclnn_check(aclnnUnique2GetWorkspaceSize(
-                acl_bool_mask.get(), true, false, true, acl_unique_value_out.get(),
-                acl_unique_inverse_out.get(), acl_unique_count_out.get(),
-                &unique2_ws_size, &unique2_executor));
-        AclMem unique2_ws(unique2_ws_size, handle);
-        aclnn_check(aclnnUnique2(
-                unique2_ws.ptr(), unique2_ws_size, unique2_executor, handle->stream()));
-
-        acl_safe_memcpy_async_with_sync(
-                &num_true, sizeof(int64_t),
-                static_cast<void*>(
-                        static_cast<uint8_t*>(unique_count_out_mem.ptr()) +
-                        sizeof(int64_t)),
-                sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
-    }
+            &num_true, sizeof(float), reduce_sum_out.raw_ptr(), sizeof(float),
+            ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
 
     size_t out_size = static_cast<size_t>(num_true);
     auto out_data = malloc_policy.alloc_output(0, data.layout.dtype, {out_size});
@@ -269,7 +177,7 @@ CondTakeImpl::Output CondTakeImpl::exec(
     // get out idx
     // collapse bool_mask
     TensorND collapse_bool_mask(
-            acl_bool_mask_mem.ptr(), bool_mask_layout.collapse_contiguous());
+            bool_mask.raw_ptr(), bool_mask_layout.collapse_contiguous());
     AclTensor acl_collapse_bool_mask(collapse_bool_mask);
 
     // get int64 idx

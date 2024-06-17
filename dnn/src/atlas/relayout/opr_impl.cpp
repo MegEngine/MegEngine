@@ -9,47 +9,25 @@ namespace megdnn {
 namespace atlas {
 
 namespace {
-bool check_tensor_for_transpose_with_dst_contig(
-        const TensorLayout& src_layout, const TensorLayout& dst_layout,
+
+bool check_tensor_for_transpose_with_one_contig(
+        const TensorLayout& contig_layout, const TensorLayout& non_contig_layout,
         std::vector<size_t>& permute) {
-    if (!src_layout.eq_shape(dst_layout)) {
+    if (!contig_layout.eq_shape(non_contig_layout)) {
         return false;
     }
-    if (!dst_layout.is_contiguous()) {
+    if (!contig_layout.is_contiguous()) {
         return false;
     }
-    size_t ndim = src_layout.ndim;
+    size_t ndim = non_contig_layout.ndim;
 
     permute.resize(ndim);
     rep(i, ndim) { permute[i] = i; }
-    std::sort(permute.begin(), permute.end(), [&src_layout](int i, int j) {
-        return src_layout.stride[i] >= src_layout.stride[j];
+    std::sort(permute.begin(), permute.end(), [&non_contig_layout](int i, int j) {
+        return non_contig_layout.stride[i] >= non_contig_layout.stride[j];
     });
-    TensorLayout ori_src_layout = src_layout.dimshuffle(permute);
-    if (!ori_src_layout.is_contiguous()) {
-        return false;
-    }
-    return true;
-}
-
-bool check_tensor_for_transpose_with_src_contig(
-        const TensorLayout& src_layout, const TensorLayout& dst_layout,
-        std::vector<size_t>& permute) {
-    if (!src_layout.eq_shape(dst_layout)) {
-        return false;
-    }
-    if (!src_layout.is_contiguous()) {
-        return false;
-    }
-    size_t ndim = dst_layout.ndim;
-
-    permute.resize(ndim);
-    rep(i, ndim) { permute[i] = i; }
-    std::sort(permute.begin(), permute.end(), [&dst_layout](int i, int j) {
-        return dst_layout.stride[i] >= dst_layout.stride[j];
-    });
-    TensorLayout ori_dst_layout = dst_layout.dimshuffle(permute);
-    if (!ori_dst_layout.is_contiguous()) {
+    TensorLayout ori_non_contig_layout = non_contig_layout.dimshuffle(permute);
+    if (!ori_non_contig_layout.is_contiguous()) {
         return false;
     }
     return true;
@@ -66,8 +44,8 @@ bool try_transpose(
     auto&& dst_layout = dst.layout;
     // TODO: use SmallVector may be better.
     std::vector<size_t> re_permute;
-    if (check_tensor_for_transpose_with_dst_contig(
-                src_layout, dst_layout, re_permute)) {
+    if (check_tensor_for_transpose_with_one_contig(
+                dst_layout, src_layout, re_permute)) {
         std::vector<size_t> permute(re_permute.size());
         for (size_t i = 0; i < re_permute.size(); ++i) {
             permute[re_permute[i]] = i;
@@ -85,7 +63,7 @@ bool try_transpose(
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnPermute(ws.ptr(), ws_size, executor, handle->stream()));
         return true;
-    } else if (check_tensor_for_transpose_with_src_contig(
+    } else if (check_tensor_for_transpose_with_one_contig(
                        src_layout, dst_layout, re_permute)) {
         TensorND origin_dst(dst.layout.dimshuffle(re_permute), dst.get_ref_ptr());
         AclTensor acl_src(src), acl_origin_dst(origin_dst);

@@ -158,10 +158,9 @@ void exec_index(
                 AclMem acl_one_mem(size, atlas_handle),
                         acl_one_start_mem(size, atlas_handle),
                         acl_zero_start_mem(size, atlas_handle);
-                void* zero_start_mem_ptr = atlas_handle->alloc(size);
                 TensorND one_tensor(acl_one_mem.ptr(), layout),
                         one_start_tensor(acl_one_start_mem.ptr(), layout),
-                        zero_start_tensor(zero_start_mem_ptr, layout);
+                        zero_start_tensor(acl_zero_start_mem.ptr(), layout);
 
                 // fill tensor with 1
                 auto fill_opr = atlas_handle->create_operator<Fill>();
@@ -186,7 +185,6 @@ void exec_index(
                 sub_opr->param().mode = Elemwise::Param::Mode::SUB;
                 sub_opr->exec({one_start_tensor, one_tensor}, zero_start_tensor);
 
-                indices[i] = zero_start_tensor;
                 TensorLayout contians_all_dims_layout(
                         TensorShape(zero_start_tensor.layout),
                         zero_start_tensor.layout.dtype);
