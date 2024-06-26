@@ -33,7 +33,7 @@ public:
 
     aclrtStream stream() const { return megcore_context().stream; }
 
-    void* alloc(size_t size, aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_NORMAL_ONLY);
+    void* alloc(size_t size, aclrtMemMallocPolicy policy = ACL_MEM_MALLOC_HUGE_FIRST);
     void free(void* ptr);
 
     //! global matmul opr

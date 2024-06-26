@@ -1081,6 +1081,7 @@ if(MGE_WITH_ROCM)
   include(cmake/rocm.cmake)
 endif()
 
+# TODO: add ascend.cmake
 if(MGE_WITH_ATLAS)
   include_directories("$ENV{ASCEND_HOME_PATH}/include")
   link_directories("$ENV{ASCEND_HOME_PATH}/lib64")
