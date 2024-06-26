@@ -368,10 +368,16 @@ if [ $SDK_NAME == "ascend_8_0_RC1_alpha003" ];then
         ${ASCEND_LIB_DIR}/libopt_feature.so:\
         ${ASCEND_LIB_DIR}/libascend_protobuf.so.3.13.0.0:\
         ${ASCEND_LIB_DIR}/libtsdclient.so:\
-        ${ASCEND_LIB_DIR}/libprofimpl.so"
+        ${ASCEND_LIB_DIR}/libprofimpl.so:\
+        ${ASCEND_LIB_DIR}/libra.so:\
+        ${ASCEND_LIB_DIR}/libra_hdc.so:\
+        ${ASCEND_LIB_DIR}/libra_peer.so:\
+        ${ASCEND_LIB_DIR}/librs.so:\
+        ${ASCEND_LIB_DIR}/libacl_tdt_channel.so"
     DEPEND_DIR_RELATIVE_PATH_LIST="\
         ./aarch64-linux/conf:\
         ./aarch64-linux/data/platform_config:\
+        ./aarch64-linux/lib64/hccl_reduce_op_ascend910B.o:\
         ./opp/scene.info:\
         ./opp/built-in/op_proto/lib/linux:\
         ./opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux:\
