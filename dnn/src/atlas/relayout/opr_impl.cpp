@@ -43,6 +43,7 @@ bool try_transpose(
 
     auto&& src_layout = src.layout;
     auto&& dst_layout = dst.layout;
+    // TODO: use SmallVector may be better.
     std::vector<size_t> re_permute, permute;
     if (check_tensor_for_transpose(src_layout, dst_layout, re_permute)) {
         permute.resize(re_permute.size());

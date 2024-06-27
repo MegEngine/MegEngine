@@ -123,6 +123,7 @@ void ConvBiasForwardImpl::AlgoDefault::exec(const ExecArgs& args) const {
     }
 
     TensorND filter = *(args.filter_tensor);
+    // TODO: extract the func.
     if (is_group_conv) {
         TensorLayout filter_layout(*(args.filter_layout));
         filter_layout.ndim = 4;

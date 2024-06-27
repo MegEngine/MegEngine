@@ -13,9 +13,9 @@ void FillImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
     uint64_t ws_size = 0;
     aclOpExecutor* executor = nullptr;
 
+    AclScalar acl_val(param().value, dtype::Float32());
     aclnn_check(aclnnInplaceFillScalarGetWorkspaceSize(
-            acl_out.get(), AclScalar(param().value, dtype::Float32()).get(), &ws_size,
-            &executor));
+            acl_out.get(), acl_val.get(), &ws_size, &executor));
     AclMem ws(ws_size, handle);
     aclnn_check(aclnnInplaceFillScalar(ws.ptr(), ws_size, executor, handle->stream()));
     // TODO: fix occasional error of atlas fill
