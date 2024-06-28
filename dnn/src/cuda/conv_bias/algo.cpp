@@ -380,8 +380,9 @@ void ConvBiasForwardImpl::AlgoPack::fill_ptx_algos() {
             AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{128, 256, 256});
     algo_ptx_conv2d_u4_s4.emplace_back(
             AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{128, 128, 128});
-    algo_ptx_conv2d_u4_s4.emplace_back(
-            AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{256, 64, 128});
+    // FIXME: destroy event error on NVIDIA A2 after execute the algo
+    //     algo_ptx_conv2d_u4_s4.emplace_back(
+    //             AlgoPTXUInt4Int4NCHW64IMMAImplicitGemm{256, 64, 128});
 }
 
 ConvBiasForwardImpl::AlgoBase* ConvBiasForwardImpl::AlgoPack::cudnn_conv_from_enum(
