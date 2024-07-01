@@ -373,7 +373,9 @@ if [ $SDK_NAME == "ascend_8_0_RC1_alpha003" ];then
         ${ASCEND_LIB_DIR}/libra_hdc.so:\
         ${ASCEND_LIB_DIR}/libra_peer.so:\
         ${ASCEND_LIB_DIR}/librs.so:\
-        ${ASCEND_LIB_DIR}/libacl_tdt_channel.so"
+        ${ASCEND_LIB_DIR}/libacl_tdt_channel.so:\
+        ${ASCEND_LIB_DIR}/libacl_tdt_queue.so:\
+        ${ASCEND_LIB_DIR}/libdatatransfer.so"
     DEPEND_DIR_RELATIVE_PATH_LIST="\
         ./aarch64-linux/conf:\
         ./aarch64-linux/data/platform_config:\

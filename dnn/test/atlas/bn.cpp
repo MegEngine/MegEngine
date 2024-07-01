@@ -22,6 +22,7 @@ TEST_F(ATLAS, BN_FORWARD_BACKWARD) {
             continue;
         }
 
+        arg.param.epsilon = 1e-3;
         size_t reserve = 0;
         // Forward
         for (int i = 0; i < 9; ++i) {
@@ -31,26 +32,28 @@ TEST_F(ATLAS, BN_FORWARD_BACKWARD) {
         checker_fwd.set_dtype(7, dtype::Byte());
         checker_fwd.set_dtype(8, arg.dtype);
         checker_fwd.set_bypass(7);
-        checker_fwd.set_epsilon(1e-3).set_param(arg.param);
+        checker_fwd.set_epsilon(1e-3);
+        UniformFloatRNG rng(1, 100);
+        checker_fwd.set_rng(4, &rng);
         using FMode = param::BN::FwdMode;
-        for (auto mode : {FMode::TRAINING}) {
+        for (auto mode : {FMode::TRAINING, FMode::INFERENCE}) {
             arg.param.fwd_mode = mode;
+            checker_fwd.set_param(arg.param);
             checker_fwd.exec({
                     arg.src,
                     arg.param_shape,  // bn_scale
                     arg.param_shape,  // bn_bias
-                    mode == FMode::TRAINING ? arg.param_shape
-                                            : TensorShape({0}),  // mean
-                    mode == FMode::TRAINING ? arg.param_shape
-                                            : TensorShape({0}),  // variance
-                    arg.param_shape,                             // batch_mean
-                    arg.param_shape,                             // batch_inv_variance
-                    {reserve},                                   // reserve
-                    arg.src                                      // dst
+                    arg.param_shape,  // mean
+                    arg.param_shape,  // variance
+                    arg.param_shape,  // batch_mean
+                    arg.param_shape,  // batch_inv_variance
+                    {reserve},        // reserve
+                    arg.src           // dst
             });
         }
 
         // Backward
+        arg.param.fwd_mode = FMode::TRAINING;
         for (int i = 0; i < 9; ++i) {
             checker_bwd.set_dtype(i, dtype::Float32());
         }

@@ -1,7 +1,9 @@
 #include <memory>
 
+#include "aclnnop/aclnn_add.h"
 #include "aclnnop/aclnn_batch_norm.h"
 #include "aclnnop/aclnn_batch_norm_backward.h"
+#include "aclnnop/aclnn_batch_norm_elemt.h"
 #include "aclnnop/aclnn_mul.h"
 #include "aclnnop/aclnn_pow.h"
 #include "aclnnop/aclnn_rsqrt.h"
@@ -14,17 +16,68 @@ using namespace megdnn;
 using namespace atlas;
 using Mode = param::Elemwise::Mode;
 
+void BNForwardImpl::exec_infer(
+        _megdnn_tensor_in src, _megdnn_tensor_in bn_scale, _megdnn_tensor_in bn_bias,
+        _megdnn_tensor_in mean, _megdnn_tensor_in variance, _megdnn_tensor_out dst) {
+    megdnn_assert(
+            m_param.param_dim == param::BN::ParamDim::DIM_1C11,
+            "atlas batchnorm only support (1,C,1,1)");
+
+    auto handle = concrete_handle(this->handle());
+    AclTensor acl_input(src, ACL_FORMAT_NCHW);
+    AclTensor acl_output(dst, ACL_FORMAT_NCHW);
+
+    TensorLayout flattened_weight_lyt = bn_scale.layout.collapse_contiguous();
+    AclTensor acl_weight(bn_scale.raw_ptr(), flattened_weight_lyt);
+    AclTensor acl_bias(bn_bias.raw_ptr(), flattened_weight_lyt);
+    AclTensor acl_mean(mean.raw_ptr(), flattened_weight_lyt);
+    AclTensor acl_var(variance.raw_ptr(), flattened_weight_lyt);
+
+    AclMem invstd_mem(flattened_weight_lyt.span().dist_byte(), handle);
+    TensorND invstd(invstd_mem.ptr(), flattened_weight_lyt);
+    AclTensor acl_invstd(invstd);
+
+    double eps = m_param.epsilon, alpha = 1.0;
+    AclScalar acl_eps(eps), acl_aplha(alpha);
+    uint64_t adds_ws_size = 0;
+    aclOpExecutor* adds_executor = nullptr;
+    aclnn_check(aclnnAddsGetWorkspaceSize(
+            acl_var.get(), acl_eps.get(), acl_aplha.get(), acl_invstd.get(),
+            &adds_ws_size, &adds_executor));
+    AclMem adds_ws(adds_ws_size, handle);
+    aclnn_check(
+            aclnnAdds(adds_ws.ptr(), adds_ws_size, adds_executor, handle->stream()));
+
+    uint64_t rsqrt_ws_size = 0;
+    aclOpExecutor* rsqrt_executor = nullptr;
+    aclnn_check(aclnnInplaceRsqrtGetWorkspaceSize(
+            acl_invstd.get(), &rsqrt_ws_size, &rsqrt_executor));
+    AclMem rsqrt_ws(rsqrt_ws_size, handle);
+    aclnn_check(aclnnInplaceRsqrt(
+            rsqrt_ws.ptr(), rsqrt_ws_size, rsqrt_executor, handle->stream()));
+
+    uint64_t bn_ws_size = 0;
+    aclOpExecutor* bn_executor = nullptr;
+    aclnn_check(aclnnBatchNormElemtGetWorkspaceSize(
+            acl_input.get(), acl_weight.get(), acl_bias.get(), acl_mean.get(),
+            acl_invstd.get(), eps, acl_output.get(), &bn_ws_size, &bn_executor));
+    AclMem bn_ws(bn_ws_size, handle);
+    aclnn_check(aclnnBatchNormElemt(
+            bn_ws.ptr(), bn_ws_size, bn_executor, handle->stream()));
+}
+
 void BNForwardImpl::exec(
         _megdnn_tensor_in src, _megdnn_tensor_in bn_scale, _megdnn_tensor_in bn_bias,
         _megdnn_tensor_out mean, _megdnn_tensor_out variance,
         _megdnn_tensor_out batch_mean, _megdnn_tensor_out batch_inv_variance,
         _megdnn_tensor_out, _megdnn_tensor_out dst, _megdnn_workspace) {
-    using FMode = param::BN::FwdMode;
-    auto mode = m_param.fwd_mode;
+    if (m_param.fwd_mode == Param::FwdMode::INFERENCE) {
+        exec_infer(src, bn_scale, bn_bias, mean, variance, dst);
+        return;
+    }
     megdnn_assert(
             m_param.param_dim == param::BN::ParamDim::DIM_1C11,
             "atlas batchnorm only support (1,C,1,1)");
-    megdnn_assert(mode == FMode::TRAINING, "only support training now");
 
     auto handle = concrete_handle(this->handle());
     AclTensor acl_input(src, ACL_FORMAT_NCHW);
@@ -38,7 +91,7 @@ void BNForwardImpl::exec(
     AclTensor acl_save_mean(batch_mean.raw_ptr(), flattened_weight_lyt);
     AclTensor acl_save_invvar(batch_inv_variance.raw_ptr(), flattened_weight_lyt);
 
-    bool training = (m_param.fwd_mode == param::BN::FwdMode::TRAINING);
+    bool training = true;
     double eps = m_param.epsilon;
     double momentum = m_param.avg_factor;
 

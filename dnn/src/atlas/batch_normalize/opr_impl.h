@@ -8,6 +8,10 @@ namespace atlas {
 class BNForwardImpl final : public BNForward {
 public:
     using BNForward::BNForward;
+    void exec_infer(
+            _megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
+            _megdnn_tensor_in bn_bias, _megdnn_tensor_in mean,
+            _megdnn_tensor_in variance, _megdnn_tensor_out dst);
     void exec(
             _megdnn_tensor_in src, _megdnn_tensor_in bn_scale,
             _megdnn_tensor_in bn_bias, _megdnn_tensor_out mean,
