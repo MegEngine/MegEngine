@@ -54,11 +54,9 @@ protected:
 
 class MatrixMulForwardImpl::AlgoACL final : public AlgoBase {
     std::string m_algo_name;
-    AlgoAttribute m_algo_attribute;
 
 public:
-    AlgoACL(const std::string& name, const AlgoAttribute& attr)
-            : m_algo_name(name), m_algo_attribute(attr) {}
+    AlgoACL(const std::string& name) : m_algo_name(name) {}
     bool is_available(const SizeArgs& args) const override;
     size_t get_workspace_in_bytes(const SizeArgs& /* args */) const override;
     const char* name() const override;
@@ -76,7 +74,7 @@ private:
 
 public:
     AlgoPack();
-    AlgoACL algo_acl{"AclMatrixMulForward", AlgoAttribute::REPRODUCIBLE};
+    AlgoACL algo_acl{"AclMatrixMulForward"};
     std::vector<AlgoBase*> all_algos;
 
     const AlgoBase::Mapper& all_algos_map() const { return m_all_algos_map; }

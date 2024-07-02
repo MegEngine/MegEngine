@@ -19,14 +19,9 @@ void IndexingOneHotForwardImpl::exec(
     aclOpExecutor* executor = nullptr;
 
     int dim = this->param().axis;
-
-    TensorLayout dst_layout = index.layout;
-    dst_layout.add_axis_inplace(dim, 1, dst_layout.stride[dim]);
-    TensorND new_index{workspace.raw_ptr, dst_layout};
-    auto relayout_opr = handle->create_operator<RelayoutForward>();
-    relayout_opr->exec(index, new_index);
-
-    AclTensor acl_index(new_index);
+    TensorLayout index_layout = index.layout;
+    index_layout.add_axis_inplace(dim, 1, index_layout.stride[dim]);
+    AclTensor acl_index(index.raw_ptr(), index_layout);
     aclnn_check(aclnnGatherGetWorkspaceSize(
             acl_src.get(), dim, acl_index.get(), acl_dst.get(), &ws_size, &executor));
     AclMem ws(ws_size, handle);
@@ -43,14 +38,9 @@ void IndexingSetOneHotForwardImpl::exec(
     aclOpExecutor* executor = nullptr;
 
     int dim = this->param().axis;
-    TensorLayout dst_layout = index.layout;
-    dst_layout.add_axis_inplace(dim, 1, dst_layout.stride[dim]);
-    TensorND new_index{workspace.raw_ptr, dst_layout};
-    auto relayout_opr = handle->create_operator<RelayoutForward>();
-    relayout_opr->exec(index, new_index);
-
-    AclTensor acl_index(new_index);
-
+    TensorLayout index_layout = index.layout;
+    index_layout.add_axis_inplace(dim, 1, index_layout.stride[dim]);
+    AclTensor acl_index(index.raw_ptr(), index_layout);
     aclnn_check(aclnnInplaceScatterGetWorkspaceSize(
             acl_src.get(), dim, acl_index.get(), acl_sub.get(), 0, &ws_size,
             &executor));

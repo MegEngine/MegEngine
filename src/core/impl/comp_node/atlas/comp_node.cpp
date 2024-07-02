@@ -283,8 +283,7 @@ struct AtlasCompNodeImpl::StaticData {
             : host_alloc(mem_alloc::SimpleCachingAlloc::make(
                       std::make_unique<mem_alloc::AtlasHostAllocator>())) {
         prealloc_config.max_overhead = 0;
-        // TODO: fix the alignment
-        prealloc_config.alignment = 64;
+        prealloc_config.alignment = 1;
         host_alloc->alignment(1);
     }
 

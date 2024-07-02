@@ -9,8 +9,6 @@
     do {                                                     \
         aclError _ret = (_x);                                \
         if (_ret != ACL_ERROR_NONE) {                        \
-            const char* msg = aclGetRecentErrMsg();          \
-            printf("%s\n", msg);                             \
             ::megdnn::atlas::__throw_acl_error__(_ret, #_x); \
         }                                                    \
     } while (0)
@@ -19,8 +17,6 @@
     do {                                                     \
         aclnnStatus _ret = (_x);                             \
         if (_ret != OK) {                                    \
-            const char* msg = aclGetRecentErrMsg();          \
-            printf("%s\n", msg);                             \
             ::megdnn::atlas::__throw_acl_error__(_ret, #_x); \
         }                                                    \
     } while (0)

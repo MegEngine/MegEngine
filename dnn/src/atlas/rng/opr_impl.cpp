@@ -29,11 +29,9 @@ void UniformRNGImpl::exec(_megdnn_tensor_inout dst, _megdnn_workspace) {
     aclOpExecutor* executor = nullptr;
 
     float from = 0.0, to = 1.0;
-
     int offset = 0;
 
     aclnn_check(aclnnInplaceUniformGetWorkspaceSize(
-
             acl_dst.get(), from, to, seed, offset, &ws_size, &executor));
     auto handle = concrete_handle(this->handle());
     AclMem ws(ws_size, handle);
