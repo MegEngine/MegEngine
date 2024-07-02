@@ -73,62 +73,20 @@ void clip(const TensorNDArray& src, TensorND dst, HandleImpl* handle) {
 void abs_grad(const TensorNDArray& src, TensorND dst, HandleImpl* handle) {
     uint64_t ws_size = 0;
     aclOpExecutor* executor = nullptr;
-
     SmallVector<AclTensor> acl_inps;
     for (size_t i = 0; i < src.size(); ++i) {
         acl_inps.emplace_back(src[i]);
     }
     AclTensor acl_out(dst);
+    aclnn_check(aclnnSignGetWorkspaceSize(
+            acl_inps[0].get(), acl_out.get(), &ws_size, &executor));
+    AclMem ws1(ws_size, handle);
+    aclnn_check(aclnnSign(ws1.ptr(), ws_size, executor, handle->stream()));
 
-    DType mask_type = ::megdnn::dtype::Bool();
-    TensorLayout mask_layout(src[0].layout, mask_type);
-    AclMem mask_mem(mask_layout.access_bytes(), handle);
-    AclTensor mask_tensor(mask_mem.ptr(), mask_layout);
-
-    // x > 0  true
-    AclScalar zero(0);
-    aclnn_check(aclnnGtScalarGetWorkspaceSize(
-            acl_inps[0].get(), zero.get(), mask_tensor.get(), &ws_size, &executor));
-    AclMem ws(ws_size, handle);
-    aclnn_check(aclnnGtScalar(ws.ptr(), ws_size, executor, handle->stream()));
-
-    DType mul_type = ::megdnn::dtype::Int32();
-    TensorLayout mul_layout(src[0].layout, mul_type);
-    AclMem mul_mem(mul_layout.access_bytes(), handle);
-    AclTensor mul_tensor(mul_mem.ptr(), mul_layout);
-
-    //  x > 0  mul = 1
-    AclScalar one(1);
-    aclnn_check(aclnnInplaceMaskedFillScalarGetWorkspaceSize(
-            mul_tensor.get(), mask_tensor.get(), one.get(), &ws_size, &executor));
+    aclnn_check(aclnnInplaceMulGetWorkspaceSize(
+            acl_out.get(), acl_inps[1].get(), &ws_size, &executor));
     AclMem ws2(ws_size, handle);
-    aclnn_check(aclnnInplaceMaskedFillScalar(
-            ws2.ptr(), ws_size, executor, handle->stream()));
-
-    // not (x > 0)
-    DType not_mask_type = ::megdnn::dtype::Bool();
-    TensorLayout not_mask_layout(src[0].layout, not_mask_type);
-    AclMem not_mask_mem(not_mask_layout.access_bytes(), handle);
-    AclTensor not_mask_tensor(not_mask_mem.ptr(), not_mask_layout);
-
-    aclnn_check(aclnnBitwiseNotGetWorkspaceSize(
-            mask_tensor.get(), not_mask_tensor.get(), &ws_size, &executor));
-    AclMem ws3(ws_size, handle);
-    aclnn_check(aclnnBitwiseNot(ws3.ptr(), ws_size, executor, handle->stream()));
-
-    // not (x > 0) mul = -1
-    AclScalar negative_one(-1);
-    aclnn_check(aclnnInplaceMaskedFillScalarGetWorkspaceSize(
-            mul_tensor.get(), not_mask_tensor.get(), negative_one.get(), &ws_size,
-            &executor));
-    AclMem ws4(ws_size, handle);
-    aclnn_check(aclnnInplaceMaskedFillScalar(
-            ws4.ptr(), ws_size, executor, handle->stream()));
-
-    aclnn_check(aclnnMulGetWorkspaceSize(
-            acl_inps[1].get(), mul_tensor.get(), acl_out.get(), &ws_size, &executor));
-    AclMem ws5(ws_size, handle);
-    aclnn_check(aclnnMul(ws5.ptr(), ws_size, executor, handle->stream()));
+    aclnn_check(aclnnInplaceMul(ws2.ptr(), ws_size, executor, handle->stream()));
 }
 
 void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst) {
@@ -255,13 +213,11 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
         aclnn_check(aclnnMinimumGetWorkspaceSize(
                 acl_inps[0].get(), acl_inps[1].get(), acl_out.get(), &ws_size,
                 &executor));
-
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnMinimum(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::NOT) {
         aclnn_check(aclnnBitwiseNotGetWorkspaceSize(
                 acl_inps[0].get(), acl_out.get(), &ws_size, &executor));
-
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnBitwiseNot(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::POW) {
@@ -311,51 +267,39 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
                 &executor));
         AclMem ws_4(ws_size, handle);
         aclnn_check(aclnnMul(ws_4.ptr(), ws_size, executor, handle->stream()));
-
     } else if (m_param.mode == Mode::SOFTPLUS_GRAD) {
-        AclMem scalar_mem(src[0].layout.access_bytes(), handle);
-        AclTensor scalar_tensor(scalar_mem.ptr(), src[0].layout);
-        AclScalar scalar_value(1.0);
-
-        aclnn_check(aclnnInplaceFillScalarGetWorkspaceSize(
-                scalar_tensor.get(), scalar_value.get(), &ws_size, &executor));
-        AclMem ws1(ws_size, handle);
-        aclnn_check(
-                aclnnInplaceFillScalar(ws1.ptr(), ws_size, executor, handle->stream()));
-        //  scalar_tensor = 1
-
+        // e_x = e^x
         AclMem e_x_mem(src[0].layout.access_bytes(), handle);
         AclTensor e_x_tensor(e_x_mem.ptr(), src[0].layout);
-
         aclnn_check(aclnnExpGetWorkspaceSize(
                 acl_inps[0].get(), e_x_tensor.get(), &ws_size, &executor));
-        AclMem ws2(ws_size, handle);
-        aclnn_check(aclnnExp(ws2.ptr(), ws_size, executor, handle->stream()));
-        // e_x = e^x
+        AclMem ws1(ws_size, handle);
+        aclnn_check(aclnnExp(ws1.ptr(), ws_size, executor, handle->stream()));
 
+        // 1 + e^x
         AclMem den_mem(src[0].layout.access_bytes(), handle);
         AclTensor den_tensor(den_mem.ptr(), src[0].layout);
-
-        aclnn_check(aclnnAddGetWorkspaceSize(
-                scalar_tensor.get(), e_x_tensor.get(), scalar_value.get(),
-                den_tensor.get(), &ws_size, &executor));
-        AclMem ws3(ws_size, handle);
-        aclnn_check(aclnnAdd(ws2.ptr(), ws_size, executor, handle->stream()));
+        AclScalar acl_one(1, src[0].layout.dtype);
+        AclScalar acl_alpha(1, src[0].layout.dtype);
+        aclnn_check(aclnnAddsGetWorkspaceSize(
+                e_x_tensor.get(), acl_one.get(), acl_alpha.get(), den_tensor.get(),
+                &ws_size, &executor));
+        AclMem ws2(ws_size, handle);
+        aclnn_check(aclnnAdds(ws2.ptr(), ws_size, executor, handle->stream()));
 
         AclMem molecule_mem(src[0].layout.access_bytes(), handle);
         AclTensor molecule_tensor(e_x_mem.ptr(), src[0].layout);
-
         aclnn_check(aclnnMulGetWorkspaceSize(
                 acl_inps[1].get(), e_x_tensor.get(), molecule_tensor.get(), &ws_size,
                 &executor));
-        AclMem ws4(ws_size, handle);
-        aclnn_check(aclnnMul(ws4.ptr(), ws_size, executor, handle->stream()));
+        AclMem ws3(ws_size, handle);
+        aclnn_check(aclnnMul(ws3.ptr(), ws_size, executor, handle->stream()));
 
         aclnn_check(aclnnDivGetWorkspaceSize(
                 molecule_tensor.get(), den_tensor.get(), acl_out.get(), &ws_size,
                 &executor));
-        AclMem ws5(ws_size, handle);
-        aclnn_check(aclnnDiv(ws5.ptr(), ws_size, executor, handle->stream()));
+        AclMem ws4(ws_size, handle);
+        aclnn_check(aclnnDiv(ws4.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::CLIP) {
 #define cb(DType)                                    \
     if (dst.layout.dtype == DType()) {               \
@@ -363,9 +307,7 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
         clip<T>(src, dst, handle);                   \
         return;                                      \
     }
-
         cb(::megdnn::dtype::Float32) cb(::megdnn::dtype::Float16)
-
     } else if (m_param.mode == Mode::ABS) {
         aclnn_check(aclnnAbsGetWorkspaceSize(
                 acl_inps[0].get(), acl_out.get(), &ws_size, &executor));

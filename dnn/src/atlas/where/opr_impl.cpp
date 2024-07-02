@@ -8,10 +8,6 @@
 using namespace megdnn;
 using namespace atlas;
 
-#include <iostream>
-#include <string>
-#include <string_view>
-
 void WhereForwardImpl::exec(
         _megdnn_tensor_in mask, _megdnn_tensor_in data1, _megdnn_tensor_in data2,
         _megdnn_tensor_out dst, _megdnn_workspace workspace) {
@@ -40,7 +36,6 @@ void WhereBackwardImpl::exec(
 
     uint64_t ws_size = 0;
     aclOpExecutor* executor = nullptr;
-
     auto handle = concrete_handle(this->handle());
 
     TensorLayout zero_layout(diff.layout, dtype::Int32());

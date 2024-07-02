@@ -21,7 +21,6 @@ void LinspaceImpl::exec(_megdnn_tensor_out dst, _megdnn_workspace workspace) {
     AclScalar acl_start(start), acl_stop(stop);
     aclnnLinspaceGetWorkspaceSize(
             acl_start.get(), acl_stop.get(), n, acl_out.get(), &ws_size, &executor);
-
     AclMem ws(ws_size, handle);
     aclnn_check(aclnnLinspace(ws.ptr(), ws_size, executor, handle->stream()));
 }

@@ -1,6 +1,4 @@
 #include "./opr_impl.h"
-#include <iostream>
-#include <sstream>
 #include "aclnnop/aclnn_copy.h"
 #include "aclnnop/aclnn_masked_fill_scalar.h"
 #include "src/atlas/handle.h"
@@ -21,12 +19,9 @@ void MaskedFillImpl::exec(
     }
 
     TensorND formated_index(index.raw_ptr(), formated_layout);
-
     AclTensor acl_origin(origin), acl_index(formated_index), acl_dest(dest);
     uint64_t ws_size;
-
     aclOpExecutor* executor = nullptr;
-
     aclnn_check(aclnnInplaceCopyGetWorkspaceSize(
             acl_dest.get(), acl_origin.get(), &ws_size, &executor));
     AclMem ws(ws_size, handle);
