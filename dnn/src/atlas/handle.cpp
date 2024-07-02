@@ -23,6 +23,7 @@
 #include "src/atlas/relayout/opr_impl.h"
 #include "src/atlas/resize/opr_impl.h"
 #include "src/atlas/rng/opr_impl.h"
+#include "src/atlas/softmax/opr_impl.h"
 #include "src/atlas/topk/opr_impl.h"
 #include "src/atlas/type_cvt/opr_impl.h"
 #include "src/atlas/utils.h"
@@ -138,6 +139,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingSetMultiAxisVec);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingIncrMultiAxisVec);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgmaxForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ResizeBackward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxForward);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
