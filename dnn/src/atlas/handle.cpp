@@ -2,6 +2,7 @@
 #include "megcore_atlas.h"
 #include "src/atlas/adaptive_pooling/opr_impl.h"
 #include "src/atlas/argmxx/opr_impl.h"
+#include "src/atlas/argsort/opr_impl.h"
 #include "src/atlas/batch_normalize/opr_impl.h"
 #include "src/atlas/checksum/opr_impl.h"
 #include "src/atlas/cond_take/opr_impl.h"
@@ -140,6 +141,7 @@ MEGDNN_SPECIALIZE_CREATE_OPERATOR(IndexingIncrMultiAxisVec);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgmaxForward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(ResizeBackward);
 MEGDNN_SPECIALIZE_CREATE_OPERATOR(SoftmaxForward);
+MEGDNN_SPECIALIZE_CREATE_OPERATOR(ArgsortForward);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
