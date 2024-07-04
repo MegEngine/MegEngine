@@ -273,6 +273,14 @@ def nms(
         >>> F.vision.nms(inp, scores, iou_thresh=0.7)
         Tensor([75 69], dtype=int32, device=xpux:0)
     """
+    # hack for atlas
+    is_atlas = False
+    device_type = str(boxes.device)
+    if "atlas" in device_type:
+        is_atlas = True
+        boxes = boxes.to("cpux")
+        scores = scores.to("cpux")
+
     assert (
         boxes.ndim == 2 and boxes.shape[1] == 4
     ), "the expected shape of boxes is (N, 4)"
@@ -294,6 +302,8 @@ def nms(
     indices, count = apply(op, *inp)
     indices = indices[0][: count[0]]
     keep_inds = sorted_idx[indices]
+    if is_atlas:
+        keep_inds = keep_inds.to(device_type)
     return keep_inds
 
 
