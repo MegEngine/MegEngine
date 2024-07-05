@@ -18,9 +18,10 @@ void PowCImpl::do_exec(
         exp_num += *exp_f;
     if (exp_i)
         exp_num += *exp_i;
+    AclScalar acl_scalar_exp_num(exp_num, dst.layout.dtype);
     aclnn_check(aclnnPowTensorScalarGetWorkspaceSize(
-            acl_src.get(), AclScalar(exp_num, dst.layout.dtype).get(), acl_dst.get(),
-            &ws_size, &executor));
+            acl_src.get(), acl_scalar_exp_num.get(), acl_dst.get(), &ws_size,
+            &executor));
     AclMem ws(ws_size, handle);
     aclnn_check(aclnnPowScalarTensor(ws.ptr(), ws_size, executor, handle->stream()));
 }

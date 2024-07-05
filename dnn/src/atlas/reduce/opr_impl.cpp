@@ -70,8 +70,9 @@ void ReduceForwardImpl::exec(
         }
         case Param::Mode::SUM_SQR: {
             AclTempTensor(handle, tmp, src.layout);
+            AclScalar acl_scalar_two(2);
             aclnn_call(
-                    handle, aclnnPowTensorScalar, inp.get(), AclScalar(2).get(),
+                    handle, aclnnPowTensorScalar, inp.get(), acl_scalar_two.get(),
                     tmp.get());
             aclnn_call(
                     handle, aclnnReduceSum, tmp.get(), axes.get(), keepdims, data_type,

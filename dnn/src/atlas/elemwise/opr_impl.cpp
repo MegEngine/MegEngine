@@ -101,10 +101,10 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
     aclOpExecutor* executor = nullptr;
 
     if (m_param.mode == Mode::ADD) {
+        AclScalar acl_scalar_one(1.0, dst.layout.dtype);
         aclnn_check(aclnnAddGetWorkspaceSize(
-                acl_inps[0].get(), acl_inps[1].get(),
-                AclScalar(1.0, dst.layout.dtype).get(), acl_out.get(), &ws_size,
-                &executor));
+                acl_inps[0].get(), acl_inps[1].get(), acl_scalar_one.get(),
+                acl_out.get(), &ws_size, &executor));
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnAdd(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::MUL) {
@@ -119,10 +119,10 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnRelu(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::SUB) {
+        AclScalar acl_scalar_one(1.0, dst.layout.dtype);
         aclnn_check(aclnnRsubGetWorkspaceSize(
-                acl_inps[1].get(), acl_inps[0].get(),
-                AclScalar(1.0, dst.layout.dtype).get(), acl_out.get(), &ws_size,
-                &executor));
+                acl_inps[1].get(), acl_inps[0].get(), acl_scalar_one.get(),
+                acl_out.get(), &ws_size, &executor));
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnRsubs(ws.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::TRUE_DIV) {
