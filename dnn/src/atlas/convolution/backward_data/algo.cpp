@@ -77,8 +77,22 @@ size_t ConvolutionBackwardDataImpl::AlgoDefault::get_workspace_in_bytes(
 void ConvolutionBackwardDataImpl::AlgoDefault::exec(const ExecArgs& args) const {
     auto handle = concrete_handle(args.opr->handle());
     TensorND fake_input_tensor(*(args.grad_tensor));
-    AclTensor acl_diff(*(args.diff_tensor), aclFormat::ACL_FORMAT_NCHW),
-            acl_filter(*(args.filter_tensor), aclFormat::ACL_FORMAT_NCHW),
+
+    TensorLayout layout = args.filter_tensor->layout;
+    if (layout.ndim == 5) {
+        size_t* src_shape = layout.shape;
+        SmallVector<size_t> target_shape;
+        target_shape.push_back(src_shape[0] * src_shape[1]);
+        target_shape.push_back(src_shape[2]);
+        target_shape.push_back(src_shape[3]);
+        target_shape.push_back(src_shape[4]);
+        TensorShape target_tensor_shape(target_shape);
+        layout.try_reshape(layout, target_tensor_shape);
+    }
+    TensorND filter_nd(args.filter_tensor->raw_ptr(), layout);
+
+    AclTensor acl_diff((*args.diff_tensor), aclFormat::ACL_FORMAT_NCHW),
+            acl_filter(filter_nd, aclFormat::ACL_FORMAT_NCHW),
             acl_fake_input(fake_input_tensor, aclFormat::ACL_FORMAT_NCHW),
             acl_grad(*(args.grad_tensor), aclFormat::ACL_FORMAT_NCHW);
     uint64_t ws_size = 0;

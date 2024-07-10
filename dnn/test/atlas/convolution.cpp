@@ -73,6 +73,73 @@ TEST_F(ATLAS, CONVOLUTION_1X1_FORWARD) {
                 .execs({arg.src, arg.filter, {}});
     }
 }
+std::vector<convolution::TestArg> get_ncdhw_args() {
+    std::vector<convolution::TestArg> args;
+
+    param::Convolution param;
+    param.format = param::Convolution::Format::NCHW;
+    TensorShape filter_shape{64, 1, 1, 3, 3};
+    TensorShape src_shape{16, 64, 24, 40};
+    param.mode = param::Convolution::Mode::CROSS_CORRELATION;
+    param.pad_h = 1;
+    param.pad_w = 1;
+    param.stride_h = 1;
+    param.stride_w = 1;
+    param.stride_h = 1;
+    param.dilate_h = 1;
+    param.dilate_w = 1;
+    param.sparse = ::megdnn::param::Convolution::Sparse::GROUP;
+    convolution::TestArg arg(param, src_shape, filter_shape);
+    args.push_back(arg);
+
+    return args;
+}
+
+TEST_F(ATLAS, CONVOLUTION_BACKWARD_DATA_5D_FILTER) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_ncdhw_args();
+    Checker<ConvolutionBackwardData> checker(handle_atlas());
+    NormalRNG default_rng;
+    for (auto&& arg : args) {
+        auto src = TensorLayout(arg.src, dtype::Float32());
+        auto filter = TensorLayout(arg.filter, dtype::Float32());
+        TensorLayout dst(TensorShape({16, 64, 24, 40}), dtype::Float32());
+
+        float scale = 1.0f / sqrt(dst[2] * dst[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        src.dtype = dst.dtype = filter.dtype = dtype::Float32();
+        checker.set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{filter, dst, src});
+        // similar to cuda convolution_backward_filter, too large f16 array may
+        // introduce significant error
+    }
+}
+
+TEST_F(ATLAS, MY_CONVOLUTION_BACKWARD_FILTER_5D_FILTER) {
+    using namespace convolution;
+    std::vector<TestArg> args = get_ncdhw_args();
+    Checker<ConvolutionBackwardFilter> checker(handle_atlas());
+    NormalRNG default_rng;
+    for (auto&& arg : args) {
+        auto src = TensorLayout(arg.src, dtype::Float32());
+        auto filter = TensorLayout(arg.filter, dtype::Float32());
+        TensorLayout dst(TensorShape({16, 64, 24, 40}), dtype::Float32());
+
+        float scale = 1.0f / sqrt(dst[2] * dst[3]);
+        UniformFloatRNG rng(scale, 2 * scale);
+        src.dtype = dst.dtype = filter.dtype = dtype::Float32();
+        checker.set_rng(0, &default_rng)
+                .set_rng(1, &default_rng)
+                .set_epsilon(1e-3)
+                .set_param(arg.param)
+                .exec(TensorLayoutArray{src, dst, filter});
+        // similar to cuda convolution_backward_filter, too large f16 array may
+        // introduce significant error
+    }
+}
 
 TEST_F(ATLAS, CONVOLUTION_BACKWARD_DATA) {
     using namespace convolution;
@@ -114,7 +181,6 @@ TEST_F(ATLAS, CONVOLUTION_BACKWARD_DATA) {
                 .exec(TensorLayoutArray{filter, dst, src});
     }
 }
-
 TEST_F(ATLAS, CONVOLUTION_BACKWARD_FILTER) {
     using namespace convolution;
     std::vector<TestArg> args = get_args();
