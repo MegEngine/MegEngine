@@ -270,38 +270,142 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
         AclMem ws_4(ws_size, handle);
         aclnn_check(aclnnMul(ws_4.ptr(), ws_size, executor, handle->stream()));
     } else if (m_param.mode == Mode::SOFTPLUS_GRAD) {
-        // e_x = e^x
-        AclMem e_x_mem(src[0].layout.access_bytes(), handle);
-        AclTensor e_x_tensor(e_x_mem.ptr(), src[0].layout);
-        aclnn_check(aclnnExpGetWorkspaceSize(
-                acl_inps[0].get(), e_x_tensor.get(), &ws_size, &executor));
-        AclMem ws1(ws_size, handle);
-        aclnn_check(aclnnExp(ws1.ptr(), ws_size, executor, handle->stream()));
+        AclTensor acl_x(src[0]), acl_dy(src[1]), acl_out(dst);
 
-        // 1 + e^x
-        AclMem den_mem(src[0].layout.access_bytes(), handle);
-        AclTensor den_tensor(den_mem.ptr(), src[0].layout);
-        AclScalar acl_one(1, src[0].layout.dtype);
-        AclScalar acl_alpha(1, src[0].layout.dtype);
+        // exp(-abs(x))
+        TensorLayout src_layout = src[0].layout;
+        AclMem acl_exp_neg_abs_x_mem(src_layout.span().dist_byte(), handle);
+        AclTensor acl_exp_neg_abs_x(acl_exp_neg_abs_x_mem.ptr(), src_layout);
+
+        uint64_t abs_ws_size = 0;
+        aclOpExecutor* abs_executor = nullptr;
+        aclnn_check(aclnnAbsGetWorkspaceSize(
+                acl_x.get(), acl_exp_neg_abs_x.get(), &abs_ws_size, &abs_executor));
+        AclMem abs_ws(abs_ws_size, handle);
+        aclnn_check(
+                aclnnAbs(abs_ws.ptr(), abs_ws_size, abs_executor, handle->stream()));
+
+        uint64_t neg_ws_size = 0;
+        aclOpExecutor* neg_executor = nullptr;
+        aclnn_check(aclnnInplaceNegGetWorkspaceSize(
+                acl_exp_neg_abs_x.get(), &neg_ws_size, &neg_executor));
+        AclMem neg_ws(neg_ws_size, handle);
+        aclnn_check(aclnnInplaceNeg(
+                neg_ws.ptr(), neg_ws_size, neg_executor, handle->stream()));
+
+        uint64_t exp_ws_size = 0;
+        aclOpExecutor* exp_executor = nullptr;
+        aclnn_check(aclnnInplaceExpGetWorkspaceSize(
+                acl_exp_neg_abs_x.get(), &exp_ws_size, &exp_executor));
+        AclMem exp_ws(exp_ws_size, handle);
+        aclnn_check(aclnnInplaceExp(
+                exp_ws.ptr(), exp_ws_size, exp_executor, handle->stream()));
+
+        // 1 + exp(-abs(x))
+        AclMem acl_1p_prepared_x_mem(src_layout.span().dist_byte(), handle);
+        AclTensor acl_1p_prepared_x(acl_1p_prepared_x_mem.ptr(), src_layout);
+
+        AclScalar acl_other_one(1.0);
+        AclScalar acl_alpha_one(1.0);
+        uint64_t adds_ws_size = 0;
+        aclOpExecutor* adds_executor = nullptr;
         aclnn_check(aclnnAddsGetWorkspaceSize(
-                e_x_tensor.get(), acl_one.get(), acl_alpha.get(), den_tensor.get(),
-                &ws_size, &executor));
-        AclMem ws2(ws_size, handle);
-        aclnn_check(aclnnAdds(ws2.ptr(), ws_size, executor, handle->stream()));
+                acl_exp_neg_abs_x.get(), acl_other_one.get(), acl_alpha_one.get(),
+                acl_1p_prepared_x.get(), &adds_ws_size, &adds_executor));
+        AclMem adds_ws(adds_ws_size, handle);
+        aclnn_check(aclnnAdds(
+                adds_ws.ptr(), adds_ws_size, adds_executor, handle->stream()));
 
-        AclMem molecule_mem(src[0].layout.access_bytes(), handle);
-        AclTensor molecule_tensor(e_x_mem.ptr(), src[0].layout);
+        // dy * exp(-abs(x))
+        AclMem acl_logg_mem(src_layout.span().dist_byte(), handle);
+        AclTensor acl_logg(acl_logg_mem.ptr(), src_layout);
+
+        uint64_t mul_ws_size = 0;
+        aclOpExecutor* mul_executor = nullptr;
         aclnn_check(aclnnMulGetWorkspaceSize(
-                acl_inps[1].get(), e_x_tensor.get(), molecule_tensor.get(), &ws_size,
-                &executor));
-        AclMem ws3(ws_size, handle);
-        aclnn_check(aclnnMul(ws3.ptr(), ws_size, executor, handle->stream()));
+                acl_exp_neg_abs_x.get(), acl_dy.get(), acl_logg.get(), &mul_ws_size,
+                &mul_executor));
+        AclMem mul_ws(mul_ws_size, handle);
+        aclnn_check(
+                aclnnMul(mul_ws.ptr(), mul_ws_size, mul_executor, handle->stream()));
 
-        aclnn_check(aclnnDivGetWorkspaceSize(
-                molecule_tensor.get(), den_tensor.get(), acl_out.get(), &ws_size,
-                &executor));
-        AclMem ws4(ws_size, handle);
-        aclnn_check(aclnnDiv(ws4.ptr(), ws_size, executor, handle->stream()));
+        // dy * exp(-abs(x)) / (1 + exp(-abs(x)))
+        uint64_t div_ws_size = 0;
+        aclOpExecutor* div_executor = nullptr;
+        aclnn_check(aclnnInplaceDivGetWorkspaceSize(
+                acl_logg.get(), acl_1p_prepared_x.get(), &div_ws_size, &div_executor));
+        AclMem div_ws(div_ws_size, handle);
+        aclnn_check(aclnnInplaceDiv(
+                div_ws.ptr(), div_ws_size, div_executor, handle->stream()));
+
+        // -(dy * exp(-abs(x)) / (1 + exp(-abs(x))))
+        AclMem acl_neg_logg_mem(src_layout.span().dist_byte(), handle);
+        AclTensor acl_neg_logg(acl_neg_logg_mem.ptr(), src_layout);
+
+        AclScalar acl_other_neg_one(-1.0);
+        uint64_t muls_ws_size = 0;
+        aclOpExecutor* muls_executor = nullptr;
+        aclnn_check(aclnnMulsGetWorkspaceSize(
+                acl_logg.get(), acl_other_neg_one.get(), acl_neg_logg.get(),
+                &muls_ws_size, &muls_executor));
+        AclMem muls_ws(muls_ws_size, handle);
+        aclnn_check(aclnnMuls(
+                muls_ws.ptr(), muls_ws_size, muls_executor, handle->stream()));
+
+        // nlogg = x > 0 ? logg : nlogg
+        AclScalar acl_threshold(0.0);
+        uint64_t tb0_ws_size = 0;
+        aclOpExecutor* tb0_executor = nullptr;
+        aclnn_check(aclnnThresholdBackwardGetWorkspaceSize(
+                acl_neg_logg.get(), acl_x.get(), acl_threshold.get(), acl_logg.get(),
+                &tb0_ws_size, &tb0_executor));
+        AclMem tb0_ws(tb0_ws_size, handle);
+        aclnn_check(aclnnThresholdBackward(
+                tb0_ws.ptr(), tb0_ws_size, tb0_executor, handle->stream()));
+
+        // relu(x)
+        AclMem acl_relu_x_mem(src_layout.span().dist_byte(), handle);
+        AclTensor acl_relu_x(acl_relu_x_mem.ptr(), src_layout);
+
+        uint64_t relu_ws_size = 0;
+        aclOpExecutor* relu_executor = nullptr;
+        aclnn_check(aclnnReluGetWorkspaceSize(
+                acl_x.get(), acl_relu_x.get(), &relu_ws_size, &relu_executor));
+        AclMem relu_ws(relu_ws_size, handle);
+        aclnn_check(aclnnRelu(
+                relu_ws.ptr(), relu_ws_size, relu_executor, handle->stream()));
+
+        // grad1
+        AclMem acl_grad1_mem(src_layout.span().dist_byte(), handle);
+        AclTensor acl_grad1(acl_grad1_mem.ptr(), src_layout);
+
+        uint64_t fill_ws_size = 0;
+        aclOpExecutor* fill_executor = nullptr;
+        aclnn_check(aclnnInplaceFillScalarGetWorkspaceSize(
+                acl_grad1.get(), acl_threshold.get(), &fill_ws_size, &fill_executor));
+        AclMem fill_ws(fill_ws_size, handle);
+        aclnn_check(aclnnInplaceFillScalar(
+                fill_ws.ptr(), fill_ws_size, fill_executor, handle->stream()));
+
+        // grad1 = relu(x) > 0 ? dy : grad1
+        uint64_t tb1_ws_size = 0;
+        aclOpExecutor* tb1_executor = nullptr;
+        aclnn_check(aclnnThresholdBackwardGetWorkspaceSize(
+                acl_dy.get(), acl_relu_x.get(), acl_threshold.get(), acl_grad1.get(),
+                &tb1_ws_size, &tb1_executor));
+        AclMem tb1_ws(tb1_ws_size, handle);
+        aclnn_check(aclnnThresholdBackward(
+                tb1_ws.ptr(), tb1_ws_size, tb1_executor, handle->stream()));
+
+        // out = neg_logg + grad1
+        uint64_t add_ws_size = 0;
+        aclOpExecutor* add_executor = nullptr;
+        aclnn_check(aclnnAddGetWorkspaceSize(
+                acl_logg.get(), acl_grad1.get(), acl_alpha_one.get(), acl_out.get(),
+                &add_ws_size, &add_executor));
+        AclMem add_ws(add_ws_size, handle);
+        aclnn_check(
+                aclnnAdd(add_ws.ptr(), add_ws_size, add_executor, handle->stream()));
     } else if (m_param.mode == Mode::CLIP) {
 #define cb(DType)                                    \
     if (dst.layout.dtype == DType()) {               \
