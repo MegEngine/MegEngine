@@ -15,7 +15,7 @@ ASCEND_LIB_DIR="/usr/local/ascend/aarch64-linux/lib64"
 
 SDK_NAME="unknown"
 x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118 neuware113 neuware115"
-aarch64_support_version="cu102_JetsonNano cu111 cpu cu118 ascend_8_0_RC1_alpha003"
+aarch64_support_version="cu102_JetsonNano cu111 cpu cu118 cann_8_0_RC1_alpha003"
 docker_tag="env_manylinux2014:latest"
 
 if [[ -z ${IN_CI} ]]
@@ -326,7 +326,7 @@ else
     BUILD_WHL_WITH_CAMBRICON="OFF"
 fi
 
-if [ $SDK_NAME == "ascend_8_0_RC1_alpha003" ];then
+if [ $SDK_NAME == "cann_8_0_RC1_alpha003" ];then
     echo "use $SDK_NAME with ascend support"
     BUILD_GCC8="ON"
     if [ ${machine} == "x86_64" ];then
