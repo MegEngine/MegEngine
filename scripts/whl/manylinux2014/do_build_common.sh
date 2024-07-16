@@ -185,7 +185,6 @@ do
     # export common args
     export EXTRA_CMAKE_ARGS="${ORG_EXTRA_CMAKE_FLAG} -DCMAKE_BUILD_TYPE=RelWithDebInfo"
     export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_CUSTOM_OP=ON"
-    export EXTRA_CMAKE_ARGS="${EXTRA_CMAKE_ARGS} -DMGE_WITH_ATLAS=ON"
 
     if [ ${IN_UBUNTU_DOCKER_ENV} = "ON" ]; then
         echo "into Ubuntu env"
