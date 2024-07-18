@@ -726,7 +726,9 @@ if(NOT ${MGE_WITH_CUDA}
    AND NOT ${MGE_WITH_ROCM}
    AND NOT ${MGE_WITH_CAMBRICON}
    AND NOT ${MGE_WITH_ATLAS})
-  message(STATUS "Disable distributed support, as both CUDA and ROCm are disabled.")
+  message(
+    STATUS
+      "Disable distributed support, as CUDA, ROCm, CAMBRICON and ATLAS are disabled.")
   set(MGE_WITH_DISTRIBUTED OFF)
 endif()
 
