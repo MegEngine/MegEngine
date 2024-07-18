@@ -58,7 +58,7 @@ _sh = _stream_helper()
 
 def _valid_device(inp):
     if isinstance(inp, str) and re.match(
-        "^([cxg]pu|rocm|multithread|cambricon)(x|\d+)(:\d+)?$", inp
+        "^([cxg]pu|rocm|multithread|cambricon|atlas)(x|\d+)(:\d+)?$", inp
     ):
         return True
     return False
@@ -83,7 +83,7 @@ def _str2device_type(type_str: str, allow_unspec: bool = True):
         return DeviceType.UNSPEC
 
 
-_device_type_set = {"cpu", "gpu", "xpu", "rocm", "cambricon"}
+_device_type_set = {"cpu", "gpu", "xpu", "rocm", "cambricon", "atlas"}
 
 
 def get_device_count(device_type: str) -> int:
