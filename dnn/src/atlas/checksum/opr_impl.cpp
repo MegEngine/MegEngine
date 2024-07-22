@@ -24,6 +24,7 @@ ChecksumForward::Result ChecksumForwardImpl::exec(
     megcoreDeviceHandle_t dev_handle;
     megcoreComputingHandle_t comp_handle = handle()->megcore_computing_handle();
     megcoreGetDeviceHandle(comp_handle, &dev_handle);
+    // must sync before atlas memcpy
     megcoreSynchronize(comp_handle);
     megcoreMemcpy(
             comp_handle, cpu_data.data(), data.raw_ptr(), cpu_data.size(),

@@ -39,31 +39,41 @@ void BNForwardImpl::exec_infer(
 
     double eps = m_param.epsilon, alpha = 1.0;
     AclScalar acl_eps(eps), acl_aplha(alpha);
-    uint64_t adds_ws_size = 0;
-    aclOpExecutor* adds_executor = nullptr;
-    aclnn_check(aclnnAddsGetWorkspaceSize(
-            acl_var.get(), acl_eps.get(), acl_aplha.get(), acl_invstd.get(),
-            &adds_ws_size, &adds_executor));
-    AclMem adds_ws(adds_ws_size, handle);
-    aclnn_check(
-            aclnnAdds(adds_ws.ptr(), adds_ws_size, adds_executor, handle->stream()));
 
-    uint64_t rsqrt_ws_size = 0;
-    aclOpExecutor* rsqrt_executor = nullptr;
-    aclnn_check(aclnnInplaceRsqrtGetWorkspaceSize(
-            acl_invstd.get(), &rsqrt_ws_size, &rsqrt_executor));
-    AclMem rsqrt_ws(rsqrt_ws_size, handle);
-    aclnn_check(aclnnInplaceRsqrt(
-            rsqrt_ws.ptr(), rsqrt_ws_size, rsqrt_executor, handle->stream()));
+    // perform var + eps
+    {
+        uint64_t adds_ws_size = 0;
+        aclOpExecutor* adds_executor = nullptr;
+        aclnn_check(aclnnAddsGetWorkspaceSize(
+                acl_var.get(), acl_eps.get(), acl_aplha.get(), acl_invstd.get(),
+                &adds_ws_size, &adds_executor));
+        AclMem adds_ws(adds_ws_size, handle);
+        aclnn_check(aclnnAdds(
+                adds_ws.ptr(), adds_ws_size, adds_executor, handle->stream()));
+    }
 
-    uint64_t bn_ws_size = 0;
-    aclOpExecutor* bn_executor = nullptr;
-    aclnn_check(aclnnBatchNormElemtGetWorkspaceSize(
-            acl_input.get(), acl_weight.get(), acl_bias.get(), acl_mean.get(),
-            acl_invstd.get(), eps, acl_output.get(), &bn_ws_size, &bn_executor));
-    AclMem bn_ws(bn_ws_size, handle);
-    aclnn_check(aclnnBatchNormElemt(
-            bn_ws.ptr(), bn_ws_size, bn_executor, handle->stream()));
+    // get inv std
+    {
+        uint64_t rsqrt_ws_size = 0;
+        aclOpExecutor* rsqrt_executor = nullptr;
+        aclnn_check(aclnnInplaceRsqrtGetWorkspaceSize(
+                acl_invstd.get(), &rsqrt_ws_size, &rsqrt_executor));
+        AclMem rsqrt_ws(rsqrt_ws_size, handle);
+        aclnn_check(aclnnInplaceRsqrt(
+                rsqrt_ws.ptr(), rsqrt_ws_size, rsqrt_executor, handle->stream()));
+    }
+
+    // perform batch_norm
+    {
+        uint64_t bn_ws_size = 0;
+        aclOpExecutor* bn_executor = nullptr;
+        aclnn_check(aclnnBatchNormElemtGetWorkspaceSize(
+                acl_input.get(), acl_weight.get(), acl_bias.get(), acl_mean.get(),
+                acl_invstd.get(), eps, acl_output.get(), &bn_ws_size, &bn_executor));
+        AclMem bn_ws(bn_ws_size, handle);
+        aclnn_check(aclnnBatchNormElemt(
+                bn_ws.ptr(), bn_ws_size, bn_executor, handle->stream()));
+    }
 }
 
 void BNForwardImpl::exec(
