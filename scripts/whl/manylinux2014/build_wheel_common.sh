@@ -253,16 +253,6 @@ elif [ $SDK_NAME == "cu118" ];then
     fi
 
     COPY_LIB_LIST="\
-        ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
-        ${CUDA_LIB_DIR}/libcublasLt.so.11:\
-        ${CUDA_LIB_DIR}/libcublas.so.11:\
-        ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
         ${TensorRT_LIB_DIR}/libnvinfer_plugin.so.8:\
         ${TensorRT_LIB_DIR}/libnvonnxparser.so.8\
         ${TensorRT_LIB_DIR}/libnvinfer_builder_resource.so.8.5.3:\
