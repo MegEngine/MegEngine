@@ -171,10 +171,18 @@ CondTakeImpl::Output CondTakeImpl::exec(
     aclnn_check(aclnnAny(any_ws.ptr(), any_ws_size, any_executor, handle->stream()));
 
     bool any_value_bool_mask_host = false;
-    acl_check(aclrtMemcpyAsync(
-            &any_value_bool_mask_host, sizeof(bool), any_value_bool_mask.raw_ptr(),
-            sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
-    acl_check(aclrtSynchronizeStream(handle->stream()));
+    if (reinterpret_cast<uintptr_t>(&any_value_bool_mask_host) % 64 != 0 ||
+        reinterpret_cast<uintptr_t>(any_value_bool_mask.raw_ptr()) % 64 != 0) {
+        acl_check(aclrtSynchronizeStream(handle->stream()));
+        acl_check(aclrtMemcpy(
+                &any_value_bool_mask_host, sizeof(bool), any_value_bool_mask.raw_ptr(),
+                sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST));
+    } else {
+        acl_check(aclrtMemcpyAsync(
+                &any_value_bool_mask_host, sizeof(bool), any_value_bool_mask.raw_ptr(),
+                sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
+        acl_check(aclrtSynchronizeStream(handle->stream()));
+    }
 
     if (!any_value_bool_mask_host) {
         auto out_data = malloc_policy.alloc_output(0, data.layout.dtype, {0});
@@ -201,10 +209,18 @@ CondTakeImpl::Output CondTakeImpl::exec(
     aclnn_check(aclnnAll(all_ws.ptr(), all_ws_size, all_executor, handle->stream()));
 
     bool all_value_bool_mask_host = false;
-    acl_check(aclrtMemcpyAsync(
-            &all_value_bool_mask_host, sizeof(bool), all_value_bool_mask.raw_ptr(),
-            sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
-    acl_check(aclrtSynchronizeStream(handle->stream()));
+    if (reinterpret_cast<uintptr_t>(&all_value_bool_mask_host) % 64 != 0 ||
+        reinterpret_cast<uintptr_t>(all_value_bool_mask.raw_ptr()) % 64 != 0) {
+        acl_check(aclrtSynchronizeStream(handle->stream()));
+        acl_check(aclrtMemcpy(
+                &all_value_bool_mask_host, sizeof(bool), all_value_bool_mask.raw_ptr(),
+                sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST));
+    } else {
+        acl_check(aclrtMemcpyAsync(
+                &all_value_bool_mask_host, sizeof(bool), all_value_bool_mask.raw_ptr(),
+                sizeof(bool), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
+        acl_check(aclrtSynchronizeStream(handle->stream()));
+    }
 
     int64_t num_true = 0;
     if (all_value_bool_mask_host) {
@@ -238,13 +254,28 @@ CondTakeImpl::Output CondTakeImpl::exec(
         aclnn_check(aclnnUnique2(
                 unique2_ws.ptr(), unique2_ws_size, unique2_executor, handle->stream()));
 
-        acl_check(aclrtMemcpyAsync(
-                &num_true, sizeof(int64_t),
-                static_cast<void*>(
-                        static_cast<uint8_t*>(unique_count_out_mem.ptr()) +
-                        sizeof(int64_t)),
-                sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
-        acl_check(aclrtSynchronizeStream(handle->stream()));
+        if (reinterpret_cast<uintptr_t>(&num_true) % 64 != 0 ||
+            reinterpret_cast<uintptr_t>(static_cast<void*>(
+                    static_cast<uint8_t*>(unique_count_out_mem.ptr()) +
+                    sizeof(int64_t))) %
+                            64 !=
+                    0) {
+            acl_check(aclrtSynchronizeStream(handle->stream()));
+            acl_check(aclrtMemcpy(
+                    &num_true, sizeof(int64_t),
+                    static_cast<void*>(
+                            static_cast<uint8_t*>(unique_count_out_mem.ptr()) +
+                            sizeof(int64_t)),
+                    sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST));
+        } else {
+            acl_check(aclrtMemcpyAsync(
+                    &num_true, sizeof(int64_t),
+                    static_cast<void*>(
+                            static_cast<uint8_t*>(unique_count_out_mem.ptr()) +
+                            sizeof(int64_t)),
+                    sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
+            acl_check(aclrtSynchronizeStream(handle->stream()));
+        }
     }
 
     size_t out_size = static_cast<size_t>(num_true);
@@ -274,10 +305,19 @@ CondTakeImpl::Output CondTakeImpl::exec(
             handle->stream()));
 
     // copy num of ture elems to real out
-    aclrtMemcpyAsync(
-            out_data.raw_ptr(), data.layout.dtype.size(out_size), fake_out_mem.ptr(),
-            data.layout.dtype.size(out_size), ACL_MEMCPY_DEVICE_TO_DEVICE,
-            handle->stream());
+    if (reinterpret_cast<uintptr_t>(out_data.raw_ptr()) % 64 != 0 ||
+        reinterpret_cast<uintptr_t>(fake_out_mem.ptr()) % 64 != 0) {
+        acl_check(aclrtSynchronizeStream(handle->stream()));
+        acl_check(aclrtMemcpy(
+                out_data.raw_ptr(), data.layout.dtype.size(out_size),
+                fake_out_mem.ptr(), data.layout.dtype.size(out_size),
+                ACL_MEMCPY_DEVICE_TO_DEVICE));
+    } else {
+        acl_check(aclrtMemcpyAsync(
+                out_data.raw_ptr(), data.layout.dtype.size(out_size),
+                fake_out_mem.ptr(), data.layout.dtype.size(out_size),
+                ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+    }
 
     // get out idx
     // collapse bool_mask

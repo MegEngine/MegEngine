@@ -184,9 +184,16 @@ public:
         }
         activate();
 #if MGB_USE_ATLAS_ASYNC_API
-        MGB_ATLAS_CHECK(aclrtMemcpyAsync(
-                host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST,
-                m_env.atlas_env().stream));
+        if (reinterpret_cast<uintptr_t>(host_ptr) % 64 != 0 ||
+            reinterpret_cast<uintptr_t>(device_ptr) % 64 != 0) {
+            MGB_ATLAS_CHECK(aclrtSynchronizeStream(m_env.atlas_env().stream));
+            MGB_ATLAS_CHECK(aclrtMemcpy(
+                    host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST));
+        } else {
+            MGB_ATLAS_CHECK(aclrtMemcpyAsync(
+                    host_ptr, size, device_ptr, size, ACL_MEMCPY_DEVICE_TO_HOST,
+                    m_env.atlas_env().stream));
+        }
 #else
         // aclrtMemcpy is not synchronized, so we need sync mannually before copy
         MGB_ATLAS_CHECK(aclrtSynchronizeStream(m_env.atlas_env().stream));
@@ -477,9 +484,18 @@ void AtlasCompNodeImpl::peer_copy_to(
         activate();
         if (dst_env.device == src_env.device) {
             // async d2d use SDMA which is faster than sync ctrl cpu d2d
-            MGB_ATLAS_CHECK(aclrtMemcpyAsync(
-                    dest, size, src, size, ACL_MEMCPY_DEVICE_TO_DEVICE,
-                    dst_env.stream));
+            if (reinterpret_cast<uintptr_t>(dest) % 64 != 0 ||
+                reinterpret_cast<uintptr_t>(src) % 64 != 0) {
+                // FIXME: fix the sync stream.
+                MGB_ATLAS_CHECK(aclrtSynchronizeStream(src_env.stream));
+                MGB_ATLAS_CHECK(aclrtMemcpy(
+                        dest, size, src, size, ACL_MEMCPY_DEVICE_TO_DEVICE));
+            } else {
+                MGB_ATLAS_CHECK(aclrtMemcpyAsync(
+                        dest, size, src, size, ACL_MEMCPY_DEVICE_TO_DEVICE,
+                        dst_env.stream));
+            }
+
         } else {
             mgb_throw(
                     MegBrainError,
@@ -496,10 +512,17 @@ void AtlasCompNodeImpl::peer_copy_to(
 
 #if MGB_USE_ATLAS_ASYNC_API
         auto stream = m_env.atlas_env().stream;
-        MGB_ATLAS_CHECK(aclrtMemcpyAsync(
-                dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST,
-                m_env.atlas_env().stream));
-        MGB_ATLAS_CHECK(aclrtSynchronizeStream(stream));
+        if (reinterpret_cast<uintptr_t>(dest) % 64 != 0 ||
+            reinterpret_cast<uintptr_t>(src) % 64 != 0) {
+            MGB_ATLAS_CHECK(aclrtSynchronizeStream(stream));
+            MGB_ATLAS_CHECK(
+                    aclrtMemcpy(dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST));
+        } else {
+            MGB_ATLAS_CHECK(aclrtMemcpyAsync(
+                    dest, size, src, size, ACL_MEMCPY_DEVICE_TO_HOST,
+                    m_env.atlas_env().stream));
+            MGB_ATLAS_CHECK(aclrtSynchronizeStream(stream));
+        }
 #else
         // aclrtMemcpy is not synchronized, so we need sync mannually before copy
         MGB_ATLAS_CHECK(aclrtSynchronizeStream(m_env.atlas_env().stream));

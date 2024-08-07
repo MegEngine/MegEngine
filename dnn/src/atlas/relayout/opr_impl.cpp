@@ -81,22 +81,46 @@ bool try_copy_contig(
 
     auto handle = concrete_handle(opr->handle());
     size_t copy_size = dst_layout.span().dist_byte();
-    if (!cross_dev) {
-        acl_check(aclrtMemcpyAsync(
-                dst.raw_ptr(), copy_size, src.raw_ptr(), copy_size,
-                ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+    if (reinterpret_cast<uintptr_t>(dst.raw_ptr()) % 64 != 0 ||
+        reinterpret_cast<uintptr_t>(src.raw_ptr()) % 64 != 0) {
+        if (!cross_dev) {
+            // FIXME: when copy between two devices, is sync of two devices needed?
+            acl_check(aclrtSynchronizeStream(handle->stream()));
+            acl_check(aclrtMemcpy(
+                    dst.raw_ptr(), copy_size, src.raw_ptr(), copy_size,
+                    ACL_MEMCPY_DEVICE_TO_DEVICE));
+        } else {
+            int32_t canAccessPeer = 0;
+            acl_check(aclrtDeviceCanAccessPeer(&canAccessPeer, src_dev_id, dst_dev_id));
+            if (canAccessPeer == 1) {
+                acl_check(aclrtDeviceEnablePeerAccess(dst_dev_id, 0));
+                acl_check(aclrtSynchronizeStream(handle->stream()));
+                acl_check(aclrtMemcpy(
+                        dst.raw_ptr(), copy_size, src.raw_ptr(), copy_size,
+                        ACL_MEMCPY_DEVICE_TO_DEVICE));
+            } else {
+                megdnn_throw("there is no enough ascend devices for data relayout");
+            }
+        }
     } else {
-        int32_t canAccessPeer = 0;
-        acl_check(aclrtDeviceCanAccessPeer(&canAccessPeer, src_dev_id, dst_dev_id));
-        if (canAccessPeer == 1) {
-            acl_check(aclrtDeviceEnablePeerAccess(dst_dev_id, 0));
+        if (!cross_dev) {
             acl_check(aclrtMemcpyAsync(
                     dst.raw_ptr(), copy_size, src.raw_ptr(), copy_size,
                     ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
         } else {
-            megdnn_throw("there is no enough ascend devices for data relayout");
+            int32_t canAccessPeer = 0;
+            acl_check(aclrtDeviceCanAccessPeer(&canAccessPeer, src_dev_id, dst_dev_id));
+            if (canAccessPeer == 1) {
+                acl_check(aclrtDeviceEnablePeerAccess(dst_dev_id, 0));
+                acl_check(aclrtMemcpyAsync(
+                        dst.raw_ptr(), copy_size, src.raw_ptr(), copy_size,
+                        ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+            } else {
+                megdnn_throw("there is no enough ascend devices for data relayout");
+            }
         }
     }
+
     return true;
 }
 
@@ -175,10 +199,19 @@ void copy_general_interior(
                                 idst.offset() * dst.layout.dtype.size();
             dt_byte* src_addr = reinterpret_cast<dt_byte*>(src.raw_ptr()) +
                                 isrc.offset() * src.layout.dtype.size();
-            acl_check(aclrtMemcpyAsync(
-                    static_cast<void*>(dst_addr), dst.layout.dtype.size(),
-                    static_cast<void*>(src_addr), dst.layout.dtype.size(),
-                    ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+            if (reinterpret_cast<uintptr_t>(static_cast<void*>(dst_addr)) % 64 != 0 ||
+                reinterpret_cast<uintptr_t>(static_cast<void*>(src_addr)) % 64 != 0) {
+                acl_check(aclrtSynchronizeStream(handle->stream()));
+                acl_check(aclrtMemcpy(
+                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
+                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
+                        ACL_MEMCPY_DEVICE_TO_DEVICE));
+            } else {
+                acl_check(aclrtMemcpyAsync(
+                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
+                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
+                        ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+            }
             ++idst;
             ++isrc;
         }
@@ -194,10 +227,19 @@ void copy_general_interior(
                                 idst.offset() * dst.layout.dtype.size();
             dt_byte* src_addr = reinterpret_cast<dt_byte*>(src.raw_ptr()) +
                                 isrc.offset() * src.layout.dtype.size();
-            acl_check(aclrtMemcpyAsync(
-                    static_cast<void*>(dst_addr), dst.layout.dtype.size(),
-                    static_cast<void*>(src_addr), dst.layout.dtype.size(),
-                    ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+            if (reinterpret_cast<uintptr_t>(static_cast<void*>(dst_addr)) % 64 != 0 ||
+                reinterpret_cast<uintptr_t>(static_cast<void*>(src_addr)) % 64 != 0) {
+                acl_check(aclrtSynchronizeStream(handle->stream()));
+                acl_check(aclrtMemcpy(
+                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
+                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
+                        ACL_MEMCPY_DEVICE_TO_DEVICE));
+            } else {
+                acl_check(aclrtMemcpyAsync(
+                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
+                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
+                        ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
+            }
             ++idst;
             ++isrc;
         }
