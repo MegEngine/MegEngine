@@ -119,6 +119,7 @@ class StreamMemAllocImpl final : public StreamMemAlloc, public MemAllocImplHelpe
     struct AllocatedBlock {
         bool is_head;
         size_t size;
+        size_t size_ahead;  // allocated size ahead of ptr
     };
 
     DevMemAllocImpl* m_dev_alloc;
@@ -223,6 +224,7 @@ class SimpleCachingAllocImpl : public SimpleCachingAlloc, public MemAllocImplHel
     struct AllocatedBlock {
         bool is_head;
         size_t size;
+        size_t size_ahead;  // allocated size ahead of ptr
     };
 
     std::unique_ptr<RawAllocator> m_raw_alloc;

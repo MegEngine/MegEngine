@@ -294,8 +294,10 @@ struct AtlasCompNodeImpl::StaticData {
             : host_alloc(mem_alloc::SimpleCachingAlloc::make(
                       std::make_unique<mem_alloc::AtlasHostAllocator>())) {
         prealloc_config.max_overhead = 0;
-        prealloc_config.alignment = 1;
-        host_alloc->alignment(1);
+        // TODO: fix the alignment
+        prealloc_config.alignment = 64;
+        host_alloc->alignment(64);
+        host_alloc->addr_alignment(64);
     }
 
     ~StaticData() {
@@ -324,6 +326,8 @@ void AtlasCompNodeImpl::DeviceInfo::init(const CompNodeEnv& env) {
     mem_alloc->prealloc_config(sd->prealloc_config);
     auto align = env.property().mem_alignment;
     mem_alloc->alignment(align);
+    // TODO: get addr_alignment from env.
+    mem_alloc->addr_alignment(64);
     mgb_log_debug(
             "atlas: card%d: name=`%s' dyn_mem_reserve=%.2fMiB alignment=0x%zx", dev_num,
             "no name", reserve_size / 1024.0 / 1024, align);

@@ -238,16 +238,26 @@ void StreamMemAllocImpl::print_memory_state() {
 
 void* StreamMemAllocImpl::alloc(size_t size) {
     size = get_aligned_power2(size, m_dev_alloc->alignment());
+    auto addr_alignment = m_dev_alloc->addr_alignment();
+    if (addr_alignment != 1) {
+        size = size + addr_alignment;
+    }
     auto addr = do_alloc(size, true);
+    auto ptr = addr.addr_ptr();
+    size_t size_ahead = 0;
+    if (addr_alignment != 1) {
+        size_ahead = addr_alignment - reinterpret_cast<uintptr_t>(ptr) % addr_alignment;
+        ptr = (char*)ptr + size_ahead;
+    }
     MGB_LOCK_GUARD(m_mutex);
-    m_allocated_blocks[addr.addr_ptr()] = {addr.is_head, size};
-    return addr.addr_ptr();
+    m_allocated_blocks[ptr] = {addr.is_head, size, size_ahead};
+    return ptr;
 }
 
 MemAllocImplHelper::MemAddr StreamMemAllocImpl::alloc_from_parent(size_t size) {
     auto addr = m_dev_alloc->alloc(size);
     MGB_LOCK_GUARD(m_mutex);
-    m_allocated_blocks[addr.addr_ptr()] = {addr.is_head, size};
+    m_allocated_blocks[addr.addr_ptr()] = {addr.is_head, size, 0};
     return addr;
 }
 
@@ -255,6 +265,7 @@ void StreamMemAllocImpl::free(void* addr) {
     MGB_LOCK_GUARD(m_mutex);
     auto iter = m_allocated_blocks.find(addr);
     mgb_assert(iter != m_allocated_blocks.end(), "releasing bad pointer: %p", addr);
+    addr = (char*)addr - iter->second.size_ahead;
     FreeBlock fb{
             MemAddr{iter->second.is_head, reinterpret_cast<size_t>(addr)},
             iter->second.size};
@@ -523,10 +534,19 @@ SimpleCachingAllocImpl::SimpleCachingAllocImpl(std::unique_ptr<RawAllocator> raw
 
 void* SimpleCachingAllocImpl::alloc(size_t size) {
     size = get_aligned_power2(size, m_alignment);
+    if (m_addr_alignment != 1) {
+        size = size + m_addr_alignment;
+    }
     auto&& addr = do_alloc(size, true);
     auto ptr = addr.addr_ptr();
+    size_t size_ahead = 0;
+    if (m_addr_alignment != 1) {
+        size_ahead =
+                m_addr_alignment - reinterpret_cast<uintptr_t>(ptr) % m_addr_alignment;
+        ptr = (char*)ptr + size_ahead;
+    }
     MGB_LOCK_GUARD(m_mutex);
-    m_allocated_blocks[ptr] = {addr.is_head, size};
+    m_allocated_blocks[ptr] = {addr.is_head, size, size_ahead};
     m_used_size += size;
     return ptr;
 }
@@ -536,6 +556,7 @@ void SimpleCachingAllocImpl::free(void* ptr) {
     auto&& iter = m_allocated_blocks.find(ptr);
     mgb_assert(iter != m_allocated_blocks.end(), "releasing bad pointer: %p", ptr);
     auto size = iter->second.size;
+    ptr = (char*)ptr - iter->second.size_ahead;
     FreeBlock fb{MemAddr{iter->second.is_head, reinterpret_cast<size_t>(ptr)}, size};
     m_allocated_blocks.erase(iter);
     merge_free_unsafe(fb);
