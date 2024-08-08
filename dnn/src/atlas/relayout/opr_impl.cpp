@@ -199,19 +199,10 @@ void copy_general_interior(
                                 idst.offset() * dst.layout.dtype.size();
             dt_byte* src_addr = reinterpret_cast<dt_byte*>(src.raw_ptr()) +
                                 isrc.offset() * src.layout.dtype.size();
-            if (reinterpret_cast<uintptr_t>(static_cast<void*>(dst_addr)) % 64 != 0 ||
-                reinterpret_cast<uintptr_t>(static_cast<void*>(src_addr)) % 64 != 0) {
-                acl_check(aclrtSynchronizeStream(handle->stream()));
-                acl_check(aclrtMemcpy(
-                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
-                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
-                        ACL_MEMCPY_DEVICE_TO_DEVICE));
-            } else {
-                acl_check(aclrtMemcpyAsync(
-                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
-                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
-                        ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
-            }
+            acl_safe_memcpy_async(
+                    static_cast<void*>(dst_addr), dst.layout.dtype.size(),
+                    static_cast<void*>(src_addr), dst.layout.dtype.size(),
+                    ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream());
             ++idst;
             ++isrc;
         }
@@ -227,19 +218,10 @@ void copy_general_interior(
                                 idst.offset() * dst.layout.dtype.size();
             dt_byte* src_addr = reinterpret_cast<dt_byte*>(src.raw_ptr()) +
                                 isrc.offset() * src.layout.dtype.size();
-            if (reinterpret_cast<uintptr_t>(static_cast<void*>(dst_addr)) % 64 != 0 ||
-                reinterpret_cast<uintptr_t>(static_cast<void*>(src_addr)) % 64 != 0) {
-                acl_check(aclrtSynchronizeStream(handle->stream()));
-                acl_check(aclrtMemcpy(
-                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
-                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
-                        ACL_MEMCPY_DEVICE_TO_DEVICE));
-            } else {
-                acl_check(aclrtMemcpyAsync(
-                        static_cast<void*>(dst_addr), dst.layout.dtype.size(),
-                        static_cast<void*>(src_addr), dst.layout.dtype.size(),
-                        ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream()));
-            }
+            acl_safe_memcpy_async(
+                    static_cast<void*>(dst_addr), dst.layout.dtype.size(),
+                    static_cast<void*>(src_addr), dst.layout.dtype.size(),
+                    ACL_MEMCPY_DEVICE_TO_DEVICE, handle->stream());
             ++idst;
             ++isrc;
         }

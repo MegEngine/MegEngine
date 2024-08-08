@@ -27,18 +27,9 @@ void ParamPackConcatImpl::exec(
     for (size_t i = 0; i < inp_size; i++) {
         void* src = srcs_ptr[i];
         size_t data_size = (offset_vals[i * 2 + 1] - offset_vals[i * 2]) * dtype_size;
-        if (reinterpret_cast<uintptr_t>(addr + offset_vals[i * 2] * dtype_size) % 64 !=
-                    0 ||
-            reinterpret_cast<uintptr_t>(src) % 64 != 0) {
-            acl_check(aclrtSynchronizeStream(stream));
-            acl_check(aclrtMemcpy(
-                    addr + offset_vals[i * 2] * dtype_size, data_size, src, data_size,
-                    ACL_MEMCPY_DEVICE_TO_DEVICE));
-        } else {
-            acl_check(aclrtMemcpyAsync(
-                    addr + offset_vals[i * 2] * dtype_size, data_size, src, data_size,
-                    ACL_MEMCPY_DEVICE_TO_DEVICE, stream));
-        }
+        acl_safe_memcpy_async(
+                addr + offset_vals[i * 2] * dtype_size, data_size, src, data_size,
+                ACL_MEMCPY_DEVICE_TO_DEVICE, stream);
     }
 }
 

@@ -37,6 +37,30 @@
     AclMem var##_buf(var_layout.access_bytes(), handle); \
     AclTensor var(var##_buf.ptr(), var_layout)
 
+// aclrtMemcpyAsync requests the addr of src and dst is 64 bytes align.
+#define acl_safe_memcpy_async(dst, size0, src, size1, copy_type, stream)            \
+    do {                                                                            \
+        if (reinterpret_cast<uintptr_t>(dst) % 64 != 0 ||                           \
+            reinterpret_cast<uintptr_t>(src) % 64 != 0) {                           \
+            acl_check(aclrtSynchronizeStream(stream));                              \
+            acl_check(aclrtMemcpy(dst, size0, src, size1, copy_type));              \
+        } else {                                                                    \
+            acl_check(aclrtMemcpyAsync(dst, size0, src, size1, copy_type, stream)); \
+        }                                                                           \
+    } while (0)
+
+#define acl_safe_memcpy_async_with_sync(dst, size0, src, size1, copy_type, stream)  \
+    do {                                                                            \
+        if (reinterpret_cast<uintptr_t>(dst) % 64 != 0 ||                           \
+            reinterpret_cast<uintptr_t>(src) % 64 != 0) {                           \
+            acl_check(aclrtSynchronizeStream(stream));                              \
+            acl_check(aclrtMemcpy(dst, size0, src, size1, copy_type));              \
+        } else {                                                                    \
+            acl_check(aclrtMemcpyAsync(dst, size0, src, size1, copy_type, stream)); \
+            acl_check(aclrtSynchronizeStream(stream));                              \
+        }                                                                           \
+    } while (0)
+
 namespace megdnn {
 namespace atlas {
 

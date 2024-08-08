@@ -54,18 +54,9 @@ void clip(const TensorNDArray& src, TensorND dst, HandleImpl* handle) {
 
     auto get_scalar = [=](const TensorND& tensor) -> T {
         T value{};
-        if (reinterpret_cast<uintptr_t>(&value) % 64 != 0 ||
-            reinterpret_cast<uintptr_t>(tensor.raw_ptr()) % 64 != 0) {
-            acl_check(aclrtSynchronizeStream(handle->stream()));
-            acl_check(aclrtMemcpy(
-                    &value, sizeof(value), tensor.raw_ptr(), sizeof(value),
-                    ACL_MEMCPY_DEVICE_TO_HOST));
-        } else {
-            acl_check(aclrtMemcpyAsync(
-                    &value, sizeof(value), tensor.raw_ptr(), sizeof(value),
-                    ACL_MEMCPY_DEVICE_TO_HOST, handle->stream()));
-            acl_check(aclrtSynchronizeStream(handle->stream()));
-        }
+        acl_safe_memcpy_async_with_sync(
+                &value, sizeof(value), tensor.raw_ptr(), sizeof(value),
+                ACL_MEMCPY_DEVICE_TO_HOST, handle->stream());
         return value;
     };
     T min_value = get_scalar(src[1]);
