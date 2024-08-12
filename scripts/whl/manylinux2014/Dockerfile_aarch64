@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux2014_aarch64:2021-12-30-cb9fd5b
+FROM quay.io/pypa/manylinux2014_aarch64:2024-07-23-2f3a404
 
 ENV UID=1024 PATH=${PATH}:/usr/local/cuda/bin
 

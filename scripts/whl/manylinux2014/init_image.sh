@@ -12,7 +12,7 @@ yum install -y pcre-devel devtoolset-9-libatomic-devel.${ARCH}
 yum install -y devtoolset-8 devtoolset-8-libatomic-devel.${ARCH}
 # install a default python3 for cmake PYTHON3_EXECUTABLE_WITHOUT_VERSION
 yum install -y python3 python3-devel
-python3 -m pip install cython -i https://mirrors.aliyun.com/pypi/simple
+python3 -m pip install "cython<3.0" -i https://mirrors.aliyun.com/pypi/simple
 python3 -m pip install numpy -i https://mirrors.aliyun.com/pypi/simple
 
 ALL_PYTHON="36m 37m 38 39 310"
