@@ -9,6 +9,7 @@
 #include "aclnnop/aclnn_exp.h"
 #include "aclnnop/aclnn_fill_scalar.h"
 #include "aclnnop/aclnn_floor_divide.h"
+#include "aclnnop/aclnn_fmod_tensor.h"
 #include "aclnnop/aclnn_gt_scalar.h"
 #include "aclnnop/aclnn_log.h"
 #include "aclnnop/aclnn_logsigmoid.h"
@@ -442,5 +443,13 @@ void ElemwiseForwardImpl::exec(const TensorNDArray& src, _megdnn_tensor_out dst)
                 &executor));
         AclMem ws(ws_size, handle);
         aclnn_check(aclnnTanhBackward(ws.ptr(), ws_size, executor, handle->stream()));
+    } else if (m_param.mode == Mode::MOD) {
+        aclnn_check(aclnnFmodTensorGetWorkspaceSize(
+                acl_inps[0].get(), acl_inps[1].get(), acl_out.get(), &ws_size,
+                &executor));
+        AclMem ws(ws_size, handle);
+        aclnn_check(aclnnFmodTensor(ws.ptr(), ws_size, executor, handle->stream()));
+    } else {
+        megdnn_throw("unsupported elemwise mode");
     }
 }

@@ -72,7 +72,8 @@ TEST_F(ATLAS, ELEMWISE) {
     run_binary(4, 32, 10, 10, Mode::SWITCH_GT0, _dt);   \
     run_binary(4, 32, 10, 10, Mode::SIGMOID_GRAD, _dt); \
     run_binary(4, 32, 10, 10, Mode::FLOOR_DIV, _dt);    \
-    run_binary(4, 32, 10, 10, Mode::TANH_GRAD, _dt);
+    run_binary(4, 32, 10, 10, Mode::TANH_GRAD, _dt);    \
+    run_binary(4, 32, 10, 10, Mode::MOD, _dt);
 
     RUN_BINARY_UINT16(dtype::Float32());
 
