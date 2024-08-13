@@ -89,9 +89,9 @@ sdkname2requres = {'cu118': ['nvidia-cuda-runtime-cu11==11.8.89',
 
 with open('requires.txt') as f:
     requires = f.read().splitlines()
-    
-if sdk_name in sdkname2requres.keys():
-    requires = requires + sdkname2requres[sdk_name]
+if os.environ.get("BUILD_WITH_LIBRARY", "false") == "false": 
+    if sdk_name in sdkname2requres.keys():
+        requires = requires + sdkname2requres[sdk_name]
     
 with open('requires-style.txt') as f:
     requires_style = f.read().splitlines()
