@@ -265,6 +265,7 @@ elif [ $SDK_NAME == "cu118" ];then
         ${TensorRT_LIB_DIR}/libnvinfer.so.8"
     if [ ${build_with_library}  == "true" ];then
         COPY_LIB_LIST="\
+	    ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
             ${CUDA_LIB_DIR}/libcublasLt.so.11:\
             ${CUDA_LIB_DIR}/libcublas.so.11:\
             ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
