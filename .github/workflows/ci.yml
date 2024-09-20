@@ -24,7 +24,7 @@ jobs:
           yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD
 
   cpu-test:
-    runs-on: self-hosted
+    runs-on: self-mge
     needs: [check-commit]
     container:
       image: mcd.io/mcd-apps/megengine-ci:v1
