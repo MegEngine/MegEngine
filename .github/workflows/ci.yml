@@ -50,7 +50,7 @@ jobs:
       - name: C++ test
         run: ./ci/run_cpp_test.sh cpu
   gpu-test:
-    runs-on: self-hosted
+    runs-on: self-mge
     needs: [check-commit]
     container:
       image: mcd.io/mcd-apps/megengine-ci:v1
