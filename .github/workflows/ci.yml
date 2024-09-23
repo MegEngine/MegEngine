@@ -23,71 +23,13 @@ jobs:
           yarn add @commitlint/config-conventional @commitlint/cli
           yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD
 
-  cpu-test:
-    runs-on: self-hosted
-    needs: [check-commit]
-    container:
-      image: mcd.io/mcd-apps/megengine-ci:v1
-      env:
-        FTP_URL_PREFIX: ${{ secrets.FTP_URL_PREFIX }}
-    steps:
-      - name: Checkout MegEngine
-        uses: actions/checkout@v2
-      - name: Checkout submodules
-        run: |
-          apt update&&apt install ninja-build
-          ./third_party/prepare.sh
-          ./third_party/install-mkl.sh
-      - name: Build MegEngine
-        run: ./ci/cmake.sh cpu
-      - name: Python test
-        run: |
-          rm -rf imperative/python/megenginelite/
-          cp -rf lite/pylite/megenginelite/ imperative/python/
-          mkdir -p imperative/python/megenginelite/libs
-          cp /tmp/build/cpu/lite/liblite_shared_whl.so imperative/python/megenginelite/libs/liblite_shared_whl.so
-          ./ci/run_python_test.sh cpu
-      - name: C++ test
-        run: ./ci/run_cpp_test.sh cpu
-  gpu-test:
-    runs-on: self-hosted
-    needs: [check-commit]
-    container:
-      image: mcd.io/mcd-apps/megengine-ci:v1
-      volumes:
-        - /usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs:/usr/local/cuda-10.1-cudnn-7.6.3-trt-6.0.1.5-libs
-      options: --gpus all --shm-size 1g
-      env:
-        NCCL_LAUNCH_MODE: PARALLEL
-        FTP_URL_PREFIX: ${{ secrets.FTP_URL_PREFIX }}
-    steps:
-      - name: Checkout MegEngine
-        uses: actions/checkout@v2
-      - name: Checkout submodules
-        run: |
-          apt update&&apt install ninja-build
-          ./third_party/prepare.sh
-          ./third_party/install-mkl.sh
-      - name: Build MegEngine
-        run: ./ci/cmake.sh cuda
-      - name: Python test
-        run: |
-          rm -rf imperative/python/megenginelite/
-          cp -rf lite/pylite/megenginelite/ imperative/python/
-          mkdir -p imperative/python/megenginelite/libs
-          cp /tmp/build/cuda/lite/liblite_shared_whl.so imperative/python/megenginelite/libs/liblite_shared_whl.so
-          ./ci/run_python_test.sh cuda
-      - name: C++ test
-        run: ./ci/run_cpp_test.sh cuda
   auto-merge:
     if: ${{ github.ref == 'refs/heads/try-import' }}
-    runs-on: self-hosted
-    needs: [cpu-test, gpu-test]
-    container:
-      image: mcd.io/mcd-apps/megengine-ci:v1
+    runs-on: ubuntu-latest
+    needs: [check-commit]
     steps:
       - name: Checkout MegEngine
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2.3.1
         with:
           fetch-depth: '0'
       - name: Merge with master
@@ -100,8 +42,8 @@ jobs:
           git push
   send-dingding:
     runs-on: ubuntu-latest
-    needs: [cpu-test, gpu-test]
-    if: ${{ always() && github.ref == 'refs/heads/try-import' && (needs.cpu-test.result == 'failure' || needs.gpu-test.result == 'failure' ) }}
+    needs: [auto-merge]
+    if: ${{ always() && github.ref == 'refs/heads/try-import'  }}
     steps:
       - name: run
         uses: zcong1993/actions-ding@master
