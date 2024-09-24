@@ -24,7 +24,7 @@ jobs:
           yarn commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD
 
   cpu-test:
-    runs-on: self-hosted
+    runs-on: jy-apu-megengine-ci01
     needs: [check-commit]
     container:
       image: mcd.io/mcd-apps/megengine-ci:v1
@@ -50,7 +50,7 @@ jobs:
       - name: C++ test
         run: ./ci/run_cpp_test.sh cpu
   gpu-test:
-    runs-on: self-hosted
+    runs-on: jy-apu-megengine-ci01
     needs: [check-commit]
     container:
       image: mcd.io/mcd-apps/megengine-ci:v1
@@ -81,7 +81,7 @@ jobs:
         run: ./ci/run_cpp_test.sh cuda
   auto-merge:
     if: ${{ github.ref == 'refs/heads/try-import' }}
-    runs-on: self-hosted
+    runs-on: jy-apu-megengine-ci01
     needs: [cpu-test, gpu-test]
     container:
       image: mcd.io/mcd-apps/megengine-ci:v1
