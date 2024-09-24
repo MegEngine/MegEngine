@@ -83,7 +83,11 @@ function patch_elf_depend_lib_mgb_mge() {
     cp ${BUILD_DIR}/src/libmegengine_shared.so ${LIBS_DIR}
     handle_strip ${LIBS_DIR}/libmegengine_shared.so
     patchelf --remove-rpath ${LIBS_DIR}/libmegengine_shared.so
-    patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_shared.so
+    if [ ${BUILD_WITH_LIBRARY} == "false" ];then
+        patchelf --force-rpath --set-rpath '$ORIGIN/../../../nvidia/cublas/lib:$ORIGIN/../../../nvidia/cuda_nvrtc/lib:$ORIGIN/../../../nvidia/cuda_runtime/lib:$ORIGIN/../../../nvidia/cudnn/lib:$ORIGIN' ${LIBS_DIR}/libmegengine_shared.so
+    else
+        patchelf --force-rpath --set-rpath '$ORIGIN/.' ${LIBS_DIR}/libmegengine_shared.so
+    fi 
     patch_elf_depend_lib_name ${LIBS_DIR}/libmegengine_shared.so
 
     # as some version of cudnn/trt libs have dlopen libs, so we can not use auditwheel

@@ -16,7 +16,7 @@ SDK_NAME="unknown"
 x86_64_support_version="cu101 cu111 cu112 cpu cu111_cudnn821_tensorRT825 cu114 cu118 neuware113 neuware115"
 aarch64_support_version="cu102_JetsonNano cu111 cpu cu118"
 docker_tag="env_manylinux2014:latest"
-
+build_with_library="false"
 if [[ -z ${IN_CI} ]]
 then
     IN_CI="false"
@@ -25,6 +25,7 @@ function usage() {
     echo "use -sdk sdk_version to specify sdk toolkit config!"
     echo "now x86_64 sdk_version support ${x86_64_support_version}"
     echo "now aarch64 sdk_version support ${aarch64_support_version}"
+    echo "use -l build with cuda and cudnn library instead of depending cuda and cudnn whls!"
 }
 
 while [ "$1" != "" ]; do
@@ -32,6 +33,10 @@ while [ "$1" != "" ]; do
         -sdk)
             shift
             SDK_NAME=$1
+            shift
+            ;;
+        -l)
+            build_with_library="true"
             shift
             ;;
         *)
@@ -253,22 +258,25 @@ elif [ $SDK_NAME == "cu118" ];then
     fi
 
     COPY_LIB_LIST="\
-        ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
-        ${CUDA_LIB_DIR}/libcublasLt.so.11:\
-        ${CUDA_LIB_DIR}/libcublas.so.11:\
-        ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
-        ${CUDNN_LIB_DIR}/libcudnn.so.8:\
         ${TensorRT_LIB_DIR}/libnvinfer_plugin.so.8:\
         ${TensorRT_LIB_DIR}/libnvonnxparser.so.8\
         ${TensorRT_LIB_DIR}/libnvinfer_builder_resource.so.8.5.3:\
         ${TensorRT_LIB_DIR}/libnvparsers.so.8:\
         ${TensorRT_LIB_DIR}/libnvinfer.so.8"
-
+    if [ ${build_with_library}  == "true" ];then
+        COPY_LIB_LIST="\
+	    ${CUDA_LIB_DIR}/libnvrtc.so.11.2:\
+            ${CUDA_LIB_DIR}/libcublasLt.so.11:\
+            ${CUDA_LIB_DIR}/libcublas.so.11:\
+            ${CUDNN_LIB_DIR}/libcudnn_adv_infer.so.8:\
+            ${CUDNN_LIB_DIR}/libcudnn_adv_train.so.8:\
+            ${CUDNN_LIB_DIR}/libcudnn_cnn_infer.so.8:\
+            ${CUDNN_LIB_DIR}/libcudnn_cnn_train.so.8:\
+            ${CUDNN_LIB_DIR}/libcudnn_ops_infer.so.8:\
+            ${CUDNN_LIB_DIR}/libcudnn_ops_train.so.8:\
+            ${CUDNN_LIB_DIR}/libcudnn.so.8:\
+            ${COPY_LIB_LIST}"
+    fi
     EXTRA_CMAKE_FLAG=" -DMGE_WITH_CUDNN_SHARED=ON -DMGE_WITH_CUBLAS_SHARED=ON \
         -DMGE_CUDA_GENCODE=\"-gencode arch=compute_61,code=sm_61 \
         -gencode arch=compute_70,code=sm_70 \
@@ -412,6 +420,7 @@ docker run --rm ${docker_args} $TMPFS_ARGS \
     -e TRT_ROOT_DIR="/opt/tensorrt" \
     -e NEUWARE_HOME="/usr/local/neuware" \
     -e PYTHON_EXTRA_REQUIRES="$PYTHON_EXTRA_REQUIRES" \
+    -e BUILD_WITH_LIBRARY="$build_with_library" \
     ${mount_args} \
     -v ${BASEDIR}:/home/code \
     -v ${OUTPUTDIR}:/home/output:rw \
